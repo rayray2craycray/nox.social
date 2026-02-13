@@ -3,8 +3,13 @@
  * Defines API endpoints and base URL
  */
 
+import Constants from 'expo-constants';
+
 // Get API base URL from environment
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+
+// Google Maps API Key (from app.config.js)
+export const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.googleMapsApiKey || '';
 
 // API Endpoints
 export const API_ENDPOINTS = {

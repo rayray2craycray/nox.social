@@ -173,6 +173,11 @@ export const VenueDetailsModal: React.FC<VenueDetailsModalProps> = ({
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={styles.modalGradient}>
+            {/* Drag Indicator */}
+            <View style={styles.dragIndicatorContainer}>
+              <View style={styles.dragIndicator} />
+            </View>
+
             {/* Header */}
             <View style={styles.header}>
               <Text style={styles.headerTitle}>{venueName || details?.name || 'Venue Details'}</Text>
@@ -182,7 +187,11 @@ export const VenueDetailsModal: React.FC<VenueDetailsModalProps> = ({
             </View>
 
             {/* Content */}
-            <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.scrollContent}
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={styles.scrollContentContainer}
+            >
               {isLoading && (
                 <View style={styles.loadingContainer}>
                   <Text style={styles.loadingText}>Loading venue details...</Text>
@@ -277,12 +286,22 @@ const styles = StyleSheet.create({
   modalGradient: {
     flex: 1,
   },
+  dragIndicatorContainer: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  dragIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 20,
-    paddingTop: 30,
+    paddingTop: 10,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
@@ -297,6 +316,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flex: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: 40,
   },
   loadingContainer: {
     padding: 40,
