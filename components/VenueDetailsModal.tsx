@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Linking,
   Image,
   Dimensions,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
@@ -20,6 +22,7 @@ import {
   MapPin,
   DollarSign,
   ExternalLink,
+  ChevronDown,
 } from 'lucide-react-native';
 import { useVenueDetails } from '@/hooks/useVenueDetails';
 import * as Haptics from 'expo-haptics';
@@ -48,6 +51,15 @@ export const VenueDetailsModal: React.FC<VenueDetailsModalProps> = ({
     placeId,
     autoFetch: visible && !!placeId,
   });
+
+  const [showScrollHint, setShowScrollHint] = useState(true);
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    if (offsetY > 50) {
+      setShowScrollHint(false);
+    }
+  };
 
   const handlePhonePress = () => {
     if (details?.phoneNumber) {
@@ -190,7 +202,11 @@ export const VenueDetailsModal: React.FC<VenueDetailsModalProps> = ({
             <ScrollView
               style={styles.scrollContent}
               showsVerticalScrollIndicator={true}
+              persistentScrollbar={true}
+              indicatorStyle="white"
               contentContainerStyle={styles.scrollContentContainer}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
             >
               {isLoading && (
                 <View style={styles.loadingContainer}>
@@ -264,6 +280,22 @@ export const VenueDetailsModal: React.FC<VenueDetailsModalProps> = ({
                 </>
               )}
             </ScrollView>
+
+            {/* Scroll Hint */}
+            {showScrollHint && !isLoading && details && (
+              <View style={styles.scrollHint}>
+                <LinearGradient
+                  colors={['rgba(10, 10, 10, 0)', 'rgba(10, 10, 10, 0.95)']}
+                  style={styles.scrollHintGradient}
+                >
+                  <View style={styles.scrollHintContent}>
+                    <ChevronDown size={20} color="#fff" />
+                    <Text style={styles.scrollHintText}>Scroll for more details</Text>
+                    <ChevronDown size={20} color="#fff" />
+                  </View>
+                </LinearGradient>
+              </View>
+            )}
           </LinearGradient>
         </View>
       </View>
@@ -449,6 +481,30 @@ const styles = StyleSheet.create({
   reviewTime: {
     fontSize: 12,
     color: '#666',
+  },
+  scrollHint: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    pointerEvents: 'none',
+  },
+  scrollHintGradient: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: 20,
+  },
+  scrollHintContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  scrollHintText: {
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 
