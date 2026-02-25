@@ -13,7 +13,7 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { Video, ResizeMode } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 
 // Import extracted components
@@ -258,23 +258,8 @@ export default function StudioScreen() {
     }
   }, [venueSearchQuery]);
 
-  // Create video players for previews
-  const previewPlayer = useVideoPlayer(recordedVideo || '', (player) => {
-    player.loop = true;
-    player.muted = false;
-  });
-
-  const customizePlayer = useVideoPlayer(recordedVideo || '', (player) => {
-    player.loop = true;
-    player.muted = false;
-    player.play();
-  });
-
-  const sharePlayer = useVideoPlayer(recordedVideo || '', (player) => {
-    player.loop = true;
-    player.muted = false;
-    player.play();
-  });
+  // Video refs for previews (expo-av)
+  const previewRef = useRef<Video>(null);
 
   // Format helpers - memoized for performance
   const formatCurrency = useCallback((amount: number) => {
@@ -611,23 +596,19 @@ export default function StudioScreen() {
         </View>
 
         <View style={styles.videoPreviewContainer}>
-          <VideoView
-            player={previewPlayer}
+          <Video
+            ref={previewRef}
+            source={{ uri: recordedVideo || '' }}
             style={styles.videoPreview}
-            contentFit="contain"
-            nativeControls={false}
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay={isPlaying}
+            isLooping={true}
+            useNativeControls={false}
           />
 
           <TouchableOpacity
             style={styles.playButton}
-            onPress={() => {
-              if (isPlaying) {
-                previewPlayer.pause();
-              } else {
-                previewPlayer.play();
-              }
-              setIsPlaying(!isPlaying);
-            }}
+            onPress={() => setIsPlaying(!isPlaying)}
           >
             {isPlaying ? (
               <Pause size={32} color={COLORS.text} />
@@ -666,11 +647,13 @@ export default function StudioScreen() {
 
         <ScrollView style={styles.customizeScroll}>
           <View style={styles.videoPreviewSmall}>
-            <VideoView
-              player={customizePlayer}
+            <Video
+              source={{ uri: recordedVideo || '' }}
               style={styles.videoPreviewSmallVideo}
-              contentFit="contain"
-              nativeControls={false}
+              resizeMode={ResizeMode.CONTAIN}
+              shouldPlay={true}
+              isLooping={true}
+              useNativeControls={false}
             />
 
             {/* Filter Preview Overlay */}
@@ -733,11 +716,13 @@ export default function StudioScreen() {
 
         <ScrollView style={styles.shareContainer}>
           <View style={styles.videoPreviewFinal}>
-            <VideoView
-              player={sharePlayer}
+            <Video
+              source={{ uri: recordedVideo || '' }}
               style={styles.videoPreviewFinalVideo}
-              contentFit="contain"
-              nativeControls={false}
+              resizeMode={ResizeMode.CONTAIN}
+              shouldPlay={true}
+              isLooping={true}
+              useNativeControls={false}
             />
 
             {/* Filter Preview Overlay */}
@@ -913,7 +898,7 @@ export default function StudioScreen() {
                   <View style={styles.noResultsContainer}>
                     <MapPin size={48} color={COLORS.textSecondary} />
                     <Text style={styles.noResultsText}>
-                      No venues found for "{venueSearchQuery}"
+                      No venues found for &quot;{venueSearchQuery}&quot;
                     </Text>
                     <Text style={styles.noResultsSubtext}>
                       Try a different search term or check your spelling
