@@ -16,7 +16,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Heart, MessageCircle, Share2, Music, UserPlus, MapPin, Flag } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import UserActionMenu from '@/components/UserActionMenu';
-import { Video, ResizeMode } from 'expo-av';
 import { mockVenues } from '@/mocks/venues';
 import { mockPerformers } from '@/mocks/performers';
 import { VibeVideo, FeedFilter } from '@/types';
@@ -292,19 +291,6 @@ function VideoCard({ video, venue, performer, isActive, isLiked, onLike, isFocus
   const [videoError, setVideoError] = useState(false);
   const [showReportMenu, setShowReportMenu] = useState(false);
 
-  const videoRef = useRef<Video>(null);
-
-  useEffect(() => {
-    if (isActive && isFocused) {
-      videoRef.current?.playAsync();
-      videoRef.current?.setIsMutedAsync(false);
-    } else {
-      videoRef.current?.pauseAsync();
-      videoRef.current?.setPositionAsync(0);
-      videoRef.current?.setIsMutedAsync(true);
-    }
-  }, [isActive, isFocused]);
-
   const handleLikePress = useCallback(() => {
     onLike(video.id);
     RNAnimated.sequence([
@@ -482,26 +468,11 @@ function VideoCard({ video, venue, performer, isActive, isLiked, onLike, isFocus
 
   return (
     <View style={styles.videoContainer}>
-      {/* Only render Video component when active */}
-      {isActive ? (
-        <Video
-          ref={videoRef}
-          source={{ uri: video.videoUrl }}
-          style={styles.video}
-          resizeMode={ResizeMode.COVER}
-          isLooping={true}
-          isMuted={!(isActive && isFocused)}
-          useNativeControls={false}
-        />
-      ) : (
-        <View style={styles.videoPlaceholder}>
-          <Image
-            source={{ uri: video.thumbnailUrl }}
-            style={styles.thumbnail}
-            contentFit="cover"
-          />
-        </View>
-      )}
+      <Image
+        source={{ uri: video.thumbnailUrl }}
+        style={styles.thumbnail}
+        contentFit="cover"
+      />
 
       {/* Filter Overlay */}
       {video.filter && video.filter !== 'none' && (

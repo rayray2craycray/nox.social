@@ -13,7 +13,6 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { Video as ExpoVideo, ResizeMode } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 
 // Import extracted components
@@ -258,8 +257,6 @@ export default function StudioScreen() {
     }
   }, [venueSearchQuery]);
 
-  // Video refs for previews (expo-av)
-  const previewRef = useRef<ExpoVideo>(null);
 
   // Format helpers - memoized for performance
   const formatCurrency = useCallback((amount: number) => {
@@ -596,15 +593,9 @@ export default function StudioScreen() {
         </View>
 
         <View style={styles.videoPreviewContainer}>
-          <ExpoVideo
-            ref={previewRef}
-            source={{ uri: recordedVideo || '' }}
-            style={styles.videoPreview}
-            resizeMode={ResizeMode.CONTAIN}
-            shouldPlay={isPlaying}
-            isLooping={true}
-            useNativeControls={false}
-          />
+          <View style={[styles.videoPreview, { backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }]}>
+            <Play size={48} color={COLORS.accent} />
+          </View>
 
           <TouchableOpacity
             style={styles.playButton}
@@ -647,14 +638,9 @@ export default function StudioScreen() {
 
         <ScrollView style={styles.customizeScroll}>
           <View style={styles.videoPreviewSmall}>
-            <ExpoVideo
-              source={{ uri: recordedVideo || '' }}
-              style={styles.videoPreviewSmallVideo}
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay={true}
-              isLooping={true}
-              useNativeControls={false}
-            />
+            <View style={[styles.videoPreviewSmallVideo, { backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }]}>
+              <Play size={32} color={COLORS.accent} />
+            </View>
 
             {/* Filter Preview Overlay */}
             {selectedFilter !== 'none' && (
@@ -716,14 +702,9 @@ export default function StudioScreen() {
 
         <ScrollView style={styles.shareContainer}>
           <View style={styles.videoPreviewFinal}>
-            <ExpoVideo
-              source={{ uri: recordedVideo || '' }}
-              style={styles.videoPreviewFinalVideo}
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay={true}
-              isLooping={true}
-              useNativeControls={false}
-            />
+            <View style={[styles.videoPreviewFinalVideo, { backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }]}>
+              <Play size={32} color={COLORS.accent} />
+            </View>
 
             {/* Filter Preview Overlay */}
             {selectedFilter !== 'none' && (

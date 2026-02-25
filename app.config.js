@@ -38,7 +38,7 @@ module.exports = {
     icon: './assets/images/icon.png',
     scheme: 'nox',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: true,
+    // newArchEnabled removed - SDK 53 doesn't need this
 
     splash: {
       image: './assets/images/splash-icon.png',
@@ -51,12 +51,14 @@ module.exports = {
       bundleIdentifier: IOS_BUNDLE_ID,
       buildNumber: BUILD_NUMBER,
       infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription: 'Nox needs camera access to capture venue moments and create video highlights.',
         NSMicrophoneUsageDescription: 'Nox needs microphone access to record video highlights.',
         NSPhotoLibraryUsageDescription: 'Nox needs photo library access to upload your memories.',
         NSLocationWhenInUseUsageDescription: 'Nox needs your location to verify you\'re at a venue when capturing memories.',
         NSLocationAlwaysAndWhenInUseUsageDescription: 'Nox needs your location to verify you\'re at a venue.',
         NSLocationAlwaysUsageDescription: 'Nox needs your location to discover nearby venues.',
+        NSContactsUsageDescription: 'Nox uses contacts to help you find friends who are also using the app.',
         UIBackgroundModes: ['audio', 'location'],
       },
       config: {
@@ -98,6 +100,8 @@ module.exports = {
     },
 
     plugins: [
+      '@react-native-community/datetimepicker',
+      'expo-secure-store',
       [
         'expo-router',
         {
@@ -121,16 +125,10 @@ module.exports = {
         },
       ],
       [
-        'expo-av',
-        {
-          microphonePermission: 'Nox needs microphone access to record video highlights.',
-        },
-      ],
-      [
         'expo-location',
         {
           isAndroidForegroundServiceEnabled: true,
-          isAndroidBackgroundLocationEnabled: false, // Set to true if background location needed
+          isAndroidBackgroundLocationEnabled: false,
           isIosBackgroundLocationEnabled: false,
           locationAlwaysAndWhenInUsePermission: 'Nox needs your location to verify venue check-ins.',
         },
@@ -141,27 +139,22 @@ module.exports = {
       typedRoutes: true,
     },
 
-    // Extra configuration for runtime
+    // Extra configuration for runtime (also used by EAS)
     extra: {
       apiUrl: API_URL,
       environment: process.env.APP_ENV || 'development',
-      easProjectId: EAS_PROJECT_ID,
+      easProjectId: EAS_PROJECT_ID || 'e5c57346-e187-4439-897d-085cf29a7456',
       cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
-      sentryDsn: process.env.SENTRY_DSN || '',
+      sentryDsn: process.env.SENTRY_DSN || process.env.EXPO_PUBLIC_SENTRY_DSN || '',
       googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyBTR8B7HNcmI58gqKP23Pr0Bb0uO4ymJhI',
       instagramClientId: process.env.INSTAGRAM_CLIENT_ID || '',
       eas: {
-        projectId: EAS_PROJECT_ID,
+        projectId: EAS_PROJECT_ID || 'e5c57346-e187-4439-897d-085cf29a7456',
       },
     },
 
-    // Update channels for OTA updates
-    updates: {
-      fallbackToCacheTimeout: 0,
-      url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
-    },
 
-    // Runtime version for updates
+    // Runtime version (required even without updates)
     runtimeVersion: {
       policy: 'sdkVersion',
     },
