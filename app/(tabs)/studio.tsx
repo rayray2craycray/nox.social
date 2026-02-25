@@ -13,7 +13,7 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { Video, ResizeMode } from 'expo-av';
+import { Video as ExpoVideo, ResizeMode } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 
 // Import extracted components
@@ -259,7 +259,7 @@ export default function StudioScreen() {
   }, [venueSearchQuery]);
 
   // Video refs for previews (expo-av)
-  const previewRef = useRef<Video>(null);
+  const previewRef = useRef<ExpoVideo>(null);
 
   // Format helpers - memoized for performance
   const formatCurrency = useCallback((amount: number) => {
@@ -596,7 +596,7 @@ export default function StudioScreen() {
         </View>
 
         <View style={styles.videoPreviewContainer}>
-          <Video
+          <ExpoVideo
             ref={previewRef}
             source={{ uri: recordedVideo || '' }}
             style={styles.videoPreview}
@@ -647,7 +647,7 @@ export default function StudioScreen() {
 
         <ScrollView style={styles.customizeScroll}>
           <View style={styles.videoPreviewSmall}>
-            <Video
+            <ExpoVideo
               source={{ uri: recordedVideo || '' }}
               style={styles.videoPreviewSmallVideo}
               resizeMode={ResizeMode.CONTAIN}
@@ -716,7 +716,7 @@ export default function StudioScreen() {
 
         <ScrollView style={styles.shareContainer}>
           <View style={styles.videoPreviewFinal}>
-            <Video
+            <ExpoVideo
               source={{ uri: recordedVideo || '' }}
               style={styles.videoPreviewFinalVideo}
               resizeMode={ResizeMode.CONTAIN}
