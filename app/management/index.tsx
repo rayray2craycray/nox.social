@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -23,28 +23,48 @@ import {
   Wifi,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { mockAnalytics } from '@/mocks/analytics';
-import { mockVenues } from '@/mocks/venues';
 import { usePOS } from '@/contexts/POSContext';
+import { useVenueManagement } from '@/contexts/VenueManagementContext';
+import { Venue, VenueAnalytics } from '@/types';
+import { venuesService } from '@/services/venues.service';
 
 const { width } = Dimensions.get('window');
 
 export default function ManagementDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month'>('today');
-  const venue = mockVenues[0];
-  const analytics = mockAnalytics;
+  const [venue, setVenue] = useState<Venue | null>(null);
+  const { managedVenues } = useVenueManagement();
   const { isConnected: isPOSConnected } = usePOS();
+
+  useEffect(() => {
+    if (managedVenues[0]) {
+      venuesService.getVenueById(managedVenues[0]).then(v => setVenue(v)).catch(() => {});
+    }
+  }, [managedVenues]);
+
+  const analytics: VenueAnalytics = {
+    venueId: venue?.id || '',
+    period: selectedPeriod,
+    totalRevenue: 0,
+    totalTransactions: 0,
+    averageSpend: 0,
+    uniqueGuests: 0,
+    newMembers: 0,
+    vipUpgrades: 0,
+    peakHours: [],
+    topSpenders: [],
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.venueName}>{venue.name}</Text>
+            <Text style={styles.venueName}>{venue?.name ?? 'My Venue'}</Text>
             <View style={styles.statusRow}>
-              <View style={[styles.statusDot, venue.isOpen && styles.statusDotLive]} />
+              <View style={[styles.statusDot, venue?.isOpen && styles.statusDotLive]} />
               <Text style={styles.statusText}>
-                {venue.isOpen ? 'Currently Open' : 'Closed'}
+                {venue?.isOpen ? 'Currently Open' : 'Closed'}
               </Text>
             </View>
             {isPOSConnected && (

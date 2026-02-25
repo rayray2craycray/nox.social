@@ -23,7 +23,7 @@ interface SettingRowProps {
   destructive?: boolean;
 }
 
-export const SettingRow = memo<SettingRowProps>(({
+const SettingRowComponent = ({
   icon,
   label,
   value,
@@ -33,7 +33,7 @@ export const SettingRow = memo<SettingRowProps>(({
   onPress,
   onSwitchChange,
   destructive = false,
-}) => {
+}: SettingRowProps) => {
   // Memoize handlers to prevent child re-renders
   const handlePress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -70,7 +70,9 @@ export const SettingRow = memo<SettingRowProps>(({
       )}
     </TouchableOpacity>
   );
-});
+};
+SettingRowComponent.displayName = 'SettingRow';
+export const SettingRow = memo(SettingRowComponent);
 
 const styles = StyleSheet.create({
   row: {

@@ -24,10 +24,9 @@ import {
   Clock,
 } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventsContext';
-import { mockVenues } from '@/mocks/venues';
 import * as Haptics from 'expo-haptics';
 import QRCode from 'react-native-qrcode-svg';
-import type { Ticket as TicketType } from '@/types';
+import type { Ticket as TicketType, Venue } from '@/types';
 
 export default function TicketsScreen() {
   const { userTickets, getEventById, getTicketTiersForEvent, generateTicketQR, isLoading } = useEvents();
@@ -216,7 +215,7 @@ function TicketCard({
   const event = getEventById(ticket.eventId);
   const tiers = getTicketTiersForEvent(ticket.eventId);
   const tier = tiers.find(t => t.id === ticket.tierId);
-  const venue = event ? mockVenues.find(v => v.id === event.venueId) : null;
+  const venue = null as Venue | null;
 
   if (!event || !tier) return null;
 
@@ -339,7 +338,7 @@ function QRCodeModal({
   const event = getEventById(ticket.eventId);
   const tiers = getTicketTiersForEvent(ticket.eventId);
   const tier = tiers.find(t => t.id === ticket.tierId);
-  const venue = event ? mockVenues.find(v => v.id === event.venueId) : null;
+  const venue = null as Venue | null;
   const qrCode = generateTicketQR(ticket.id);
 
   if (!event || !tier) return null;

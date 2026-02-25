@@ -94,6 +94,7 @@ export default function SettingsScreen() {
         expiryMonth: 12,
         expiryYear: 2025,
         cardholderName: profile.displayName,
+        isDefault: false,
       };
       addLinkedCard(newCard);
       setCardNumber('');

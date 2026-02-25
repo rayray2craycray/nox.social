@@ -14,7 +14,6 @@ import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { X, MapPin, Users, DollarSign, Navigation, Ghost, ChevronUp, ChevronDown, RefreshCw, Info } from 'lucide-react-native';
-import { mockVenues } from '@/mocks/venues';
 import { Venue, FriendLocation, GroupPurchase } from '@/types';
 import { useDiscovery, useAppState } from '@/contexts/AppStateContext';
 import { useSocial } from '@/contexts/SocialContext';
@@ -55,7 +54,6 @@ export default function DiscoveryScreen() {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showGroupPurchaseModal, setShowGroupPurchaseModal] = useState(false);
   const [showVenueDetails, setShowVenueDetails] = useState(false);
-  const [useMockData, setUseMockData] = useState(false); // Toggle for development
   const mapRef = useRef<MapView>(null);
 
   // Use Google Places API to fetch real venues within 50-mile radius
@@ -156,12 +154,8 @@ export default function DiscoveryScreen() {
   }, [discoveredVenues]);
 
   const nearbyVenues = useMemo(() => {
-    // Use mock data for development or when Google Places fails
-    if (useMockData || venuesError || discoveredVenues.length === 0) {
-      return mockVenues;
-    }
     return convertedVenues;
-  }, [useMockData, venuesError, discoveredVenues, convertedVenues]);
+  }, [convertedVenues]);
 
   const friendsByVenue = useMemo(() => {
     return nearbyVenues.reduce((acc, venue) => {
@@ -195,17 +189,12 @@ export default function DiscoveryScreen() {
     );
   }
 
-  // Show error alert if venues failed to load but continue with mock data
-  if (venuesError && !useMockData) {
+  // Show error alert if venues failed to load
+  if (venuesError) {
     Alert.alert(
       'Unable to Load Venues',
-      'Could not fetch nearby venues from Google Maps. Using sample data instead.\n\nPlease ensure Google Maps API key is configured.',
-      [
-        {
-          text: 'Use Sample Data',
-          onPress: () => setUseMockData(true),
-        },
-      ]
+      'Could not fetch nearby venues. Please check your connection and ensure location permissions are granted.',
+      [{ text: 'OK' }]
     );
   }
 
@@ -291,11 +280,7 @@ export default function DiscoveryScreen() {
         />
         <Text style={styles.headerTitle}>Discover Venues</Text>
         <Text style={styles.headerSubtitle}>
-          {useMockData ? (
-            'Using sample data'
-          ) : (
-            `${nearbyVenues.filter(v => v.isOpen).length} open now • ${nearbyVenues.length} within 50 miles`
-          )}
+          {`${nearbyVenues.filter(v => v.isOpen).length} open now • ${nearbyVenues.length} within 50 miles`}
         </Text>
       </View>
 
@@ -310,17 +295,15 @@ export default function DiscoveryScreen() {
           <Ghost size={22} color={locationSettings.ghostMode ? '#000000' : '#fff'} />
         </TouchableOpacity>
 
-        {!useMockData && (
-          <TouchableOpacity
-            style={styles.controlButton}
-            onPress={async () => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              await refreshVenues();
-            }}
-          >
-            <RefreshCw size={22} color="#fff" />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={async () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            await refreshVenues();
+          }}
+        >
+          <RefreshCw size={22} color="#fff" />
+        </TouchableOpacity>
 
         {friendLocations.length > 0 && (
           <TouchableOpacity style={styles.controlButton} onPress={findMyGroup}>

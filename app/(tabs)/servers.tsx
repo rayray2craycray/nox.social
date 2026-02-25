@@ -12,14 +12,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Hash, Lock, Send, MessageCircle, Settings, LogOut, Users, Bell, AlertTriangle, X, Zap, MessageSquare, Shield } from 'lucide-react-native';
-import { mockServers, mockMessages } from '@/mocks/servers';
-import { VenueServer, ServerChannel, Message, VibeEnergyLevel, WaitTimeRange } from '@/types';
+import { VenueServer, ServerChannel, Message, VibeEnergyLevel, WaitTimeRange, PerformerBooking } from '@/types';
 import * as Haptics from 'expo-haptics';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useSocial } from '@/contexts/SocialContext';
 import { useChat } from '@/contexts/ChatContext';
-import { mockBookings } from '@/mocks/analytics';
-import { PerformerBooking } from '@/types';
 import UserProfileModal from '@/components/UserProfileModal';
 import { useLocalSearchParams } from 'expo-router';
 import { Calendar, Clock, DollarSign } from 'lucide-react-native';
@@ -438,9 +435,6 @@ function DirectMessageChat({ conversationId, onBack, onOpenUserProfile }: Direct
       fee: parseFloat(bookingDetails.fee),
       status: 'PENDING',
     };
-
-    // Add to mock bookings
-    mockBookings.push(newBooking);
 
     // Send confirmation message
     const confirmationMessage = {

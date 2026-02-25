@@ -7,15 +7,12 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
 import { Calendar, Clock, DollarSign, TrendingUp, Users, Check, X } from 'lucide-react-native';
-import { mockBookings } from '@/mocks/analytics';
-import { mockPerformers } from '@/mocks/performers';
 import { PerformerBooking } from '@/types';
 import * as Haptics from 'expo-haptics';
 
 export default function TalentBookingScreen() {
-  const [bookings, setBookings] = useState<PerformerBooking[]>(mockBookings);
+  const [bookings, setBookings] = useState<PerformerBooking[]>([]);
   const [selectedTab, setSelectedTab] = useState<'upcoming' | 'past'>('upcoming');
 
   const upcomingBookings = bookings.filter(b => b.status !== 'COMPLETED' && b.status !== 'CANCELLED');
@@ -135,22 +132,11 @@ export default function TalentBookingScreen() {
 
         <View style={styles.bookingsContainer}>
           {(selectedTab === 'upcoming' ? upcomingBookings : pastBookings).map(booking => {
-            const performer = mockPerformers.find(p => p.id === booking.performerId);
-            if (!performer) return null;
-
             return (
               <View key={booking.id} style={styles.bookingCard}>
                 <View style={styles.performerHeader}>
-                  <Image source={{ uri: performer.imageUrl }} style={styles.performerImage} />
                   <View style={styles.performerInfo}>
-                    <Text style={styles.performerName}>{performer.stageName}</Text>
-                    <View style={styles.genreRow}>
-                      {performer.genres.slice(0, 2).map((genre, idx) => (
-                        <View key={idx} style={styles.genreTag}>
-                          <Text style={styles.genreText}>{genre}</Text>
-                        </View>
-                      ))}
-                    </View>
+                    <Text style={styles.performerName}>Performer #{booking.performerId}</Text>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) + '30' }]}>
                     <Text style={[styles.statusText, { color: getStatusColor(booking.status) }]}>

@@ -136,7 +136,7 @@ module.exports = {
     ],
 
     experiments: {
-      typedRoutes: true,
+      typedRoutes: false,
     },
 
     // Extra configuration for runtime (also used by EAS)

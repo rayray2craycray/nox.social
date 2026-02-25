@@ -16,9 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Heart, MessageCircle, Share2, Music, UserPlus, MapPin, Flag } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import UserActionMenu from '@/components/UserActionMenu';
-import { mockVenues } from '@/mocks/venues';
-import { mockPerformers } from '@/mocks/performers';
-import { VibeVideo, FeedFilter } from '@/types';
+import { VibeVideo, Venue, Performer, FeedFilter } from '@/types';
 import * as Haptics from 'expo-haptics';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useFeed } from '@/contexts/FeedContext';
@@ -147,10 +145,8 @@ export default function FeedScreen() {
   }, []);
 
   const renderVideo = useCallback(({ item, index }: { item: VibeVideo; index: number }) => {
-    const venue = mockVenues.find(v => v.id === item.venueId);
-    const performer = item.performerId
-      ? mockPerformers.find(p => p.id === item.performerId)
-      : null;
+    const venue = undefined;
+    const performer = undefined;
     const isLiked = likedVideos.has(item.id);
 
     return (
@@ -276,8 +272,8 @@ export default function FeedScreen() {
 
 interface VideoCardProps {
   video: VibeVideo;
-  venue?: typeof mockVenues[0];
-  performer: typeof mockPerformers[0] | null | undefined;
+  venue?: Venue;
+  performer?: Performer | null;
   isActive: boolean;
   isLiked: boolean;
   onLike: (videoId: string) => void;
@@ -583,7 +579,7 @@ function VideoCard({ video, venue, performer, isActive, isLiked, onLike, isFocus
 
 interface EmptyStateProps {
   filter: FeedFilter;
-  suggestedPerformers: typeof mockPerformers;
+  suggestedPerformers: Performer[];
   onFollowPerformer: (id: string) => void;
   isFollowing: (id: string) => boolean;
 }

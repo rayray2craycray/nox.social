@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Send, Ban, AlertTriangle, Radio } from 'lucide-react-native';
-import { mockServerMembers } from '@/mocks/analytics';
 import { ServerMember } from '@/types';
 import * as Haptics from 'expo-haptics';
 import { useAppState } from '@/contexts/AppStateContext';
@@ -19,7 +18,7 @@ export default function ServerCommandScreen() {
   const { profile, addBroadcastMessage } = useAppState();
   const [message, setMessage] = useState<string>('');
   const [selectedChannel, setSelectedChannel] = useState<string>('#general');
-  const [members, setMembers] = useState<ServerMember[]>(mockServerMembers);
+  const [members, setMembers] = useState<ServerMember[]>([]);
 
   const channels = ['#general', '#line-watch', '#vip-lounge'];
 

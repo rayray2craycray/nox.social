@@ -30,7 +30,6 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
 import { useVenueManagement } from '@/contexts/VenueManagementContext';
 import { useUpload } from '@/hooks/useUpload';
 import type { Venue } from '@/types';
@@ -148,14 +147,14 @@ export default function VenueEditScreen() {
         address: venueData.location.address,
         coverCharge: venueData.coverCharge || 0,
         tags: venueData.tags || [],
-        hours: venueData.hours || {
-          monday: '',
-          tuesday: '',
-          wednesday: '',
-          thursday: '',
-          friday: '',
-          saturday: '',
-          sunday: '',
+        hours: {
+          monday: venueData.hours?.monday || '',
+          tuesday: venueData.hours?.tuesday || '',
+          wednesday: venueData.hours?.wednesday || '',
+          thursday: venueData.hours?.thursday || '',
+          friday: venueData.hours?.friday || '',
+          saturday: venueData.hours?.saturday || '',
+          sunday: venueData.hours?.sunday || '',
         },
       });
     } catch (error) {
@@ -177,22 +176,15 @@ export default function VenueEditScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [16, 9],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      try {
-        const uploadedUrl = await uploadImage(result.assets[0].uri);
-        setFormData({ ...formData, imageUrl: uploadedUrl });
+    try {
+      const result = await uploadVenueFromGallery(venueId);
+      if (result?.url) {
+        setFormData({ ...formData, imageUrl: result.url });
         Alert.alert('Success', 'Image uploaded successfully');
-      } catch (error) {
-        console.error('Image upload error:', error);
-        Alert.alert('Error', 'Failed to upload image');
       }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      Alert.alert('Error', 'Failed to upload image');
     }
   };
 

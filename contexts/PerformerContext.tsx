@@ -3,8 +3,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Gig, PerformerAnalytics } from '@/types';
-// TODO: Import content API for performer data
-// import { contentApi } from '@/services/api';
+import { eventsApi, contentApi } from '@/services/api';
 
 const STORAGE_KEYS = {
   PERFORMER_MODE: 'vibelink_performer_mode',
@@ -44,25 +43,33 @@ export const [PerformerProvider, usePerformer] = createContextHook(() => {
 
   const { mutate: togglePerformerMode } = togglePerformerModeMutation;
 
-  // TODO: Fetch performer's gigs from API
-  // Note: In the backend, "gigs" are Events where performer is performing
-  // Should call: contentApi.getPerformerDetails(performerId) or eventsApi.getByPerformer(performerId)
   const gigsQuery = useQuery<Gig[]>({
     queryKey: ['gigs', performerId],
     queryFn: async (): Promise<Gig[]> => {
-      // Return empty array for now - UI will show empty state
-      return [];
+      const response = await eventsApi.getEventsByPerformer(performerId);
+      if (!response.data) return [];
+      return response.data.map((event) => ({
+        id: event.id,
+        performerId,
+        venueId: event.venueId,
+        venueName: '',
+        venueImageUrl: event.imageUrl,
+        date: event.date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        fee: 0,
+        status: event.status === 'LIVE' ? 'UPCOMING' : event.status as Gig['status'],
+        genre: event.genres[0] || '',
+      }));
     },
     enabled: isPerformerMode,
   });
 
-  // TODO: Fetch performer's promo videos from API
-  // Should call: contentApi.getUserHighlights(performerId) or similar
   const videosQuery = useQuery<any[]>({
     queryKey: ['promoVideos', performerId],
     queryFn: async (): Promise<any[]> => {
-      // Return empty array for now - UI will show empty state
-      return [];
+      const response = await contentApi.getPerformerPosts(performerId);
+      return response.data || [];
     },
     enabled: isPerformerMode,
   });

@@ -8,15 +8,30 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TrendingUp, Users, DollarSign, Target } from 'lucide-react-native';
-import { mockAnalytics, mockPromoterStats } from '@/mocks/analytics';
+import { VenueAnalytics, PromoterStats } from '@/types';
 
 const { width } = Dimensions.get('window');
 
-export default function AnalyticsScreen() {
-  const [analytics] = useState(mockAnalytics);
-  const [promoters] = useState(mockPromoterStats);
+const emptyAnalytics: VenueAnalytics = {
+  venueId: '',
+  period: 'today',
+  totalRevenue: 0,
+  totalTransactions: 0,
+  averageSpend: 0,
+  uniqueGuests: 0,
+  newMembers: 0,
+  vipUpgrades: 0,
+  peakHours: [],
+  topSpenders: [],
+};
 
-  const maxPeakRevenue = Math.max(...analytics.peakHours.map(h => h.revenue));
+export default function AnalyticsScreen() {
+  const [analytics] = useState<VenueAnalytics>(emptyAnalytics);
+  const [promoters] = useState<PromoterStats[]>([]);
+
+  const maxPeakRevenue = analytics.peakHours.length > 0
+    ? Math.max(...analytics.peakHours.map(h => h.revenue))
+    : 1;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>

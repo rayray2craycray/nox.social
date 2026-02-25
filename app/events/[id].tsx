@@ -23,10 +23,8 @@ import {
   CheckCircle,
 } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventsContext';
-import { mockVenues } from '@/mocks/venues';
-import { mockPerformers } from '@/mocks/performers';
 import * as Haptics from 'expo-haptics';
-import { TicketTier } from '@/types';
+import { TicketTier, Performer, Venue } from '@/types';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,10 +33,8 @@ export default function EventDetailScreen() {
   const [isPurchasing, setIsPurchasing] = useState(false);
 
   const event = getEventById(id || '');
-  const venue = event ? mockVenues.find(v => v.id === event.venueId) : null;
-  const performers = event
-    ? mockPerformers.filter(p => event.performerIds.includes(p.id))
-    : [];
+  const venue = null as Venue | null;
+  const performers: Performer[] = [];
   const ticketTiers = event ? getTicketTiersForEvent(event.id) : [];
 
   const handleClose = () => {

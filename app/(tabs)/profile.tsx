@@ -26,7 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useVenueManagement } from '@/contexts/VenueManagementContext';
 import { useUpload } from '@/hooks/useUpload';
 import { router } from 'expo-router';
-import { mockVenues } from '@/mocks/venues';
+import { venuesService } from '@/services/venues.service';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import UserProfileModal from '@/components/UserProfileModal';
@@ -162,7 +162,8 @@ export default function ProfileScreen() {
       let nearestVenue: { id: string; name: string; distance: number } | null = null;
       let minDistance = Infinity;
 
-      mockVenues.forEach((venue) => {
+      const nearbyVenuesList = await venuesService.getNearbyVenues(latitude, longitude, 1);
+      nearbyVenuesList.forEach((venue) => {
         const distance = calculateDistance(
           latitude,
           longitude,
@@ -677,9 +678,7 @@ export default function ProfileScreen() {
             ) : (
               <View style={styles.badgeList}>
                 {profile.badges.map((badge) => {
-                  const venue = mockVenues.find(v => v.id === badge.venueId);
-                  // Use fallback image if venue not found in mock data
-                  const venueImage = venue?.imageUrl || 'https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2';
+                  const venueImage = 'https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2';
 
                   return (
                     <View key={badge.id} style={styles.badgeCard}>
@@ -722,9 +721,7 @@ export default function ProfileScreen() {
               </View>
             ) : (
               profile.badges.slice(0, 3).map((badge) => {
-                const venue = mockVenues.find(v => v.id === badge.venueId);
-                // Use fallback image if venue not found in mock data
-                const venueImage = venue?.imageUrl || 'https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2';
+                const venueImage = 'https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2';
 
                 return (
                   <View key={badge.id} style={styles.badgeCard}>
@@ -895,7 +892,6 @@ export default function ProfileScreen() {
               )}
             </View>
             {myGroupPurchases.slice(0, 3).map((gp) => {
-              const venue = mockVenues.find(v => v.id === gp.venueId);
               const isInitiator = gp.initiatorId === 'user-me';
               const participantCount = gp.currentParticipants.length;
               const spotsLeft = gp.maxParticipants - participantCount;
@@ -921,7 +917,7 @@ export default function ProfileScreen() {
                   </View>
                   <View style={styles.groupPurchaseInfo}>
                     <Text style={styles.groupPurchaseName}>
-                      {venue?.name || 'Unknown Venue'}
+                      {'Unknown Venue'}
                     </Text>
                     <View style={styles.groupPurchaseDetails}>
                       <View style={styles.groupPurchaseDetailItem}>

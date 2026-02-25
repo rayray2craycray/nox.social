@@ -7,7 +7,7 @@ import { useFeed } from '@/contexts/FeedContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUpload } from '@/hooks/useUpload';
 import { useNearbyVenues } from '@/hooks/useNearbyVenues';
-import { mockVenues } from '@/mocks/venues';
+
 import { Camera, Upload, Play, Pause, RotateCw, Zap, ZapOff, Check, Type, Music2, Share2, Instagram, ExternalLink, Video, Scissors, Sparkles, Sticker, X, MapPin, Search } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';

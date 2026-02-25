@@ -17,7 +17,7 @@ export interface JWTPayload {
  */
 export const generateAccessToken = (payload: { userId: string; email: string }): string => {
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN as string | number,
+    expiresIn: JWT_EXPIRES_IN as any,
   });
 };
 

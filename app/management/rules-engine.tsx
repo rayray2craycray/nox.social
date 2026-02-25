@@ -12,13 +12,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, Trash2, Edit3, X, Save } from 'lucide-react-native';
-import { mockVenueRules } from '@/mocks/analytics';
 import { VenueRule } from '@/types';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function RulesEngineScreen() {
-  const [rules, setRules] = useState<VenueRule[]>(mockVenueRules);
+  const [rules, setRules] = useState<VenueRule[]>([]);
   const [editingRule, setEditingRule] = useState<VenueRule | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);

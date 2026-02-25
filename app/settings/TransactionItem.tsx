@@ -16,11 +16,11 @@ interface TransactionItemProps {
   formatDate: (dateString: string) => string;
 }
 
-export const TransactionItem = memo<TransactionItemProps>(({
+const TransactionItemComponent = ({
   transaction,
   formatCurrency,
   formatDate,
-}) => {
+}: TransactionItemProps) => {
   return (
     <View style={styles.transaction}>
       <View style={styles.transactionLeft}>
@@ -41,11 +41,12 @@ export const TransactionItem = memo<TransactionItemProps>(({
       </View>
     </View>
   );
-}, (prevProps, nextProps) => {
-  // Custom comparison: transaction data rarely changes once created
-  return prevProps.transaction.id === nextProps.transaction.id &&
-         prevProps.transaction.status === nextProps.transaction.status;
-});
+};
+TransactionItemComponent.displayName = 'TransactionItem';
+const transactionItemCompare = (prevProps: TransactionItemProps, nextProps: TransactionItemProps) =>
+  prevProps.transaction.id === nextProps.transaction.id &&
+  prevProps.transaction.status === nextProps.transaction.status;
+export const TransactionItem = memo(TransactionItemComponent, transactionItemCompare);
 
 const styles = StyleSheet.create({
   transaction: {
