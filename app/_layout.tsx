@@ -27,7 +27,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
 import { initSentry, captureException } from "@/config/sentry";
 
-// Initialize Sentry error tracking
+// Initialize Sentry in production (safe no-op when no DSN)
 initSentry();
 
 SplashScreen.preventAutoHideAsync();
@@ -41,12 +41,36 @@ function RootLayoutNav() {
   const [isCheckingAge, setIsCheckingAge] = useState(true);
 
   useEffect(() => {
-    // Check if user has already verified their age
-    AsyncStorage.getItem('age_verified').then((verified) => {
-      setIsAgeVerified(verified === 'true');
-      setShowAgeGate(verified !== 'true');
-      setIsCheckingAge(false);
-    });
+    let isMounted = true;
+
+    const checkAgeVerification = async () => {
+      try {
+        // Check if user has already verified their age
+        const verified = await AsyncStorage.getItem('age_verified');
+
+        if (!isMounted) return;
+
+        const hasVerified = verified === 'true';
+        setIsAgeVerified(hasVerified);
+        setShowAgeGate(!hasVerified);
+      } catch (error) {
+        console.error('Failed to load age verification status', error);
+        // Fail-safe: show the age gate instead of a blank screen
+        if (!isMounted) return;
+        setIsAgeVerified(false);
+        setShowAgeGate(true);
+      } finally {
+        if (isMounted) {
+          setIsCheckingAge(false);
+        }
+      }
+    };
+
+    checkAgeVerification();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleAgeVerified = async (dateOfBirth: Date) => {
@@ -56,7 +80,15 @@ function RootLayoutNav() {
     setShowAgeGate(false);
   };
 
-  // Don't render anything until we've checked age verification status
+  // Hide the splash screen only after the age check resolves, so the splash
+  // stays visible during the async check and there is no black screen flash.
+  useEffect(() => {
+    if (!isCheckingAge) {
+      SplashScreen.hideAsync();
+    }
+  }, [isCheckingAge]);
+
+  // Keep returning null while checking — splash screen is still covering the screen
   if (isCheckingAge) {
     return null;
   }
@@ -87,10 +119,6 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
-
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
     // Send error to Sentry
     captureException(error, {
