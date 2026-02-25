@@ -35,6 +35,39 @@ eas submit --platform ios --latest               # Submit to TestFlight
 eas build:list --platform ios                    # Check build status
 ```
 
+## Mandatory Pre-Build Checklist
+**Run all three steps before every `eas build`. Do not skip any step.**
+
+### Step 1 — Bundle check (catches JS/import errors)
+```bash
+npx expo export --platform ios
+```
+Must complete with no errors. This caught the Build 56 duplicate identifier crash before it
+hit EAS. If this fails, fix it before proceeding.
+
+### Step 2 — TypeScript check (catches type errors)
+```bash
+npx tsc --noEmit
+```
+Note: this project has pre-existing TS errors (expo-router typed routes, backend types) that
+do not block Metro bundling. Only block the build on **new** errors introduced by your
+changes. Compare output before and after your changes to identify new errors.
+
+### Step 3 — Physical device test (catches native/TurboModule crashes)
+```bash
+npx expo run:ios --device
+```
+Requires a physical iPhone connected via USB. This is the most important step — it catches
+TurboModule crashes (like the expo-video and expo-av crashes in builds 55 and 57) before
+they reach TestFlight. The iOS simulator does NOT reliably reproduce native crashes.
+If no device is available, note this and proceed with extra caution.
+
+Only after all three pass:
+```bash
+eas build --platform ios --profile production --non-interactive
+eas submit --platform ios --latest --non-interactive
+```
+
 ## Project Structure
 
 ### Frontend (root)
@@ -67,9 +100,12 @@ backend/          # Node.js + Express API server
 
 ## Critical Warnings
 
-### DO NOT use expo-video
-`expo-video` causes a TurboModule crash (`EXC_CRASH SIGABRT`) on iOS. Do not install,
-import, or reference it. This was the root cause of 29 consecutive failed TestFlight builds.
+### DO NOT use expo-video or expo-av
+Both `expo-video` and `expo-av` cause a TurboModule crash (`EXC_CRASH SIGABRT`) on iOS.
+They call void TurboModule methods at mount time that throw ObjC exceptions, killing the
+process. Do not install, import, or reference either package. These were the cause of
+crashes in builds 55 and 57. If video playback is needed in the future, it must be tested
+on a physical device first via `npx expo run:ios --device` before submitting an EAS build.
 
 ### Context provider order is load-bearing
 The 18 context providers nested in `app/_layout.tsx` must remain in their current order.
