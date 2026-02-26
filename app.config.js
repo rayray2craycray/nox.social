@@ -58,8 +58,7 @@ module.exports = {
         NSLocationWhenInUseUsageDescription: 'Nox needs your location to verify you\'re at a venue when capturing memories.',
         NSLocationAlwaysAndWhenInUseUsageDescription: 'Nox needs your location to verify you\'re at a venue.',
         NSLocationAlwaysUsageDescription: 'Nox needs your location to discover nearby venues.',
-        NSContactsUsageDescription: 'Nox uses contacts to help you find friends who are also using the app.',
-        UIBackgroundModes: ['audio', 'location'],
+        UIBackgroundModes: ['location'],
       },
       config: {
         googleMapsApiKey: process.env.GOOGLE_MAPS_IOS_API_KEY || 'AIzaSyBTR8B7HNcmI58gqKP23Pr0Bb0uO4ymJhI',
@@ -100,14 +99,6 @@ module.exports = {
     },
 
     plugins: [
-      [
-        '@sentry/react-native/expo',
-        {
-          url: 'https://sentry.io/',
-          project: 'nox-nightlife',
-          organization: 'nox-social',
-        },
-      ],
       '@react-native-community/datetimepicker',
       'expo-secure-store',
       [

@@ -27,9 +27,6 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
 import { initSentry, captureException } from "@/config/sentry";
 
-// Initialize Sentry in production (safe no-op when no DSN)
-initSentry();
-
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
@@ -119,6 +116,12 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  // Defer Sentry initialization to after React mounts — calling it at module
+  // load time caused TurboModule void-method crashes on startup.
+  useEffect(() => {
+    initSentry();
+  }, []);
+
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
     // Send error to Sentry
     captureException(error, {
