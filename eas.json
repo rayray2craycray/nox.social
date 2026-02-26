@@ -44,7 +44,8 @@
         "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production",
         "EXPO_PUBLIC_DEBUG_MODE": "false",
         "IOS_BUNDLE_ID": "social.nox",
-        "ANDROID_PACKAGE": "social.nox"
+        "ANDROID_PACKAGE": "social.nox",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production-ios": {
