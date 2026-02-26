@@ -100,6 +100,14 @@ module.exports = {
     },
 
     plugins: [
+      [
+        '@sentry/react-native/expo',
+        {
+          url: 'https://sentry.io/',
+          project: 'nox-nightlife',
+          organization: 'nox-social',
+        },
+      ],
       '@react-native-community/datetimepicker',
       'expo-secure-store',
       [

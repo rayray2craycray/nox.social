@@ -7,46 +7,21 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": {
-        "simulator": true,
-        "buildConfiguration": "Debug"
-      },
-      "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
-      },
-      "env": {
-        "APP_ENV": "development",
-        "API_URL": "http://localhost:5000"
-      }
+      "ios": { "simulator": true, "buildConfiguration": "Debug" },
+      "android": { "buildType": "apk", "gradleCommand": ":app:assembleDebug" },
+      "env": { "APP_ENV": "development", "API_URL": "http://localhost:5000" }
     },
     "preview": {
       "distribution": "internal",
-      "ios": {
-        "simulator": false,
-        "buildConfiguration": "Release"
-      },
-      "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
-      },
-      "env": {
-        "APP_ENV": "staging",
-        "API_URL": "https://staging-api.nox.social"
-      }
+      "ios": { "simulator": false, "buildConfiguration": "Release" },
+      "android": { "buildType": "apk", "gradleCommand": ":app:assembleRelease" },
+      "env": { "APP_ENV": "staging", "API_URL": "https://staging-api.nox.social" }
     },
     "staging": {
       "distribution": "internal",
       "channel": "staging",
-      "ios": {
-        "simulator": false,
-        "buildConfiguration": "Release",
-        "bundleIdentifier": "social.nox.staging"
-      },
-      "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
-      },
+      "ios": { "simulator": false, "buildConfiguration": "Release" },
+      "android": { "buildType": "apk", "gradleCommand": ":app:assembleRelease" },
       "env": {
         "APP_ENV": "staging",
         "APP_NAME": "Nox (Staging)",
@@ -57,40 +32,28 @@
     },
     "production": {
       "distribution": "store",
-      "channel": "production",
-      "ios": {
-        "simulator": false,
-        "buildConfiguration": "Release",
-        "bundleIdentifier": "social.nox"
-      },
-      "android": {
-        "buildType": "aab",
-        "gradleCommand": ":app:bundleRelease"
-      },
+      "autoIncrement": true,
+      "ios": { "simulator": false, "buildConfiguration": "Release" },
+      "android": { "buildType": "app-bundle", "gradleCommand": ":app:bundleRelease" },
       "env": {
         "APP_ENV": "production",
         "APP_NAME": "Nox",
         "EXPO_PUBLIC_API_URL": "https://rork-api-prod-3a4b8043e7dd.herokuapp.com/api",
         "EXPO_PUBLIC_USE_MOCK_DATA": "false",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://b198d5a4180a329ad71dc1fa5e213d0f@o4510789682266113.ingest.us.sentry.io/4510789691834368",
         "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production",
         "EXPO_PUBLIC_DEBUG_MODE": "false",
         "IOS_BUNDLE_ID": "social.nox",
         "ANDROID_PACKAGE": "social.nox"
-      },
-      "autoIncrement": true
+      }
     },
     "production-ios": {
       "extends": "production",
-      "ios": {
-        "simulator": false,
-        "buildConfiguration": "Release"
-      }
+      "ios": { "simulator": false, "buildConfiguration": "Release" }
     },
     "production-android": {
       "extends": "production",
-      "android": {
-        "buildType": "aab"
-      }
+      "android": { "buildType": "app-bundle" }
     }
   },
   "submit": {

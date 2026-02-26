@@ -59,10 +59,7 @@ export const initSentry = () => {
 
     // Integrations
     integrations: [
-      new Sentry.ReactNativeTracing({
-        tracingOrigins: ['localhost', /^\/api\//],
-        routingInstrumentation: new Sentry.ReactNavigationInstrumentation(),
-      }),
+      Sentry.reactNavigationIntegration(),
     ],
   });
 
@@ -70,51 +67,54 @@ export const initSentry = () => {
   console.log(`[Sentry] Environment: ${ENVIRONMENT}`);
 };
 
-// Helper to capture exceptions with additional context
+// Helper to capture exceptions with additional context (no-op if Sentry not initialized)
 export const captureException = (error: Error, context?: Record<string, any>) => {
   if (__DEV__) {
     console.error('[Sentry] Exception:', error, context);
     return;
   }
-
-  Sentry.captureException(error, {
-    contexts: {
-      custom: context,
-    },
-  });
+  if (!SENTRY_DSN) return;
+  try {
+    Sentry.captureException(error, {
+      contexts: {
+        custom: context ?? {},
+      },
+    });
+  } catch (_) {
+    // ignore so app never crashes due to Sentry
+  }
 };
 
-// Helper to capture messages/logs
+// Helper to capture messages/logs (no-op if Sentry not initialized)
 export const captureMessage = (message: string, level: Sentry.SeverityLevel = 'info') => {
   if (__DEV__) {
     console.log(`[Sentry] Message (${level}):`, message);
     return;
   }
-
-  Sentry.captureMessage(message, level);
+  if (!SENTRY_DSN) return;
+  try {
+    Sentry.captureMessage(message, level);
+  } catch (_) {}
 };
 
-// Helper to add breadcrumbs for debugging
+// Helper to add breadcrumbs for debugging (no-op if Sentry not initialized)
 export const addBreadcrumb = (message: string, category: string, data?: Record<string, any>) => {
-  Sentry.addBreadcrumb({
-    message,
-    category,
-    data,
-    level: 'info',
-  });
+  if (!SENTRY_DSN) return;
+  try {
+    Sentry.addBreadcrumb({ message, category, data, level: 'info' });
+  } catch (_) {}
 };
 
-// Helper to set user context
+// Helper to set user context (no-op if Sentry not initialized)
 export const setUserContext = (userId: string | null, email?: string, username?: string) => {
-  if (userId) {
-    Sentry.setUser({
-      id: userId,
-      email,
-      username,
-    });
-  } else {
-    Sentry.setUser(null);
-  }
+  if (!SENTRY_DSN) return;
+  try {
+    if (userId) {
+      Sentry.setUser({ id: userId, email, username });
+    } else {
+      Sentry.setUser(null);
+    }
+  } catch (_) {}
 };
 
 export default Sentry;
