@@ -85,7 +85,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <Text style={styles.emoji}>😔</Text>
             <Text style={styles.title}>Oops! Something went wrong</Text>
             <Text style={styles.description}>
-              We're sorry for the inconvenience. The app encountered an unexpected error.
+              We&apos;re sorry for the inconvenience. The app encountered an unexpected error.
             </Text>
 
             {__DEV__ && this.state.error && (

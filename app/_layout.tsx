@@ -27,6 +27,12 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
 import { initSentry, captureException } from "@/config/sentry";
 
+// Prevent the splash screen from auto-hiding. We call hideAsync() explicitly
+// from RootLayout's useEffect (the outermost component), which fires after all
+// provider and child effects have committed. Calling it from a deeply-nested
+// component (like RootLayoutNav) fires too early in the commit cycle and the
+// native hide is silently ignored. expo-router's internalMaybeHideAsync is also
+// blocked (userControlledAutoHideEnabled=true) so only our explicit call hides it.
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
@@ -42,8 +48,14 @@ function RootLayoutNav() {
 
     const checkAgeVerification = async () => {
       try {
-        // Check if user has already verified their age
-        const verified = await AsyncStorage.getItem('age_verified');
+        // Race AsyncStorage against a 3-second timeout — if the native module is
+        // in a broken state after a caught void-method exception, getItem may never
+        // resolve. The timeout ensures the age gate always unblocks.
+        const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 3000));
+        const verified = await Promise.race([
+          AsyncStorage.getItem('age_verified'),
+          timeout,
+        ]);
 
         if (!isMounted) return;
 
@@ -77,15 +89,8 @@ function RootLayoutNav() {
     setShowAgeGate(false);
   };
 
-  // Hide the splash screen only after the age check resolves, so the splash
-  // stays visible during the async check and there is no black screen flash.
-  useEffect(() => {
-    if (!isCheckingAge) {
-      SplashScreen.hideAsync();
-    }
-  }, [isCheckingAge]);
-
-  // Keep returning null while checking — splash screen is still covering the screen
+  // Keep returning null while checking — the native splash screen (prevented
+  // from auto-hiding above) stays visible, so there is no blank-screen flash.
   if (isCheckingAge) {
     return null;
   }
@@ -120,6 +125,16 @@ export default function RootLayout() {
   // load time caused TurboModule void-method crashes on startup.
   useEffect(() => {
     initSentry();
+  }, []);
+
+  // Hide the splash screen from the outermost component. React fires effects
+  // bottom-up (deepest children first, outermost last), so this useEffect runs
+  // after all provider and RootLayoutNav effects have committed — the point at
+  // which the native UI thread has fully processed the initial render. Calling
+  // hideAsync() from a deeply-nested component fires too early and is silently
+  // ignored by SplashScreenManager on device.
+  useEffect(() => {
+    SplashScreen.hideAsync();
   }, []);
 
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {

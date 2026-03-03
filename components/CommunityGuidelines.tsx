@@ -84,7 +84,7 @@ export default function CommunityGuidelines() {
           title="Be Respectful"
         >
           <Text style={styles.description}>
-            Treat everyone with kindness and respect. We're all here to have a good time.
+            Treat everyone with kindness and respect. We&apos;re all here to have a good time.
           </Text>
           <RuleItem allowed text="Share positive nightlife experiences" />
           <RuleItem allowed text="Engage in friendly conversations" />
@@ -99,7 +99,7 @@ export default function CommunityGuidelines() {
           title="Content Standards"
         >
           <Text style={styles.description}>
-            Share authentic nightlife moments while respecting venue rules and others' privacy.
+            Share authentic nightlife moments while respecting venue rules and others&apos; privacy.
           </Text>
           <RuleItem allowed text="Authentic videos and photos from nightlife venues" />
           <RuleItem allowed text="Content that captures the energy and atmosphere" />
@@ -115,12 +115,12 @@ export default function CommunityGuidelines() {
           title="Privacy & Safety"
         >
           <Text style={styles.description}>
-            Protect your privacy and respect others' boundaries.
+            Protect your privacy and respect others&apos; boundaries.
           </Text>
           <RuleItem allowed text="Keep personal information private" />
           <RuleItem allowed text="Report suspicious or harmful behavior" />
           <RuleItem allowed text="Use privacy settings to control your content" />
-          <RuleItem allowed={false} text="Sharing others' personal information (doxxing)" />
+          <RuleItem allowed={false} text="Sharing others&apos; personal information (doxxing)" />
           <RuleItem allowed={false} text="Impersonating other users or venues" />
           <RuleItem allowed={false} text="Creating fake accounts or profiles" />
         </GuidelinesSection>
@@ -200,7 +200,7 @@ export default function CommunityGuidelines() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            These guidelines are subject to change. We'll notify you of any significant updates.
+            These guidelines are subject to change. We&apos;ll notify you of any significant updates.
           </Text>
           <Text style={styles.footerDate}>Last updated: February 7, 2026</Text>
         </View>

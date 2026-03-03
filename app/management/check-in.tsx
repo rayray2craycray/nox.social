@@ -141,7 +141,7 @@ export default function CheckInScreen() {
                   <Text style={styles.instructionNumberText}>1</Text>
                 </View>
                 <Text style={styles.instructionText}>
-                  Tap the "Scan QR Code" button below
+                  Tap the &quot;Scan QR Code&quot; button below
                 </Text>
               </View>
               <View style={styles.instructionItem}>
@@ -149,7 +149,7 @@ export default function CheckInScreen() {
                   <Text style={styles.instructionNumberText}>2</Text>
                 </View>
                 <Text style={styles.instructionText}>
-                  Position the guest's ticket QR code in the frame
+                  Position the guest&apos;s ticket QR code in the frame
                 </Text>
               </View>
               <View style={styles.instructionItem}>

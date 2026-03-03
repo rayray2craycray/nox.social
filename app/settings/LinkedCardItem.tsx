@@ -16,7 +16,7 @@ interface LinkedCardItemProps {
   onRemove: (cardId: string) => void;
 }
 
-export const LinkedCardItem = memo<LinkedCardItemProps>(({ card, onRemove }) => {
+const LinkedCardItemComponent = ({ card, onRemove }: LinkedCardItemProps) => {
   // Memoize gradient colors to avoid recalculation
   const gradientColors = useMemo((): [string, string] => {
     switch (card.brand.toLowerCase()) {
@@ -67,7 +67,9 @@ export const LinkedCardItem = memo<LinkedCardItemProps>(({ card, onRemove }) => 
       </LinearGradient>
     </View>
   );
-});
+};
+LinkedCardItemComponent.displayName = 'LinkedCardItem';
+export const LinkedCardItem = memo(LinkedCardItemComponent);
 
 const styles = StyleSheet.create({
   card: {

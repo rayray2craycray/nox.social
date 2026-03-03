@@ -65,11 +65,28 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const [token, expiryStr, userData] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
-          AsyncStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY),
-          AsyncStorage.getItem(STORAGE_KEYS.USER_DATA),
+        // Race AsyncStorage reads against a 3-second timeout. If the native
+        // module is stuck after a caught void-method exception, getItem calls
+        // may never resolve. The timeout ensures isLoading always unblocks so
+        // the sign-in screen is shown rather than a permanent spinner.
+        const authStorageTimeout = new Promise<null>(resolve =>
+          setTimeout(() => resolve(null), 3000)
+        );
+        const asyncResult = await Promise.race([
+          Promise.all([
+            AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
+            AsyncStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY),
+            AsyncStorage.getItem(STORAGE_KEYS.USER_DATA),
+          ]).then(values => ({ values })),
+          authStorageTimeout,
         ]);
+
+        if (!asyncResult) {
+          console.warn('[Auth] AsyncStorage timed out during init — treating as unauthenticated');
+          return;
+        }
+
+        const [token, expiryStr, userData] = asyncResult.values;
 
         if (token && expiryStr && userData) {
           const expiry = parseInt(expiryStr, 10);

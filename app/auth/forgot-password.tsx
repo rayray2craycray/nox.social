@@ -60,7 +60,7 @@ export default function ForgotPasswordScreen() {
           </View>
           <Text style={styles.title}>Check Your Email</Text>
           <Text style={styles.successText}>
-            We've sent a password reset link to{'\n'}
+            We&apos;ve sent a password reset link to{'\n'}
             <Text style={styles.emailText}>{email}</Text>
           </Text>
           <Text style={styles.instruction}>
@@ -93,7 +93,7 @@ export default function ForgotPasswordScreen() {
             </TouchableOpacity>
             <Text style={styles.title}>Reset Password</Text>
             <Text style={styles.subtitle}>
-              Enter your email and we'll send you instructions to reset your password
+              Enter your email and we&apos;ll send you instructions to reset your password
             </Text>
           </View>
 

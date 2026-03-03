@@ -65,7 +65,7 @@ export default function VerificationPendingScreen() {
         {/* Title */}
         <Text style={styles.title}>Check Your Email</Text>
         <Text style={styles.subtitle}>
-          We've sent a verification link to your business email address.
+          We&apos;ve sent a verification link to your business email address.
         </Text>
 
         {/* Steps */}
@@ -83,7 +83,7 @@ export default function VerificationPendingScreen() {
           <StepItem
             icon={<Clock size={20} color={COLORS.accent} />}
             title="Wait for approval"
-            description="We'll review your application within 24 hours"
+            description="We&apos;ll review your application within 24 hours"
           />
         </View>
 

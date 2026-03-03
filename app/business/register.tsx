@@ -302,7 +302,7 @@ export default function BusinessRegisterScreen() {
           <Text style={styles.errorText}>{errors.businessEmail}</Text>
         )}
         <Text style={styles.helperText}>
-          You'll receive a verification email at this address
+          You&apos;ll receive a verification email at this address
         </Text>
       </View>
 
@@ -559,7 +559,7 @@ export default function BusinessRegisterScreen() {
         <View style={styles.infoBox}>
           <AlertCircle size={20} color={COLORS.accent} />
           <Text style={styles.infoText}>
-            After verification, you'll become the Head Moderator of your venue's server
+            After verification, you&apos;ll become the Head Moderator of your venue&apos;s server
             with full editing permissions.
           </Text>
         </View>

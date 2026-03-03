@@ -19,7 +19,7 @@ interface GigCardProps {
   formatCurrency: (amount: number) => string;
 }
 
-export const GigCard = memo<GigCardProps>(({ gig, onPress, formatDate, formatCurrency }) => {
+const GigCardComponent = ({ gig, onPress, formatDate, formatCurrency }: GigCardProps) => {
   return (
     <TouchableOpacity onPress={onPress} style={styles.gigCard}>
       <LinearGradient
@@ -60,15 +60,14 @@ export const GigCard = memo<GigCardProps>(({ gig, onPress, formatDate, formatCur
       </LinearGradient>
     </TouchableOpacity>
   );
-}, (prevProps, nextProps) => {
-  // Custom comparison: only re-render if gig data actually changed
-  return (
-    prevProps.gig.id === nextProps.gig.id &&
-    prevProps.gig.status === nextProps.gig.status &&
-    prevProps.gig.fee === nextProps.gig.fee &&
-    prevProps.gig.barSalesGenerated === nextProps.gig.barSalesGenerated
-  );
-});
+};
+GigCardComponent.displayName = 'GigCard';
+const gigCardCompare = (prevProps: GigCardProps, nextProps: GigCardProps) =>
+  prevProps.gig.id === nextProps.gig.id &&
+  prevProps.gig.status === nextProps.gig.status &&
+  prevProps.gig.fee === nextProps.gig.fee &&
+  prevProps.gig.barSalesGenerated === nextProps.gig.barSalesGenerated;
+export const GigCard = memo(GigCardComponent, gigCardCompare);
 
 const styles = StyleSheet.create({
   gigCard: {

@@ -406,7 +406,7 @@ export default function POSIntegrationScreen() {
                       2. Navigate to Settings → API Access
                     </Text>
                     <Text style={styles.instructionsText}>
-                      3. Generate a new API key with "Orders" permission
+                      3. Generate a new API key with &quot;Orders&quot; permission
                     </Text>
                     <Text style={styles.instructionsText}>
                       4. Copy your Restaurant GUID from Settings → General

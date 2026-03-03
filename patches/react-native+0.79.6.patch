@@ -1,0 +1,26 @@
+diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+index 441a16f..14a8483 100644
+--- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
++++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
+@@ -438,7 +438,20 @@ TraceSection s(
+     @try {
+       [inv invokeWithTarget:strongModule];
+     } @catch (NSException *exception) {
+-      throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
++      if (shouldVoidMethodsExecuteSync_) {
++        // Sync void methods can safely convert to a C++ JSError on the JS thread.
++        throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
++      } else {
++        // Async void methods: throwing C++ exception from @catch + @finally causes
++        // objc_exception_rethrow → __cxa_rethrow → std::terminate() on ARM64.
++        // Void methods cannot return errors to JS, so log and continue.
++        RCTLogError(
++            @"TurboModule void method '%s' of '%s' raised an ObjC exception: %@ (%@)",
++            methodName,
++            moduleName,
++            exception.name,
++            exception.reason);
++      }
+     } @finally {
+       [retainedObjectsForInvocation removeAllObjects];
+     }

@@ -17,7 +17,7 @@ interface StatsCardProps {
   subtitle?: string;
 }
 
-export const StatsCard = memo<StatsCardProps>(({ icon, label, value, subtitle }) => {
+const StatsCardComponent = ({ icon, label, value, subtitle }: StatsCardProps) => {
   return (
     <View style={styles.statsCard}>
       <LinearGradient
@@ -35,7 +35,9 @@ export const StatsCard = memo<StatsCardProps>(({ icon, label, value, subtitle })
       </View>
     </View>
   );
-});
+};
+StatsCardComponent.displayName = 'StatsCard';
+export const StatsCard = memo(StatsCardComponent);
 
 const styles = StyleSheet.create({
   statsCard: {
