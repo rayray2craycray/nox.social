@@ -6,12 +6,15 @@
 import apiClient from './config';
 import {
   Venue,
-  Server,
+  VenueServer,
   VibeCheckVote,
   VenueVibeData,
   VibeEnergyLevel,
   WaitTimeRange
 } from '@/types';
+
+// Alias for backward compatibility
+type Server = VenueServer;
 
 /**
  * Request/Response Types

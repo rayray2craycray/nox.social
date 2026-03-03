@@ -522,8 +522,8 @@ export const searchVenues = async (
 
           return venue;
         })
-        .filter(venue => venue.distance <= radiusMiles)
-        .sort((a, b) => a.distance - b.distance);
+        .filter((venue: DiscoveredVenue) => venue.distance <= radiusMiles)
+        .sort((a: DiscoveredVenue, b: DiscoveredVenue) => a.distance - b.distance);
 
       return venues;
     }

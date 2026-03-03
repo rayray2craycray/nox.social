@@ -211,6 +211,7 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
   const crewsQuery = useQuery({
     queryKey: ['crews', userId],
     queryFn: async () => {
+      if (!userId) return [];
       try {
         // Use userId from auth context
         const response = await socialApi.getUserCrews(userId);
@@ -255,6 +256,7 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
   const challengeProgressQuery = useQuery({
     queryKey: ['challenge-progress', userId],
     queryFn: async () => {
+      if (!userId) return [];
       try {
         console.log('[Social] Fetching challenge progress for userId:', userId);
         // Use userId from auth context
@@ -514,8 +516,9 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
   const crewPlans = useMemo(() => crewPlansQuery.data || [], [crewPlansQuery.data]);
 
   const userCrews = useMemo(() => {
+    if (!userId) return [];
     return crews.filter(crew => crew.memberIds.includes(userId));
-  }, [crews]);
+  }, [crews, userId]);
 
   const pendingCrewInvites = useMemo(() => {
     return crewInvites.filter(invite =>
@@ -596,7 +599,7 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
 
   const respondToCrewInvite = useCallback((inviteId: string, accept: boolean) => {
     const invite = crewInvites.find(inv => inv.id === inviteId);
-    if (!invite) return;
+    if (!invite || !userId) return;
 
     if (accept) {
       // Update invite status
@@ -628,6 +631,7 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
 
   const leaveCrewMutation = useMutation({
     mutationFn: async (crewId: string) => {
+      if (!userId) throw new Error('User not authenticated');
       try {
         // Use userId from auth context
         const response = await socialApi.removeCrewMember(crewId, userId);
@@ -662,6 +666,7 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
   }, [crewPlans, updateCrewPlansMutation]);
 
   const updateCrewPlanAttendance = useCallback((planId: string, attending: boolean) => {
+    if (!userId) return;
     const updatedPlans = crewPlans.map(plan => {
       if (plan.id !== planId) return plan;
 
@@ -672,7 +677,7 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
       return { ...plan, attendingMemberIds };
     });
     updateCrewPlansMutation.mutate(updatedPlans);
-  }, [crewPlans, updateCrewPlansMutation]);
+  }, [crewPlans, updateCrewPlansMutation, userId]);
 
   // ===== CHALLENGE HELPER FUNCTIONS =====
   const joinChallengeMutation = useMutation({
@@ -707,6 +712,7 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
 
   const updateChallengeProgressApiMutation = useMutation({
     mutationFn: async ({ challengeId, incrementBy }: { challengeId: string; incrementBy: number }) => {
+      if (!userId) throw new Error('User not authenticated');
       try {
         // Use userId from auth context
         const response = await socialApi.updateChallengeProgress(challengeId, userId, incrementBy);

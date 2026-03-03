@@ -305,7 +305,7 @@ export default function CalendarScreen() {
                 size="large"
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  router.push(`/events/${event.id}`);
+                  router.push(`/events/${event.id}` as any);
                 }}
               />
             ))
@@ -321,11 +321,31 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  gradient: {
+    flex: 1,
+  },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    position: 'relative',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+    textAlign: 'center',
   },
   headerGradient: {
     position: 'absolute',
@@ -357,6 +377,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
+  filterBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#ff0080',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  timeFilterScroll: {
+    maxHeight: 50,
+    marginBottom: 8,
+  },
+  timeFilterContent: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  timeFilterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  timeFilterChipActive: {
+    backgroundColor: 'rgba(255, 0, 128, 0.2)',
+    borderColor: '#ff0080',
+  },
+  timeFilterLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#999',
+  },
+  timeFilterLabelActive: {
+    color: '#ff0080',
+  },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -379,11 +443,73 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   filtersPanel: {
-    backgroundColor: '#1a1a2e',
     marginHorizontal: 20,
     marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  filtersPanelGradient: {
     padding: 16,
     borderRadius: 12,
+  },
+  filtersPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  filtersPanelTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  clearFiltersText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#ff0080',
+  },
+  filterSection: {
+    marginBottom: 16,
+  },
+  filterSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  filterSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  filterOptionActive: {
+    backgroundColor: 'rgba(255, 0, 128, 0.2)',
+    borderColor: '#ff0080',
+  },
+  filterOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#999',
+  },
+  filterOptionTextActive: {
+    color: '#ff0080',
+  },
+  genreOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   filtersSectionTitle: {
     fontSize: 14,
@@ -433,9 +559,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  resultsHeader: {
+    marginBottom: 16,
+  },
+  resultsCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#999',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#999',
+  },
   emptyState: {
     alignItems: 'center',
     padding: 40,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#fff',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  clearButton: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    backgroundColor: '#ff0080',
+  },
+  clearButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
   },
   emptyStateText: {
     fontSize: 16,

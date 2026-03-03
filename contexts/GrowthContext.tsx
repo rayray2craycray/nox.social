@@ -36,6 +36,7 @@ export const [GrowthProvider, useGrowth] = createContextHook(() => {
   const groupPurchasesQuery = useQuery({
     queryKey: ['groupPurchases'],
     queryFn: async () => {
+      if (!userId) return [];
       try {
         // Use userId from auth context
         const response = await growthApi.getGroupPurchasesByUser(userId);
@@ -155,6 +156,7 @@ export const [GrowthProvider, useGrowth] = createContextHook(() => {
   const referralsQuery = useQuery({
     queryKey: ['referrals'],
     queryFn: async () => {
+      if (!userId) return [];
       try {
         // Use userId from auth context
         const response = await growthApi.getReferralStats(userId);
@@ -170,6 +172,7 @@ export const [GrowthProvider, useGrowth] = createContextHook(() => {
   const referralStatsQuery = useQuery({
     queryKey: ['referralStats'],
     queryFn: async () => {
+      if (!userId) return null;
       try {
         // Use userId from auth context
         const response = await growthApi.getReferralStats(userId);
@@ -185,6 +188,7 @@ export const [GrowthProvider, useGrowth] = createContextHook(() => {
   const referralRewardsQuery = useQuery({
     queryKey: ['referralRewards'],
     queryFn: async () => {
+      if (!userId) return [];
       try {
         // Use userId from auth context
         const response = await growthApi.getReferralRewards(userId);
@@ -260,7 +264,7 @@ export const [GrowthProvider, useGrowth] = createContextHook(() => {
 
   const storyTemplatesQuery = useQuery({
     queryKey: ['storyTemplates'],
-    queryFn: async () => [],
+    queryFn: async (): Promise<StoryTemplate[]> => [],
   });
 
   const shareableContentQuery = useQuery({
@@ -293,7 +297,7 @@ export const [GrowthProvider, useGrowth] = createContextHook(() => {
       const newContent: ShareableContent = {
         id: `share-${Date.now()}`,
         userId,
-        type: template.type === 'VENUE' ? 'GROUP_PURCHASE' : template.type === 'GROUP_INVITE' ? 'GROUP_PURCHASE' : template.type,
+        type: (template.type === 'VENUE' ? 'GROUP_PURCHASE' : template.type === 'GROUP_INVITE' ? 'GROUP_PURCHASE' : template.type) as ShareableContent['type'],
         templateId,
         customData,
         deepLink,
@@ -336,11 +340,12 @@ export const [GrowthProvider, useGrowth] = createContextHook(() => {
   // ===== COMPUTED VALUES =====
 
   const myGroupPurchases = useMemo(() => {
+    if (!userId) return [];
     // Use userId from auth context
     return (groupPurchasesQuery.data || []).filter(
       (gp: GroupPurchase) => gp.initiatorId === userId || gp.currentParticipants.includes(userId)
     );
-  }, [groupPurchasesQuery.data]);
+  }, [groupPurchasesQuery.data, userId]);
 
   const openGroupPurchases = useMemo(() => {
     return (groupPurchasesQuery.data || []).filter(

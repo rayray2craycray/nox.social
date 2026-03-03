@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { View, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppStateProvider, DiscoveryProvider } from "@/contexts/AppStateContext";
 import { PerformerProvider } from "@/contexts/PerformerContext";
@@ -27,13 +28,12 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
 import { initSentry, captureException } from "@/config/sentry";
 
-// Prevent the splash screen from auto-hiding. We call hideAsync() explicitly
-// from RootLayout's useEffect (the outermost component), which fires after all
-// provider and child effects have committed. Calling it from a deeply-nested
-// component (like RootLayoutNav) fires too early in the commit cycle and the
-// native hide is silently ignored. expo-router's internalMaybeHideAsync is also
-// blocked (userControlledAutoHideEnabled=true) so only our explicit call hides it.
-SplashScreen.preventAutoHideAsync();
+// DO NOT call SplashScreen.preventAutoHideAsync() here.
+// Calling it sets userControlledAutoHideEnabled=true, which blocks expo-router's
+// _internal_maybeHideAsync path. Combined with returning null from RootLayoutNav
+// (which prevents RCTContentDidAppearNotification from firing on New Arch),
+// this creates a deadlock where no code path can hide the splash.
+// Instead, we let expo-router manage the splash lifecycle automatically.
 
 const queryClient = new QueryClient();
 
@@ -89,12 +89,12 @@ function RootLayoutNav() {
     setShowAgeGate(false);
   };
 
-  // Keep returning null while checking — the native splash screen (prevented
-  // from auto-hiding above) stays visible, so there is no blank-screen flash.
-  if (isCheckingAge) {
-    return null;
-  }
-
+  // ALWAYS render the Stack — never return null. Returning null prevents React
+  // Native from producing native views on the surface, which means
+  // RCTContentDidAppearNotification never fires on New Architecture. This blocks
+  // expo-router's _internal_maybeHideAsync from ever triggering, causing the
+  // splash screen to stay visible forever. Instead, we render a black overlay
+  // on top of the Stack while loading to prevent content flash.
   return (
     <>
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
@@ -116,6 +116,7 @@ function RootLayoutNav() {
         visible={showAgeGate}
         onVerified={handleAgeVerified}
       />
+      {isCheckingAge && <View style={styles.loadingOverlay} />}
     </>
   );
 }
@@ -127,14 +128,16 @@ export default function RootLayout() {
     initSentry();
   }, []);
 
-  // Hide the splash screen from the outermost component. React fires effects
-  // bottom-up (deepest children first, outermost last), so this useEffect runs
-  // after all provider and RootLayoutNav effects have committed — the point at
-  // which the native UI thread has fully processed the initial render. Calling
-  // hideAsync() from a deeply-nested component fires too early and is silently
-  // ignored by SplashScreenManager on device.
+  // Fallback: force-hide the splash screen after a delay. expo-router should
+  // hide it automatically via _internal_maybeHideAsync once the navigation
+  // state is ready, but if anything goes wrong (New Arch timing, surface state,
+  // etc.) this ensures we never get stuck. The 2-second delay gives expo-router
+  // time to do its thing first.
   useEffect(() => {
-    SplashScreen.hideAsync();
+    const fallback = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 2000);
+    return () => clearTimeout(fallback);
   }, []);
 
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
@@ -194,3 +197,11 @@ export default function RootLayout() {
     </ErrorBoundary>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000000',
+    zIndex: 9999,
+  },
+});

@@ -667,6 +667,7 @@ export interface ShareableContent {
 export interface Event {
   id: string;
   venueId: string;
+  venueName?: string;
   title: string;
   description: string;
   performerIds: string[];
@@ -731,6 +732,7 @@ export interface GuestListEntry {
   guestPhone?: string;
   guestEmail?: string;
   plusOnes: number;
+  listType?: 'STANDARD' | 'VIP' | 'MEDIA';
   status: 'PENDING' | 'CONFIRMED' | 'CHECKED_IN' | 'NO_SHOW' | 'CANCELLED';
   addedBy: string;
   notes?: string;

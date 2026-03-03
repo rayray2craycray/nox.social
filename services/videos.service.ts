@@ -4,7 +4,10 @@
  */
 
 import { api } from './api';
-import type { FeedVideo } from '@/types';
+import type { VibeVideo } from '@/types';
+
+// FeedVideo is an alias for VibeVideo in the feed context
+type FeedVideo = VibeVideo;
 
 export const videosService = {
   async getFeedVideos(filter?: 'nearby' | 'following'): Promise<FeedVideo[]> {

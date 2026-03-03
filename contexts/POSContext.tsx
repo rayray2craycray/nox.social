@@ -6,6 +6,7 @@ import {
   POSIntegration,
   POSCredentials,
   POSLocation,
+  POSProviderType,
   SpendRule,
   POSTransaction,
   SyncResult,
@@ -15,6 +16,13 @@ import {
 // import { mockPOSIntegration, mockPOSLocations, mockSpendRules } from '@/mocks/pos';
 import { POS_CONFIG } from '@/constants/app';
 import { api } from '@/services/api';
+
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
 
 const STORAGE_KEYS = {
   POS_INTEGRATION: 'vibelink_pos_integration',
@@ -96,7 +104,7 @@ export const [POSProvider, usePOS] = createContextHook(() => {
       credentials,
     }: {
       venueId: string;
-      provider: POSProvider;
+      provider: POSProviderType;
       credentials: POSCredentials;
     }) => {
       // Update UI to show connecting state
@@ -114,7 +122,7 @@ export const [POSProvider, usePOS] = createContextHook(() => {
       setIntegration(connectingIntegration);
 
       // Call backend API to validate and store credentials
-      const response = await api.post('/pos/connect', {
+      const response = await api.post<ApiResponse<POSIntegration>>('/pos/connect', {
         venueId,
         provider,
         credentials,
@@ -148,11 +156,11 @@ export const [POSProvider, usePOS] = createContextHook(() => {
       provider,
       credentials,
     }: {
-      provider: POSProvider;
+      provider: POSProviderType;
       credentials: POSCredentials;
     }) => {
       // Call backend validation endpoint
-      const response = await api.post('/pos/validate', {
+      const response = await api.post<ApiResponse<unknown>>('/pos/validate', {
         provider,
         credentials,
       });
@@ -206,7 +214,7 @@ export const [POSProvider, usePOS] = createContextHook(() => {
       }
 
       // Call backend sync endpoint
-      const response = await api.post(`/pos/sync/${venueId}`, {
+      const response = await api.post<ApiResponse<SyncResult>>(`/pos/sync/${venueId}`, {
         fromDate,
         toDate,
       });
@@ -226,7 +234,7 @@ export const [POSProvider, usePOS] = createContextHook(() => {
   const getStatus = useMutation({
     mutationFn: async (venueId: string) => {
       // Fetch latest status from backend
-      const response = await api.get(`/pos/status/${venueId}`);
+      const response = await api.get<ApiResponse<POSIntegration>>(`/pos/status/${venueId}`);
       const updatedIntegration = response.data as POSIntegration;
 
       // Update local storage
@@ -250,7 +258,7 @@ export const [POSProvider, usePOS] = createContextHook(() => {
   const createSpendRule = useMutation({
     mutationFn: async (rule: Omit<SpendRule, 'id'>) => {
       // Call backend API
-      const response = await api.post(`/pos/rules/${rule.venueId}`, rule);
+      const response = await api.post<ApiResponse<SpendRule[]>>(`/pos/rules/${rule.venueId}`, rule);
       return response.data as SpendRule[];
     },
     onSuccess: (data) => {
@@ -264,7 +272,7 @@ export const [POSProvider, usePOS] = createContextHook(() => {
   const updateSpendRule = useMutation({
     mutationFn: async (rule: SpendRule) => {
       // Call backend API
-      const response = await api.patch(`/pos/rules/${rule.venueId}/${rule.id}`, rule);
+      const response = await api.patch<ApiResponse<SpendRule[]>>(`/pos/rules/${rule.venueId}/${rule.id}`, rule);
       return response.data as SpendRule[];
     },
     onSuccess: (data) => {
@@ -278,7 +286,7 @@ export const [POSProvider, usePOS] = createContextHook(() => {
   const deleteSpendRule = useMutation({
     mutationFn: async ({ venueId, ruleId }: { venueId: string; ruleId: string }) => {
       // Call backend API
-      const response = await api.delete(`/pos/rules/${venueId}/${ruleId}`);
+      const response = await api.delete<ApiResponse<SpendRule[]>>(`/pos/rules/${venueId}/${ruleId}`);
       return response.data as SpendRule[];
     },
     onSuccess: (data) => {
@@ -292,7 +300,7 @@ export const [POSProvider, usePOS] = createContextHook(() => {
   const toggleSpendRule = useMutation({
     mutationFn: async ({ venueId, ruleId }: { venueId: string; ruleId: string }) => {
       // Call backend API
-      const response = await api.post(`/pos/rules/${venueId}/${ruleId}/toggle`);
+      const response = await api.post<ApiResponse<SpendRule[]>>(`/pos/rules/${venueId}/${ruleId}/toggle`);
       return response.data as SpendRule[];
     },
     onSuccess: (data) => {
@@ -312,9 +320,7 @@ export const [POSProvider, usePOS] = createContextHook(() => {
       period: 'day' | 'week' | 'month' | 'year' | 'all';
     }) => {
       // Call backend API
-      const response = await api.get(`/pos/revenue/${venueId}`, {
-        params: { period },
-      });
+      const response = await api.get<ApiResponse<RevenueStats>>(`/pos/revenue/${venueId}?period=${period}`);
 
       return response.data as RevenueStats;
     },

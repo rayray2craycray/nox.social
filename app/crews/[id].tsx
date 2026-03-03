@@ -172,7 +172,7 @@ export default function CrewDetailScreen() {
         {/* Tab Content */}
         {selectedTab === 'members' && (
           <View style={styles.tabContent}>
-            {crew.memberIds.map((memberId) => {
+            {crew.memberIds.map((memberId: string) => {
               const profile = getFriendProfile(memberId);
               const isCrewOwner = memberId === crew.ownerId;
 

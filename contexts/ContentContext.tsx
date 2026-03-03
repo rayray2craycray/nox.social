@@ -281,6 +281,7 @@ export const [ContentProvider, useContent] = createContextHook(() => {
   // ===== HIGHLIGHT FUNCTIONS =====
   const uploadHighlightMutation = useMutation({
     mutationFn: async (highlight: Omit<HighlightVideo, 'id' | 'createdAt' | 'expiresAt' | 'isActive'>) => {
+      if (!userId) throw new Error('User not authenticated');
       try {
         // Use userId from auth context
         const response = await contentApi.uploadHighlight({
@@ -348,14 +349,14 @@ export const [ContentProvider, useContent] = createContextHook(() => {
     // Filter by performers
     if (filter.performerIds && filter.performerIds.length > 0) {
       filtered = filtered.filter(event =>
-        event.performerIds.some(pid => filter.performerIds!.includes(pid))
+        event.performerIds.some((pid: string) => filter.performerIds!.includes(pid))
       );
     }
 
     // Filter by genres
     if (filter.genres && filter.genres.length > 0) {
       filtered = filtered.filter(event =>
-        event.genres.some(genre => filter.genres!.includes(genre))
+        event.genres.some((genre: string) => filter.genres!.includes(genre))
       );
     }
 
@@ -372,7 +373,7 @@ export const [ContentProvider, useContent] = createContextHook(() => {
     // Filter by price range
     if (filter.priceRange) {
       filtered = filtered.filter(event => {
-        const minPrice = Math.min(...event.ticketTiers.map(t => t.price));
+        const minPrice = Math.min(...event.ticketTiers.map((t: any) => t.price));
         return minPrice >= filter.priceRange!.min && minPrice <= filter.priceRange!.max;
       });
     }

@@ -77,7 +77,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [offlineQueue, setOfflineQueue] = useState<any[]>([]);
 
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize Socket.io connection
   useEffect(() => {

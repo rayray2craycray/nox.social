@@ -175,9 +175,9 @@ class ApiClient {
   async get<T>(endpoint: string, config?: RequestConfig): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     console.log('[ApiClient] GET request:', url);
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...config?.headers,
+      ...(config?.headers as Record<string, string>),
     };
 
     // Add auth token if available
@@ -209,9 +209,9 @@ class ApiClient {
   async post<T>(endpoint: string, data?: unknown, config?: RequestConfig): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     console.log('[ApiClient] POST request:', url, 'with data:', data);
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...config?.headers,
+      ...(config?.headers as Record<string, string>),
     };
 
     // Add auth token if available
@@ -242,9 +242,9 @@ class ApiClient {
 
   async put<T>(endpoint: string, data?: unknown, config?: RequestConfig): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...config?.headers,
+      ...(config?.headers as Record<string, string>),
     };
 
     // Add auth token if available
@@ -272,9 +272,9 @@ class ApiClient {
 
   async patch<T>(endpoint: string, data?: unknown, config?: RequestConfig): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...config?.headers,
+      ...(config?.headers as Record<string, string>),
     };
 
     // Add auth token if available
@@ -302,9 +302,9 @@ class ApiClient {
 
   async delete<T>(endpoint: string, config?: RequestConfig): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...config?.headers,
+      ...(config?.headers as Record<string, string>),
     };
 
     // Add auth token if available
@@ -343,6 +343,7 @@ export const api = {
   get: <T>(endpoint: string, config?: RequestConfig) => apiClient.get<T>(endpoint, config),
   post: <T>(endpoint: string, data?: unknown, config?: RequestConfig) => apiClient.post<T>(endpoint, data, config),
   put: <T>(endpoint: string, data?: unknown, config?: RequestConfig) => apiClient.put<T>(endpoint, data, config),
+  patch: <T>(endpoint: string, data?: unknown, config?: RequestConfig) => apiClient.patch<T>(endpoint, data, config),
   delete: <T>(endpoint: string, config?: RequestConfig) => apiClient.delete<T>(endpoint, config),
 };
 
@@ -1090,7 +1091,7 @@ export const retentionApi = {
     userId: string;
     venueId: string;
     date: string;
-    type: 'CHECK_IN' | 'VIDEO' | 'PHOTO' | 'MILESTONE';
+    type: 'CHECK_IN' | 'VIDEO' | 'PHOTO' | 'MILESTONE' | 'EVENT';
     content: {
       imageUrl?: string;
       videoUrl?: string;

@@ -5,18 +5,21 @@ export const mockToastLocations: ToastLocation[] = [
     id: 'loc-1',
     name: 'The Nox Room - Main Bar',
     address: '1234 Broadway St, Los Angeles, CA',
+    provider: 'TOAST',
     restaurantGuid: 'toast-guid-1',
   },
   {
     id: 'loc-2',
     name: 'The Nox Room - Rooftop',
     address: '1234 Broadway St, Los Angeles, CA',
+    provider: 'TOAST',
     restaurantGuid: 'toast-guid-2',
   },
   {
     id: 'loc-3',
     name: 'Velvet Underground - Main Floor',
     address: '567 Sunset Blvd, Los Angeles, CA',
+    provider: 'TOAST',
     restaurantGuid: 'toast-guid-3',
   },
 ];
@@ -25,6 +28,11 @@ export const mockToastIntegration: ToastIntegration = {
   id: 'toast-int-1',
   venueId: 'venue-1',
   status: 'DISCONNECTED',
+  metadata: {},
+  syncConfig: {
+    enabled: false,
+    interval: 300,
+  },
   selectedLocations: [],
   webhooksEnabled: false,
 };

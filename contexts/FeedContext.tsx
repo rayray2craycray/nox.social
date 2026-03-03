@@ -97,7 +97,7 @@ export const [FeedProvider, useFeed] = createContextHook(() => {
         const response = await contentApi.getHighlightsFeed(userId);
         if (response.success && response.data) {
           if (__DEV__) console.log('[Feed] Fetched highlights from API:', response.data.length);
-          return response.data as VibeVideo[];
+          return response.data as unknown as VibeVideo[];
         }
         if (__DEV__) console.log('[Feed] API returned no data');
         return [];

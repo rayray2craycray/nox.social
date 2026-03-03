@@ -16,6 +16,7 @@ export const [RetentionProvider, useRetention] = createContextHook(() => {
   const userStreaksQuery = useQuery({
     queryKey: ['user-streaks'],
     queryFn: async () => {
+      if (!userId) return [];
       try {
         // Use userId from auth context
         const response = await retentionApi.getUserStreaks(userId);
@@ -31,6 +32,7 @@ export const [RetentionProvider, useRetention] = createContextHook(() => {
   const memoriesQuery = useQuery({
     queryKey: ['memories'],
     queryFn: async () => {
+      if (!userId) return [];
       try {
         // Use userId from auth context
         const response = await retentionApi.getUserMemories(userId);
@@ -52,6 +54,7 @@ export const [RetentionProvider, useRetention] = createContextHook(() => {
   // ===== MUTATIONS =====
   const claimStreakRewardMutation = useMutation({
     mutationFn: async (streakId: string) => {
+      if (!userId) throw new Error('User not authenticated');
       try {
         // Use userId from auth context
         const response = await retentionApi.claimStreakReward(streakId, userId);
@@ -73,6 +76,7 @@ export const [RetentionProvider, useRetention] = createContextHook(() => {
 
   const addMemoryMutation = useMutation({
     mutationFn: async (memory: Omit<Memory, 'id' | 'userId' | 'createdAt'>) => {
+      if (!userId) throw new Error('User not authenticated');
       try {
         // Use userId from auth context
         const response = await retentionApi.createMemory({

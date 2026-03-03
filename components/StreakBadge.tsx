@@ -39,13 +39,14 @@ const StreakBadgeComponent = ({ streak, onPress, size = 'large' }: StreakBadgePr
     }[streak.type] || 'Streak';
   };
 
-  const getGradientColors = () => {
-    return {
+  const getGradientColors = (): [string, string] => {
+    const map: Record<string, [string, string]> = {
       'WEEKEND_WARRIOR': ['#F59E0B', '#EF4444'],
       'VENUE_LOYALTY': ['#8B5CF6', '#EC4899'],
       'SOCIAL_BUTTERFLY': ['#3B82F6', '#8B5CF6'],
       'EVENT_ENTHUSIAST': ['#10B981', '#06B6D4'],
-    }[streak.type] || ['#F59E0B', '#EF4444'];
+    };
+    return map[streak.type] || ['#F59E0B', '#EF4444'];
   };
 
   const progressToNextMilestone = () => {

@@ -17,8 +17,12 @@ export * from './suggestions.service';
 export * from './upload.service';
 
 // Re-export for convenience
+import { venuesService as _venues } from './venues.service';
+import { videosService as _videos } from './videos.service';
+import { userService as _user } from './user.service';
+
 export const services = {
-  venues: venuesService,
-  videos: videosService,
-  user: userService,
+  venues: _venues,
+  videos: _videos,
+  user: _user,
 };

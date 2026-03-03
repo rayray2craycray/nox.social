@@ -31,6 +31,7 @@ export const [MonetizationProvider, useMonetization] = createContextHook(() => {
   const userPriceAlertsQuery = useQuery({
     queryKey: ['price-alerts'],
     queryFn: async () => {
+      if (!userId) return [];
       try {
         // Use userId from auth context
         const response = await pricingApi.getUserPriceAlerts(userId);
@@ -49,9 +50,10 @@ export const [MonetizationProvider, useMonetization] = createContextHook(() => {
   // ===== MUTATIONS =====
   const setPriceAlertMutation = useMutation({
     mutationFn: async ({ venueId, targetDiscount }: { venueId: string; targetDiscount: number }) => {
+      if (!userId) throw new Error('User not authenticated');
       try {
         // Use userId from auth context
-        const response = await pricingApi.createPriceAlert(userId, venueId, targetDiscount);
+        const response = await pricingApi.createPriceAlert({ userId, venueId, targetDiscount });
         return response.data!;
       } catch (error) {
         console.error('Failed to set price alert:', error);

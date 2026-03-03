@@ -200,13 +200,19 @@ export const API_ENDPOINTS = {
     list: '/events',
     byId: (id: string) => `/events/${id}`,
     byVenue: (venueId: string) => `/events/venue/${venueId}`,
+    upcoming: '/events/upcoming',
+    detail: (id: string) => `/events/${id}`,
+    venue: (venueId: string) => `/events/venue/${venueId}`,
+    performer: (performerId: string) => `/events/performer/${performerId}`,
     tickets: {
       purchase: '/events/tickets/purchase',
-      user: '/events/tickets/user',
+      user: (userId: string) => `/events/tickets/user/${userId}`,
       byQr: (qrCode: string) => `/events/tickets/qr/${qrCode}`,
       transfer: (id: string) => `/events/tickets/${id}/transfer`,
       checkin: '/events/tickets/checkin',
       cancel: (id: string) => `/events/tickets/${id}/cancel`,
+      validate: '/events/tickets/validate',
+      checkIn: (id: string) => `/events/tickets/${id}/checkin`,
     },
     guestlist: {
       add: '/events/guestlist/add',
@@ -218,6 +224,14 @@ export const API_ENDPOINTS = {
       update: (id: string) => `/events/guestlist/${id}`,
       remove: (id: string) => `/events/guestlist/${id}`,
       search: '/events/guestlist/search',
+    },
+    guestList: {
+      add: '/events/guestlist/add',
+      venue: (venueId: string) => `/events/guestlist/venue/${venueId}`,
+      event: (eventId: string) => `/events/guestlist/event/${eventId}`,
+      check: '/events/guestlist/check',
+      checkIn: (id: string) => `/events/guestlist/${id}/checkin`,
+      cancel: (id: string) => `/events/guestlist/${id}/cancel`,
     },
   },
 
@@ -232,8 +246,11 @@ export const API_ENDPOINTS = {
     },
     crews: {
       list: '/social/crews',
+      create: '/social/crews',
       byId: (id: string) => `/social/crews/${id}`,
+      detail: (id: string) => `/social/crews/${id}`,
       userCrews: (userId: string) => `/social/crews/user/${userId}`,
+      user: (userId: string) => `/social/crews/user/${userId}`,
       search: '/social/crews/search',
       active: '/social/crews/discover/active',
       join: (id: string) => `/social/crews/${id}/join`,
@@ -241,15 +258,81 @@ export const API_ENDPOINTS = {
       update: (id: string) => `/social/crews/${id}`,
       delete: (id: string) => `/social/crews/${id}`,
       invite: (id: string) => `/social/crews/${id}/invite`,
+      addMember: (id: string) => `/social/crews/${id}/members/add`,
+      removeMember: (id: string, userId: string) => `/social/crews/${id}/members/${userId}`,
     },
     challenges: {
       active: '/social/challenges/active',
       byId: (id: string) => `/social/challenges/${id}`,
+      detail: (id: string) => `/social/challenges/${id}`,
       user: (userId: string) => `/social/challenges/user/${userId}`,
       join: (id: string) => `/social/challenges/${id}/join`,
-      progress: '/social/challenges/progress',
+      progress: (id: string) => `/social/challenges/${id}/progress`,
       updateProgress: (id: string) => `/social/challenges/${id}/progress`,
+      userProgress: (challengeId: string, _userId: string) => `/social/challenges/${challengeId}/progress`,
       claim: (id: string) => `/social/challenges/${id}/claim`,
     },
+    sync: {
+      contacts: '/social/sync/contacts',
+      instagram: '/social/sync/instagram',
+    },
+  },
+
+  // Pricing
+  pricing: {
+    dynamic: {
+      current: (venueId: string) => `/pricing/dynamic/current/${venueId}`,
+      calculate: '/pricing/dynamic/calculate',
+      history: (venueId: string) => `/pricing/dynamic/history/${venueId}`,
+    },
+    alerts: {
+      create: '/pricing/alerts',
+      user: (userId: string) => `/pricing/alerts/user/${userId}`,
+      venue: (venueId: string) => `/pricing/alerts/venue/${venueId}`,
+      update: (id: string) => `/pricing/alerts/${id}`,
+      deactivate: (id: string) => `/pricing/alerts/${id}/deactivate`,
+      delete: (id: string) => `/pricing/alerts/${id}`,
+    },
+  },
+
+  // Retention
+  retention: {
+    streaks: {
+      user: (userId: string) => `/retention/streaks/user/${userId}`,
+      increment: (id: string) => `/retention/streaks/${id}/increment`,
+      claimMilestone: (id: string, milestone: number) => `/retention/streaks/${id}/milestone/${milestone}`,
+      leaderboard: (type: string) => `/retention/streaks/leaderboard/${type}`,
+      atRisk: '/retention/streaks/at-risk',
+    },
+    memories: {
+      create: '/retention/memories',
+      timeline: (userId: string) => `/retention/memories/timeline/${userId}`,
+      venue: (venueId: string) => `/retention/memories/venue/${venueId}`,
+      tagged: (userId: string) => `/retention/memories/tagged/${userId}`,
+      onThisDay: (userId: string) => `/retention/memories/on-this-day/${userId}`,
+      highlights: (userId: string) => `/retention/memories/highlights/${userId}`,
+      like: (id: string) => `/retention/memories/${id}/like`,
+      addComment: (id: string) => `/retention/memories/${id}/comments`,
+    },
+  },
+
+  // Business
+  business: {
+    register: '/business/register',
+    verify: (token: string) => `/business/verify/${token}`,
+    resendVerification: '/business/resend-verification',
+    profile: '/business/profile',
+    updateProfile: '/business/profile',
+  },
+
+  // Venue Management
+  venueManagement: {
+    roles: '/venue-management/roles',
+    detail: (venueId: string) => `/venue-management/${venueId}`,
+    updateInfo: (venueId: string) => `/venue-management/${venueId}/info`,
+    updateDisplay: (venueId: string) => `/venue-management/${venueId}/display`,
+    assignRole: (venueId: string) => `/venue-management/${venueId}/roles`,
+    removeRole: (venueId: string, roleId: string) => `/venue-management/${venueId}/roles/${roleId}`,
+    staff: (venueId: string) => `/venue-management/${venueId}/staff`,
   },
 };

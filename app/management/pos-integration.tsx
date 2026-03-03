@@ -85,7 +85,7 @@ export default function POSIntegrationScreen() {
         credentials,
       });
 
-      if (!result.valid) {
+      if (!(result as { valid: boolean }).valid) {
         setValidationError('Invalid credentials. Please check your API key and location ID.');
         setIsValidating(false);
         return;

@@ -14,11 +14,16 @@ import { TOAST_POS } from '@/constants/app';
 // For now, use default disconnected state
 
 const defaultToastIntegration: ToastIntegration = {
-  isConnected: false,
-  locationId: null,
-  locationName: null,
-  autoSyncEnabled: false,
-  lastSyncedAt: null,
+  id: '',
+  venueId: '',
+  status: 'DISCONNECTED',
+  metadata: {},
+  syncConfig: {
+    enabled: false,
+    interval: 300000,
+  },
+  selectedLocations: [],
+  webhooksEnabled: false,
 };
 import { getSecureItem, setSecureItem, deleteSecureItem, SECURE_KEYS } from '@/utils/secureStorage';
 

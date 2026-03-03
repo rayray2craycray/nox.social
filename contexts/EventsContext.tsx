@@ -37,7 +37,7 @@ interface EventsContextValue {
   ticketTiers: TicketTier[];
   ticketTransfers: TicketTransfer[];
   purchaseTicket: (tierId: string, userId: string) => Promise<Ticket>;
-  transferTicket: (ticketId: string, toUserId: string) => Promise<TicketTransfer>;
+  transferTicket: (ticketId: string, toUserId: string) => Promise<Ticket>;
   acceptTicketTransfer: (transferId: string) => Promise<void>;
   declineTicketTransfer: (transferId: string) => Promise<void>;
   getTicketTiersForEvent: (eventId: string) => TicketTier[];
@@ -96,6 +96,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   const ticketsQuery = useQuery({
     queryKey: ['tickets'],
     queryFn: async () => {
+      if (!userId) return [];
       try {
         // Use userId from auth context
         const response = await eventsApi.getUserTickets(userId);
@@ -144,7 +145,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
   // Guest List Query
   const guestListQuery = useQuery({
     queryKey: ['guestList'],
-    queryFn: async () => {
+    queryFn: async (): Promise<GuestListEntry[]> => {
       try {
         // TODO: Fetch guest list from API when available (venue-specific)
         return [];

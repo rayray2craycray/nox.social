@@ -68,7 +68,7 @@ export default function UserProfileModal({
       onMessage(userId);
     } else {
       // Navigate to servers tab and open DM
-      router.push('/servers');
+      router.push('/servers' as any);
     }
   };
 

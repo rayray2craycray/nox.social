@@ -33,14 +33,15 @@ export function PricingBadge({ pricing, size = 'medium' }: PricingBadgeProps) {
     }[pricing.reason] || 'Special';
   };
 
-  const getGradientColors = () => {
-    return {
+  const getGradientColors = (): [string, string] => {
+    const map: Record<string, [string, string]> = {
       'SLOW_HOUR': ['#8B5CF6', '#6366F1'],
       'EARLY_BIRD': ['#3B82F6', '#2563EB'],
       'APP_EXCLUSIVE': ['#EC4899', '#D946EF'],
       'HAPPY_HOUR': ['#F59E0B', '#EF4444'],
       'FLASH_SALE': ['#EF4444', '#DC2626'],
-    }[pricing.reason] || ['#8B5CF6', '#6366F1'];
+    };
+    return map[pricing.reason] || ['#8B5CF6', '#6366F1'];
   };
 
   const isExpiringSoon = () => {
