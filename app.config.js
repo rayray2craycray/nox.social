@@ -38,7 +38,7 @@ module.exports = {
     icon: './assets/images/icon.png',
     scheme: 'nox',
     userInterfaceStyle: 'automatic',
-    // newArchEnabled removed - SDK 53 doesn't need this
+    newArchEnabled: false, // Disabled: expo-splash-screen 0.30.10 has a bug on New Arch where RCTSurfaceHostingProxyRootView re-shows the loadingView after hide(). Fixed in SDK 54+.
 
     splash: {
       image: './assets/images/splash-icon.png',
