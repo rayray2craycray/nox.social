@@ -8,10 +8,10 @@ Nox is a nightlife social app (venues, events, videos, performers).
 ## Tech Stack
 | Layer | Library | Version |
 |---|---|---|
-| Framework | Expo | 53.0.27 |
-| Navigation | Expo Router | ~5.1.11 |
+| Framework | Expo | ^54.0.33 (SDK 54) |
+| Navigation | Expo Router | ~6.0.23 |
 | Language | TypeScript | ~5.9.2 |
-| React / RN | React / React Native | 19.0.0 / 0.79.6 |
+| React / RN | React / React Native | 19.1.0 / 0.81.5 |
 | State (server) | React Query | ^5.83.0 |
 | State (client) | Zustand | ^5.0.2 |
 | Validation | Zod | ^3.22.4 |

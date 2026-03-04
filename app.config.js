@@ -38,7 +38,7 @@ module.exports = {
     icon: './assets/images/icon.png',
     scheme: 'nox',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: false, // Disabled: expo-splash-screen 0.30.10 has a bug on New Arch where RCTSurfaceHostingProxyRootView re-shows the loadingView after hide(). Fixed in SDK 54+.
+    newArchEnabled: true, // Re-enabled: SDK 54 fixed the expo-splash-screen New Arch bug
 
     splash: {
       image: './assets/images/splash-icon.png',
@@ -132,6 +132,13 @@ module.exports = {
           locationAlwaysAndWhenInUsePermission: 'Nox needs your location to verify venue check-ins.',
         },
       ],
+      [
+        '@sentry/react-native/expo',
+        {
+          organization: process.env.SENTRY_ORG || '',
+          project: process.env.SENTRY_PROJECT || '',
+        },
+      ],
     ],
 
     experiments: {
@@ -158,15 +165,5 @@ module.exports = {
       policy: 'sdkVersion',
     },
 
-    // Asset bundling
-    assetBundlePatterns: ['**/*'],
-
-    // Privacy
-    privacy: 'public',
-
-    // Hooks
-    hooks: {
-      postPublish: [],
-    },
   },
 };
