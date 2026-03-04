@@ -1,8 +1,25 @@
 diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-index 441a16f..14a8483 100644
+index 2a67797..a78ba6d 100644
 --- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
 +++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-@@ -438,7 +438,20 @@ TraceSection s(
+@@ -371,7 +371,15 @@ id convertJSIValueToObjCObject(
+         // See https://github.com/reactwg/react-native-new-architecture/discussions/276#discussioncomment-12567155
+         throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
+       } else {
+-        @throw exception;
++        // Async methods: throwing C++ exception from @catch + @finally causes
++        // objc_exception_rethrow → __cxa_rethrow → std::terminate() on ARM64.
++        // Log and continue instead of crashing.
++        RCTLogError(
++            @"TurboModule async method '%s' of '%s' raised an ObjC exception: %@ (%@)",
++            methodName,
++            moduleName,
++            exception.name,
++            exception.reason);
+       }
+     } @finally {
+       [retainedObjectsForInvocation removeAllObjects];
+@@ -435,7 +443,20 @@ TraceSection s(
      @try {
        [inv invokeWithTarget:strongModule];
      } @catch (NSException *exception) {

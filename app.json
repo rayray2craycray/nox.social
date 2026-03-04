@@ -22,7 +22,6 @@
         "NSPhotoLibraryUsageDescription": "Nox needs photo library access to let you select photos and videos to share with your friends, and to save your captured nightlife memories.",
         "NSContactsUsageDescription": "Nox uses your contacts to help you find and connect with friends on the app. Your contacts are securely hashed and never shared publicly.",
         "UIBackgroundModes": [
-          "audio",
           "location"
         ],
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Nox uses your location to show you nearby nightlife venues, track your check-ins at venues, and display live events in your area. Location is only used while you're actively using the app.",
@@ -73,12 +72,6 @@
         "expo-image-picker",
         {
           "photosPermission": "Nox needs photo library access to let you select photos and videos to share with your friends, and to save your captured nightlife memories."
-        }
-      ],
-      [
-        "expo-av",
-        {
-          "microphonePermission": "Nox needs microphone access to record audio with your videos, enabling you to capture the full atmosphere of venues and events."
         }
       ],
       [
