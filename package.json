@@ -93,5 +93,10 @@
         "expo-contacts"
       ]
     }
+  },
+  "overrides": {
+    "@teovilla/react-native-web-maps": {
+      "expo-location": "$expo-location"
+    }
   }
 }
