@@ -62,7 +62,16 @@ TurboModule crashes (like the expo-video and expo-av crashes in builds 55 and 57
 they reach TestFlight. The iOS simulator does NOT reliably reproduce native crashes.
 If no device is available, note this and proceed with extra caution.
 
-Only after all three pass:
+### Step 4 — Commit check (ensures EAS builds your latest code)
+```bash
+git status --porcelain
+```
+Must return empty (no uncommitted changes). **EAS Build uses the committed git state, not the
+working tree.** If there are uncommitted changes, the build will use stale code. This was the
+root cause of Build 78 shipping the same binary as Build 76 — fixes were local only.
+Always `git add` and `git commit` before running `eas build`.
+
+Only after all four pass:
 ```bash
 eas build --platform ios --profile production --non-interactive
 eas submit --platform ios --latest --non-interactive
