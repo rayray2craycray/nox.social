@@ -1,43 +1,31 @@
 diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-index 2a67797..a78ba6d 100644
+index 2a67797..97bda23 100644
 --- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
 +++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-@@ -371,7 +371,15 @@ id convertJSIValueToObjCObject(
+@@ -371,7 +371,11 @@ id convertJSIValueToObjCObject(
          // See https://github.com/reactwg/react-native-new-architecture/discussions/276#discussioncomment-12567155
          throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
        } else {
 -        @throw exception;
-+        // Async methods: throwing C++ exception from @catch + @finally causes
-+        // objc_exception_rethrow → __cxa_rethrow → std::terminate() on ARM64.
-+        // Log and continue instead of crashing.
-+        RCTLogError(
-+            @"TurboModule async method '%s' of '%s' raised an ObjC exception: %@ (%@)",
-+            methodName,
-+            moduleName,
-+            exception.name,
-+            exception.reason);
++        // On iOS 26+, @throw inside an async dispatch block has no ObjC handler and
++        // triggers objc_exception_rethrow → __cxa_rethrow → std::terminate → SIGABRT.
++        // Log and swallow instead.
++        NSLog(@"[iOS26Fix] async method exception swallowed: %s::%s %@ %@",
++              moduleName, methodName, exception.name, exception.reason);
        }
      } @finally {
        [retainedObjectsForInvocation removeAllObjects];
-@@ -435,7 +443,20 @@ TraceSection s(
+@@ -435,7 +439,12 @@ TraceSection s(
      @try {
        [inv invokeWithTarget:strongModule];
      } @catch (NSException *exception) {
 -      throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
-+      if (shouldVoidMethodsExecuteSync_) {
-+        // Sync void methods can safely convert to a C++ JSError on the JS thread.
-+        throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
-+      } else {
-+        // Async void methods: throwing C++ exception from @catch + @finally causes
-+        // objc_exception_rethrow → __cxa_rethrow → std::terminate() on ARM64.
-+        // Void methods cannot return errors to JS, so log and continue.
-+        RCTLogError(
-+            @"TurboModule void method '%s' of '%s' raised an ObjC exception: %@ (%@)",
-+            methodName,
-+            moduleName,
-+            exception.name,
-+            exception.reason);
-+      }
++      // Do not rethrow NSExceptions from void TurboModule methods.
++      // On iOS 26+, a C++ rethrow (throw convertNSExceptionToJSError(...)) inside
++      // an async dispatch block has no handler and triggers std::terminate/SIGABRT.
++      // Swallowing and logging is safe: void methods have no return value to propagate.
++      NSLog(@"[RCTTurboModule] Exception in void method %s::%s: %@ %@",
++            moduleName, methodName, exception.name, exception.reason);
      } @finally {
        [retainedObjectsForInvocation removeAllObjects];
      }

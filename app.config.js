@@ -31,6 +31,7 @@ const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || '';
 
 module.exports = {
   expo: {
+    owner: 'rayantaimur',
     name: APP_NAME,
     slug: APP_SLUG,
     version: APP_VERSION,
@@ -50,6 +51,7 @@ module.exports = {
       supportsTablet: false,
       bundleIdentifier: IOS_BUNDLE_ID,
       buildNumber: BUILD_NUMBER,
+      jsEngine: 'jsc',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription: 'Nox needs camera access to capture venue moments and create video highlights.',
@@ -99,6 +101,7 @@ module.exports = {
     },
 
     plugins: [
+      './plugins/withTurboModuleFix',
       '@react-native-community/datetimepicker',
       'expo-secure-store',
       [
@@ -132,7 +135,6 @@ module.exports = {
           locationAlwaysAndWhenInUsePermission: 'Nox needs your location to verify venue check-ins.',
         },
       ],
-      'expo-build-properties',
     ],
 
     experiments: {

@@ -1,9 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { View, StyleSheet } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppStateProvider, DiscoveryProvider } from "@/contexts/AppStateContext";
 import { PerformerProvider } from "@/contexts/PerformerContext";
@@ -28,15 +26,10 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
 import { initSentry, captureException } from "@/config/sentry";
 
-// Take explicit control of the splash screen. Wrapped in try-catch because on
-// iOS New Arch this is a TurboModule void-method call that can throw an ObjC
-// exception during early startup. The native SplashScreenManager also has a
-// 5-second failsafe timer that force-hides the splash no matter what.
-try {
-  SplashScreen.preventAutoHideAsync();
-} catch (e) {
-  console.warn('SplashScreen.preventAutoHideAsync() threw:', e);
-}
+// SplashScreen.preventAutoHideAsync() removed — this native TurboModule call
+// causes an ObjC exception crash on iOS New Arch at startup. The splash is
+// hidden automatically by the native stage-based auto-hide in
+// RCTSurfaceHostingView._updateViews when the surface transitions to "running".
 
 const queryClient = new QueryClient();
 
@@ -44,45 +37,29 @@ function RootLayoutNav() {
   const { GlowOverlay } = useGlow();
   const [showAgeGate, setShowAgeGate] = useState(false);
   const [isAgeVerified, setIsAgeVerified] = useState(false);
-  const [isCheckingAge, setIsCheckingAge] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    // Check if user has already verified their age.
+    // Do NOT block Stack rendering on this check — if AsyncStorage hangs
+    // (e.g. on iOS 26 with TurboModule exception swallowing), returning null
+    // here prevents expo-router navigation from ever initialising and the
+    // splash screen never hides. The AgeVerificationGate is a Modal that
+    // can appear on top of the rendered Stack once the check resolves.
+    const timeout = setTimeout(() => {
+      // Fallback: if AsyncStorage hasn't responded in 3s, show the gate.
+      setShowAgeGate(true);
+    }, 3000);
 
-    const checkAgeVerification = async () => {
-      try {
-        // Race AsyncStorage against a 3-second timeout — if the native module is
-        // in a broken state after a caught void-method exception, getItem may never
-        // resolve. The timeout ensures the age gate always unblocks.
-        const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 3000));
-        const verified = await Promise.race([
-          AsyncStorage.getItem('age_verified'),
-          timeout,
-        ]);
+    AsyncStorage.getItem('age_verified').then((verified) => {
+      clearTimeout(timeout);
+      setIsAgeVerified(verified === 'true');
+      setShowAgeGate(verified !== 'true');
+    }).catch(() => {
+      clearTimeout(timeout);
+      setShowAgeGate(true);
+    });
 
-        if (!isMounted) return;
-
-        const hasVerified = verified === 'true';
-        setIsAgeVerified(hasVerified);
-        setShowAgeGate(!hasVerified);
-      } catch (error) {
-        console.error('Failed to load age verification status', error);
-        // Fail-safe: show the age gate instead of a blank screen
-        if (!isMounted) return;
-        setIsAgeVerified(false);
-        setShowAgeGate(true);
-      } finally {
-        if (isMounted) {
-          setIsCheckingAge(false);
-        }
-      }
-    };
-
-    checkAgeVerification();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => clearTimeout(timeout);
   }, []);
 
   const handleAgeVerified = async (dateOfBirth: Date) => {
@@ -92,12 +69,6 @@ function RootLayoutNav() {
     setShowAgeGate(false);
   };
 
-  // ALWAYS render the Stack — never return null. Returning null prevents React
-  // Native from producing native views on the surface, which means
-  // RCTContentDidAppearNotification never fires on New Architecture. This blocks
-  // expo-router's _internal_maybeHideAsync from ever triggering, causing the
-  // splash screen to stay visible forever. Instead, we render a black overlay
-  // on top of the Stack while loading to prevent content flash.
   return (
     <>
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
@@ -119,28 +90,21 @@ function RootLayoutNav() {
         visible={showAgeGate}
         onVerified={handleAgeVerified}
       />
-      {isCheckingAge && <View style={styles.loadingOverlay} />}
     </>
   );
 }
 
 export default function RootLayout() {
-  // Defer Sentry initialization to after React mounts — calling it at module
-  // load time caused TurboModule void-method crashes on startup.
+  // Splash is hidden by the native stage-based auto-hide in RCTSurfaceHostingView._updateViews
+  // when the surface transitions to "running" (React content ready). No explicit JS call needed.
+
+  // Defer Sentry initialization to after React mounts — safe because it uses
+  // @sentry/browser (JS-only, no native modules).
   useEffect(() => {
     initSentry();
   }, []);
 
-  // Hide the splash screen once the React tree has mounted.
-  // We call hideAsync() immediately (no delay) since we called
-  // preventAutoHideAsync() at module level. The native SplashScreenManager
-  // also has a 5-second failsafe timer in case JS never gets this far.
-  useEffect(() => {
-    SplashScreen.hideAsync().catch(() => {});
-  }, []);
-
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
-    // Send error to Sentry
     captureException(error, {
       errorInfo: errorInfo.componentStack,
       errorBoundary: 'GlobalErrorBoundary',
@@ -196,11 +160,3 @@ export default function RootLayout() {
     </ErrorBoundary>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000000',
-    zIndex: 9999,
-  },
-});
