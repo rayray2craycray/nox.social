@@ -1,0 +1,116 @@
+diff --git a/node_modules/expo-splash-screen/ios/SplashScreenManager.swift b/node_modules/expo-splash-screen/ios/SplashScreenManager.swift
+index fe4ad94..c00fb02 100644
+--- a/node_modules/expo-splash-screen/ios/SplashScreenManager.swift
++++ b/node_modules/expo-splash-screen/ios/SplashScreenManager.swift
+@@ -8,6 +8,8 @@ public class SplashScreenManager: NSObject, RCTReloadListener {
+   private var rootView: UIView?
+   private var options = SplashScreenOptions()
+   public var preventAutoHideCalled = false
++  private static let splashViewTag = 0x45585053 // "EXPS"
++  private var failsafeTimer: Timer?
+ 
+   private override init() {}
+ 
+@@ -19,6 +21,16 @@ public class SplashScreenManager: NSObject, RCTReloadListener {
+     self.rootView = rootView
+     showSplashScreen()
+     NotificationCenter.default.addObserver(self, selector: #selector(onAppReady), name: Notification.Name("RCTContentDidAppearNotification"), object: nil)
++
++    // Failsafe: force-hide the splash after 5 seconds no matter what.
++    // This ensures the splash cannot get stuck even if all JS-driven
++    // hide paths fail (e.g. JS bundle error, navigation never ready,
++    // native module unavailable to JS).
++    DispatchQueue.main.async { [weak self] in
++      self?.failsafeTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
++        self?.performHide()
++      }
++    }
+   }
+ 
+   @objc private func onAppReady() {
+@@ -33,23 +45,42 @@ public class SplashScreenManager: NSObject, RCTReloadListener {
+     }
+ 
+     DispatchQueue.main.async { [weak self] in
+-      guard let self, let rootView, isLoadingViewVisible() else {
+-        return
+-      }
+-      let duration = options.duration / 1000
++      self?.performHide()
++    }
++  }
++
++  private func performHide() {
++    failsafeTimer?.invalidate()
++    failsafeTimer = nil
++
++    guard let rootView else {
++      return
++    }
++
++    let duration = options.duration / 1000
++
++    // Remove by direct reference
++    if let loadingView, !loadingView.isHidden {
+       if options.fade {
+         UIView.transition(with: rootView, duration: duration, options: .transitionCrossDissolve) {
+-          self.loadingView?.isHidden = true
++          loadingView.isHidden = true
+         } completion: { _ in
+-          self.loadingView?.removeFromSuperview()
+-          self.loadingView = nil
++          loadingView.removeFromSuperview()
+         }
+       } else {
+-        loadingView?.isHidden = true
+-        loadingView?.removeFromSuperview()
+-        loadingView = nil
++        loadingView.isHidden = true
++        loadingView.removeFromSuperview()
+       }
+     }
++
++    // Safety net: also remove by tag in case the loadingView reference
++    // was nilled by a previous call but the view is still in the hierarchy.
++    if let taggedView = rootView.viewWithTag(SplashScreenManager.splashViewTag) {
++      taggedView.isHidden = true
++      taggedView.removeFromSuperview()
++    }
++
++    self.loadingView = nil
+   }
+ 
+   func setOptions(options: SplashScreenOptions) {
+@@ -61,22 +92,16 @@ public class SplashScreenManager: NSObject, RCTReloadListener {
+     if let vc = UIStoryboard(name: splashScreenFilename, bundle: nil).instantiateInitialViewController() {
+       loadingView = vc.view
+       loadingView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
++      loadingView?.tag = SplashScreenManager.splashViewTag
+ 
+       if let bounds = self.rootView?.bounds {
+         loadingView?.frame = bounds
+         loadingView?.center = CGPoint(x: bounds.midX, y: bounds.midY)
+       }
+       loadingView?.isHidden = false
+-#if RCT_NEW_ARCH_ENABLED
+-      if let hostView = rootView as? RCTSurfaceHostingProxyRootView, let loadingView {
+-        hostView.disableActivityIndicatorAutoHide(true)
+-        hostView.loadingView = loadingView
+-      }
+-#else
+       if let loadingView {
+         self.rootView?.addSubview(loadingView)
+       }
+-#endif
+     }
+   }
+ 
+@@ -93,6 +118,8 @@ public class SplashScreenManager: NSObject, RCTReloadListener {
+   }
+ 
+   func removeObservers() {
++    failsafeTimer?.invalidate()
++    failsafeTimer = nil
+     NotificationCenter.default.removeObserver(self, name: Notification.Name("RCTContentDidAppearNotification"), object: nil)
+   }
+ }

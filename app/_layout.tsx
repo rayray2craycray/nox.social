@@ -28,12 +28,15 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
 import { initSentry, captureException } from "@/config/sentry";
 
-// Take explicit control of the splash screen. This sets
-// userControlledAutoHideEnabled=true on the native module, which blocks
-// expo-router's _internal_maybeHideAsync — but that's fine because we call
-// hideAsync() ourselves once the app is ready. The native SplashScreenManager
-// also has a 5-second failsafe timer that force-hides the splash no matter what.
-SplashScreen.preventAutoHideAsync();
+// Take explicit control of the splash screen. Wrapped in try-catch because on
+// iOS New Arch this is a TurboModule void-method call that can throw an ObjC
+// exception during early startup. The native SplashScreenManager also has a
+// 5-second failsafe timer that force-hides the splash no matter what.
+try {
+  SplashScreen.preventAutoHideAsync();
+} catch (e) {
+  console.warn('SplashScreen.preventAutoHideAsync() threw:', e);
+}
 
 const queryClient = new QueryClient();
 

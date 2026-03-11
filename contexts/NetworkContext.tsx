@@ -44,53 +44,71 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({ children }) =>
   }, [showWarning, showInfo]);
 
   useEffect(() => {
-    // Get initial network state
-    NetInfo.fetch().then((state: NetInfoState) => {
-      const isConnected = state.isConnected ?? false;
-      const isInternetReachable = state.isInternetReachable ?? null;
-      const isOffline = !isConnected || isInternetReachable === false;
+    let unsubscribe: (() => void) | undefined;
 
-      setNetworkState({
-        isConnected,
-        isInternetReachable,
-        connectionType: state.type,
-        isOffline,
-      });
-    });
+    // Defer native NetInfo calls with a short delay so they don't fire during
+    // the TurboModule initialization window (~0-500ms after launch). This
+    // prevents ObjC exceptions in void-method invocations on iOS New Arch.
+    const timer = setTimeout(() => {
+      try {
+        // Get initial network state
+        NetInfo.fetch()
+          .then((state: NetInfoState) => {
+            const isConnected = state.isConnected ?? false;
+            const isInternetReachable = state.isInternetReachable ?? null;
+            const isOffline = !isConnected || isInternetReachable === false;
 
-    // Subscribe to network state changes — registered once, refs provide fresh values.
-    const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
-      const isConnected = state.isConnected ?? false;
-      const isInternetReachable = state.isInternetReachable ?? null;
-      const isOffline = !isConnected || isInternetReachable === false;
-
-      // Show toast when going offline
-      if (isOffline && !hasShownOfflineToastRef.current) {
-        showWarningRef.current(
-          'You are offline',
-          'Some features may not be available until you reconnect.'
-        );
-        hasShownOfflineToastRef.current = true;
-        hasShownOnlineToastRef.current = false;
+            setNetworkState({
+              isConnected,
+              isInternetReachable,
+              connectionType: state.type,
+              isOffline,
+            });
+          })
+          .catch((err: unknown) => {
+            console.warn('NetInfo.fetch() failed:', err);
+          });
+      } catch (err) {
+        console.warn('NetInfo.fetch() threw synchronously:', err);
       }
 
-      // Show toast when coming back online
-      if (!isOffline && hasShownOfflineToastRef.current && !hasShownOnlineToastRef.current) {
-        showInfoRef.current('Back online', 'You are now connected to the internet.');
-        hasShownOnlineToastRef.current = true;
-        hasShownOfflineToastRef.current = false;
-      }
+      try {
+        // Subscribe to network state changes
+        unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
+          const isConnected = state.isConnected ?? false;
+          const isInternetReachable = state.isInternetReachable ?? null;
+          const isOffline = !isConnected || isInternetReachable === false;
 
-      setNetworkState({
-        isConnected,
-        isInternetReachable,
-        connectionType: state.type,
-        isOffline,
-      });
-    });
+          if (isOffline && !hasShownOfflineToastRef.current) {
+            showWarningRef.current(
+              'You are offline',
+              'Some features may not be available until you reconnect.'
+            );
+            hasShownOfflineToastRef.current = true;
+            hasShownOnlineToastRef.current = false;
+          }
+
+          if (!isOffline && hasShownOfflineToastRef.current && !hasShownOnlineToastRef.current) {
+            showInfoRef.current('Back online', 'You are now connected to the internet.');
+            hasShownOnlineToastRef.current = true;
+            hasShownOfflineToastRef.current = false;
+          }
+
+          setNetworkState({
+            isConnected,
+            isInternetReachable,
+            connectionType: state.type,
+            isOffline,
+          });
+        });
+      } catch (err) {
+        console.warn('NetInfo.addEventListener() threw:', err);
+      }
+    }, 1000);
 
     return () => {
-      unsubscribe();
+      clearTimeout(timer);
+      unsubscribe?.();
     };
   }, []);
 
