@@ -11,7 +11,6 @@ import {
   StoryTemplate,
   ShareableContent,
 } from '@/types';
-// Mock data imports removed - using empty defaults when API unavailable
 import { growthApi } from '@/services/api';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
@@ -264,7 +263,14 @@ export const [GrowthProvider, useGrowth] = createContextHook(() => {
 
   const storyTemplatesQuery = useQuery({
     queryKey: ['storyTemplates'],
-    queryFn: async (): Promise<StoryTemplate[]> => [],
+    queryFn: async (): Promise<StoryTemplate[]> => {
+      try {
+        const response = await growthApi.getShareableContent?.();
+        return response?.data?.templates || [];
+      } catch {
+        return [];
+      }
+    },
   });
 
   const shareableContentQuery = useQuery({

@@ -16,7 +16,6 @@ import {
   ChallengeReward,
   VenueSocialProof,
 } from '@/types';
-// Mock data imports removed - using empty defaults when API unavailable
 import {
   getPersonalizedSuggestions,
   getSuggestionSourceLabel,
@@ -24,6 +23,13 @@ import {
   clearSuggestionsCache,
 } from '@/services/suggestions.service';
 import { socialApi } from '@/services/api';
+import {
+  searchUsers,
+  getUserById,
+  getFriends,
+  followUser as followUserApi,
+  unfollowUser as unfollowUserApi,
+} from '@/services/api/users.service';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
 import { useAuth } from './AuthContext';
@@ -57,10 +63,21 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
   const followsQuery = useQuery({
     queryKey: ['follows'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.FOLLOWS);
-      if (stored) {
-        return JSON.parse(stored) as Follow[];
+      try {
+        const response = await getFriends({ limit: 200 });
+        const apiFollows = (response.friends || []).map(f => ({
+          followerId: userId || '',
+          followingId: f.id,
+          shareLocation: true,
+          status: 'ACCEPTED' as const,
+          createdAt: new Date().toISOString(),
+        }));
+        if (apiFollows.length > 0) return apiFollows;
+      } catch (error) {
+        if (__DEV__) console.log('[Social] API unavailable for follows, using local');
       }
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.FOLLOWS);
+      if (stored) return JSON.parse(stored) as Follow[];
       return [];
     },
   });
@@ -88,28 +105,8 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
     }
   }, [locationSettingsQuery.data]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFriendLocations(prev => 
-        prev.map(friend => {
-          const randomOffset = 0.0002;
-          const latOffset = (Math.random() - 0.5) * randomOffset;
-          const lngOffset = (Math.random() - 0.5) * randomOffset;
-          
-          return {
-            ...friend,
-            location: {
-              latitude: friend.location.latitude + latOffset,
-              longitude: friend.location.longitude + lngOffset,
-            },
-            lastUpdated: new Date().toISOString(),
-          };
-        })
-      );
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
+  // Friend locations will come from real-time updates via Socket.io or API polling
+  // No simulated movement
 
   const updateFollowsMutation = useMutation({
     mutationFn: async (newFollows: Follow[]) => {
@@ -231,23 +228,22 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
   });
 
   const crewInvitesQuery = useQuery({
-    queryKey: ['crew-invites'],
+    queryKey: ['crew-invites', userId],
     queryFn: async () => {
+      // Crew invites are managed via crew membership mutations (socialApi.addCrewMember)
+      // Cache locally for display
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.CREW_INVITES);
-      if (stored) {
-        return JSON.parse(stored) as CrewInvite[];
-      }
+      if (stored) return JSON.parse(stored) as CrewInvite[];
       return [];
     },
   });
 
   const crewPlansQuery = useQuery({
-    queryKey: ['crew-plans'],
+    queryKey: ['crew-plans', userId],
     queryFn: async () => {
+      // Crew night plans are stored locally — no dedicated API endpoint yet
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.CREW_PLANS);
-      if (stored) {
-        return JSON.parse(stored) as CrewNightPlan[];
-      }
+      if (stored) return JSON.parse(stored) as CrewNightPlan[];
       return [];
     },
   });
@@ -296,14 +292,36 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
   });
 
   const challengeRewardsQuery = useQuery({
-    queryKey: ['challenge-rewards'],
+    queryKey: ['challenge-rewards', userId],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.CHALLENGE_REWARDS);
-      if (stored) {
-        return JSON.parse(stored) as ChallengeReward[];
+      if (!userId) return [];
+      try {
+        // Derive rewards from the challenges response (completed challenges with rewards)
+        const response = await socialApi.getUserChallenges(userId);
+        const rewards = (response.data || []).flatMap((challenge: any) => {
+          const userParticipant = challenge.participants?.find(
+            (p: any) => p.userId === userId || p.userId?._id === userId
+          );
+          if (!userParticipant || userParticipant.status !== 'COMPLETED') return [];
+          return (userParticipant.rewards || []).map((reward: any) => ({
+            ...reward,
+            id: reward._id || reward.id || `reward-${challenge._id}`,
+            userId,
+            challengeId: challenge._id || challenge.id,
+          }));
+        });
+        if (rewards.length > 0) {
+          await AsyncStorage.setItem(STORAGE_KEYS.CHALLENGE_REWARDS, JSON.stringify(rewards));
+        }
+        return rewards as ChallengeReward[];
+      } catch (error) {
+        if (__DEV__) console.log('[Social] API unavailable for challenge rewards, using cache');
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.CHALLENGE_REWARDS);
+        if (stored) return JSON.parse(stored) as ChallengeReward[];
+        return [];
       }
-      return [];
     },
+    enabled: !!userId,
   });
 
   const activeChallengesQuery = useQuery({
@@ -379,27 +397,35 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
     },
   });
 
-  const followUser = useCallback((userId: string, shareLocation = true) => {
+  const followUser = useCallback(async (targetUserId: string, shareLocation = true) => {
+    try {
+      await followUserApi(targetUserId);
+    } catch (error) {
+      if (__DEV__) console.log('[Social] API follow failed, storing locally:', error);
+    }
     const newFollow: Follow = {
-      followerId: userId,
-      followingId: userId,
+      followerId: userId || '',
+      followingId: targetUserId,
       shareLocation,
-      status: 'ACCEPTED', // Auto-accept follows (like Instagram/Twitter)
+      status: 'ACCEPTED',
       createdAt: new Date().toISOString(),
     };
     updateFollows([...follows, newFollow]);
-
-    // Clear suggestions cache and refetch to immediately update the list
     clearSuggestionsCache();
     suggestionsQuery.refetch();
-  }, [follows, updateFollows, suggestionsQuery]);
+  }, [follows, updateFollows, suggestionsQuery, userId]);
 
-  const unfollowUser = useCallback((userId: string) => {
-    const updated = follows.filter(f => 
-      !(f.followerId === userId && f.followingId === userId)
+  const unfollowUser = useCallback(async (targetUserId: string) => {
+    try {
+      await unfollowUserApi(targetUserId);
+    } catch (error) {
+      if (__DEV__) console.log('[Social] API unfollow failed, removing locally:', error);
+    }
+    const updated = follows.filter(f =>
+      !(f.followerId === userId && f.followingId === targetUserId)
     );
     updateFollows(updated);
-  }, [follows, updateFollows]);
+  }, [follows, updateFollows, userId]);
 
   const acceptFollowRequest = useCallback((followerId: string) => {
     const updated = follows.map(f => 
@@ -490,14 +516,25 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
     };
   }, [visibleFriendLocations]);
 
-  const searchFriends = useCallback((query: string) => {
-    // TODO: Implement friend search via API when available
-    return [];
+  const searchFriends = useCallback(async (query: string) => {
+    if (!query.trim()) return [];
+    try {
+      const response = await searchUsers({ query, limit: 20 });
+      return response.users || [];
+    } catch (error) {
+      console.error('Failed to search friends:', error);
+      return [];
+    }
   }, []);
 
-  const getFriendProfile = useCallback((userId: string): FriendProfile | undefined => {
-    // TODO: Fetch friend profile from API when available
-    return undefined;
+  const getFriendProfile = useCallback(async (targetUserId: string): Promise<FriendProfile | undefined> => {
+    try {
+      const user = await getUserById(targetUserId);
+      return user as unknown as FriendProfile;
+    } catch (error) {
+      console.error('Failed to get friend profile:', error);
+      return undefined;
+    }
   }, []);
 
   const suggestedPeople = useMemo(() => {

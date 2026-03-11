@@ -12,8 +12,6 @@ import {
   SyncResult,
   RevenueStats,
 } from '@/types';
-// Mock data imports removed - context now works with real API only
-// import { mockPOSIntegration, mockPOSLocations, mockSpendRules } from '@/mocks/pos';
 import { POS_CONFIG } from '@/constants/app';
 import { api } from '@/services/api';
 
@@ -36,41 +34,65 @@ export const [POSProvider, usePOS] = createContextHook(() => {
   const [transactions, setTransactions] = useState<POSTransaction[]>([]);
   const [availableLocations, setAvailableLocations] = useState<POSLocation[]>([]);
 
-  // Load integration from AsyncStorage
   const integrationQuery = useQuery({
     queryKey: ['pos-integration'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.POS_INTEGRATION);
-      if (stored) {
-        return JSON.parse(stored) as POSIntegration;
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.POS_INTEGRATION);
+        const cachedIntegration = stored ? JSON.parse(stored) as POSIntegration : null;
+        if (cachedIntegration?.venueId) {
+          const response = await api.get<any>(`/pos/status/${cachedIntegration.venueId}`);
+          if (response?.data) {
+            await AsyncStorage.setItem(STORAGE_KEYS.POS_INTEGRATION, JSON.stringify(response.data));
+            return response.data as POSIntegration;
+          }
+        }
+        return cachedIntegration;
+      } catch (error) {
+        if (__DEV__) console.log('[POS] API unavailable, using cache');
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.POS_INTEGRATION);
+        return stored ? JSON.parse(stored) as POSIntegration : null;
       }
-      // No mock data - start with null state
-      return null;
     },
   });
 
-  // Load spend rules from AsyncStorage
   const spendRulesQuery = useQuery({
     queryKey: ['pos-spend-rules'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.POS_SPEND_RULES);
-      if (stored) {
-        return JSON.parse(stored) as SpendRule[];
+      try {
+        const venueId = integration?.venueId;
+        if (venueId) {
+          const response = await api.get<any>(`/pos/rules/${venueId}`);
+          if (response?.data) {
+            await AsyncStorage.setItem(STORAGE_KEYS.POS_SPEND_RULES, JSON.stringify(response.data));
+            return response.data as SpendRule[];
+          }
+        }
+      } catch (error) {
+        if (__DEV__) console.log('[POS] API unavailable for spend rules, using cache');
       }
-      // No mock data - start with empty array
-      return [];
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.POS_SPEND_RULES);
+      return stored ? JSON.parse(stored) as SpendRule[] : [];
     },
   });
 
-  // Load transactions from AsyncStorage
   const transactionsQuery = useQuery({
     queryKey: ['pos-transactions'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.POS_TRANSACTIONS);
-      if (stored) {
-        return JSON.parse(stored) as POSTransaction[];
+      try {
+        const venueId = integration?.venueId;
+        if (venueId) {
+          const response = await api.get<any>(`/pos/transactions/${venueId}`);
+          if (response?.data) {
+            await AsyncStorage.setItem(STORAGE_KEYS.POS_TRANSACTIONS, JSON.stringify(response.data));
+            return response.data as POSTransaction[];
+          }
+        }
+      } catch (error) {
+        if (__DEV__) console.log('[POS] API unavailable for transactions, using cache');
       }
-      return [];
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.POS_TRANSACTIONS);
+      return stored ? JSON.parse(stored) as POSTransaction[] : [];
     },
   });
 

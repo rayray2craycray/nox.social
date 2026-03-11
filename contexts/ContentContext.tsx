@@ -9,8 +9,7 @@ import {
   Event,
   CalendarFilter,
 } from '@/types';
-// Mock data imports removed - using empty defaults when API unavailable
-import { contentApi } from '@/services/api';
+import { contentApi, eventsApi } from '@/services/api';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';
 import { useAuth } from './AuthContext';
@@ -28,15 +27,27 @@ export const [ContentProvider, useContent] = createContextHook(() => {
 
   // ===== QUERIES =====
   const performerFollowsQuery = useQuery({
-    queryKey: ['performer-follows'],
+    queryKey: ['performer-follows', userId],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.PERFORMER_FOLLOWS);
-      if (stored) {
-        return JSON.parse(stored) as string[]; // Array of performer IDs
+      if (!userId) return [];
+      try {
+        // Fetch performer feed — the performers in the feed are the followed ones
+        const response = await contentApi.getPerformerFeed(userId);
+        if (response.data && response.data.length > 0) {
+          const followedIds = [...new Set(response.data.map((post: any) => post.performerId))];
+          // Cache locally
+          await AsyncStorage.setItem(STORAGE_KEYS.PERFORMER_FOLLOWS, JSON.stringify(followedIds));
+          return followedIds as string[];
+        }
+      } catch (error) {
+        if (__DEV__) console.log('[Content] API unavailable for performer follows, using cache');
       }
-      // No default follows when API unavailable
+      // Fallback to cache
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.PERFORMER_FOLLOWS);
+      if (stored) return JSON.parse(stored) as string[];
       return [];
     },
+    enabled: !!userId,
   });
 
   const performerPostsQuery = useQuery({
@@ -128,8 +139,8 @@ export const [ContentProvider, useContent] = createContextHook(() => {
   const postLikes = useMemo(() => postLikesQuery.data || [], [postLikesQuery.data]);
 
   const followedPerformers = useMemo(() => {
-    // TODO: Fetch performer details from API when available
-    return [];
+    // When performer follows are available, return them (populated from API via follow mutations)
+    return performerFollows;
   }, [performerFollows]);
 
   const feedPosts = useMemo(() => {
@@ -337,59 +348,61 @@ export const [ContentProvider, useContent] = createContextHook(() => {
   }, [incrementHighlightViewsMutation]);
 
   // ===== CALENDAR FUNCTIONS =====
-  const getFilteredEvents = useCallback((filter: CalendarFilter) => {
-    // TODO: Fetch events from API when available
-    let filtered: any[] = [];
-
-    // Filter by venue
-    if (filter.venueIds && filter.venueIds.length > 0) {
-      filtered = filtered.filter(event => filter.venueIds!.includes(event.venueId));
-    }
-
-    // Filter by performers
-    if (filter.performerIds && filter.performerIds.length > 0) {
-      filtered = filtered.filter(event =>
-        event.performerIds.some((pid: string) => filter.performerIds!.includes(pid))
-      );
-    }
-
-    // Filter by genres
-    if (filter.genres && filter.genres.length > 0) {
-      filtered = filtered.filter(event =>
-        event.genres.some((genre: string) => filter.genres!.includes(genre))
-      );
-    }
-
-    // Filter by date range
-    if (filter.dateRange) {
-      const startDate = new Date(filter.dateRange.start);
-      const endDate = new Date(filter.dateRange.end);
-      filtered = filtered.filter(event => {
-        const eventDate = new Date(event.date);
-        return eventDate >= startDate && eventDate <= endDate;
+  const getFilteredEvents = useCallback(async (filter: CalendarFilter) => {
+    try {
+      const response = await eventsApi.getEvents({
+        venueId: filter.venueIds?.[0],
+        performerId: filter.performerIds?.[0],
+        startDate: filter.dateRange?.start,
+        endDate: filter.dateRange?.end,
       });
-    }
+      let filtered = response.data || [];
 
-    // Filter by price range
-    if (filter.priceRange) {
-      filtered = filtered.filter(event => {
-        const minPrice = Math.min(...event.ticketTiers.map((t: any) => t.price));
-        return minPrice >= filter.priceRange!.min && minPrice <= filter.priceRange!.max;
-      });
+      if (filter.venueIds && filter.venueIds.length > 1) {
+        filtered = filtered.filter((event: any) => filter.venueIds!.includes(event.venueId));
+      }
+      if (filter.performerIds && filter.performerIds.length > 1) {
+        filtered = filtered.filter((event: any) =>
+          event.performerIds?.some((pid: string) => filter.performerIds!.includes(pid))
+        );
+      }
+      if (filter.genres && filter.genres.length > 0) {
+        filtered = filtered.filter((event: any) =>
+          event.genres?.some((genre: string) => filter.genres!.includes(genre))
+        );
+      }
+      if (filter.priceRange) {
+        filtered = filtered.filter((event: any) => {
+          const minPrice = Math.min(...(event.ticketTiers || []).map((t: any) => t.price));
+          return minPrice >= filter.priceRange!.min && minPrice <= filter.priceRange!.max;
+        });
+      }
+      return filtered.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    } catch (error) {
+      console.error('Failed to get filtered events:', error);
+      return [];
     }
-
-    // Sort by date
-    return filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, []);
 
-  const getUpcomingEvents = useCallback((limit?: number) => {
-    // TODO: Fetch events from API when available
-    return [];
+  const getUpcomingEvents = useCallback(async (limit?: number) => {
+    try {
+      const response = await eventsApi.getUpcomingEvents();
+      const events = response.data || [];
+      return limit ? events.slice(0, limit) : events;
+    } catch (error) {
+      console.error('Failed to get upcoming events:', error);
+      return [];
+    }
   }, []);
 
-  const getPerformerById = useCallback((id: string) => {
-    // TODO: Fetch from API when available
-    return null;
+  const getPerformerById = useCallback(async (id: string): Promise<Performer | null> => {
+    try {
+      const response = await contentApi.getPerformerDetails(id);
+      return response.data || null;
+    } catch (error) {
+      console.error('Failed to get performer:', error);
+      return null;
+    }
   }, []);
 
   return {

@@ -61,7 +61,7 @@ module.exports = {
         UIBackgroundModes: ['location'],
       },
       config: {
-        googleMapsApiKey: process.env.GOOGLE_MAPS_IOS_API_KEY || 'AIzaSyBTR8B7HNcmI58gqKP23Pr0Bb0uO4ymJhI',
+        googleMapsApiKey: process.env.GOOGLE_MAPS_IOS_API_KEY || '',
       },
     },
 
@@ -88,7 +88,7 @@ module.exports = {
       ],
       config: {
         googleMaps: {
-          apiKey: process.env.GOOGLE_MAPS_ANDROID_API_KEY || 'AIzaSyBTR8B7HNcmI58gqKP23Pr0Bb0uO4ymJhI',
+          apiKey: process.env.GOOGLE_MAPS_ANDROID_API_KEY || '',
         },
       },
     },
@@ -132,13 +132,7 @@ module.exports = {
           locationAlwaysAndWhenInUsePermission: 'Nox needs your location to verify venue check-ins.',
         },
       ],
-      [
-        '@sentry/react-native/expo',
-        {
-          organization: process.env.SENTRY_ORG || '',
-          project: process.env.SENTRY_PROJECT || '',
-        },
-      ],
+      'expo-build-properties',
     ],
 
     experiments: {
@@ -152,7 +146,7 @@ module.exports = {
       easProjectId: EAS_PROJECT_ID || 'e5c57346-e187-4439-897d-085cf29a7456',
       cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
       sentryDsn: process.env.SENTRY_DSN || process.env.EXPO_PUBLIC_SENTRY_DSN || '',
-      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyBTR8B7HNcmI58gqKP23Pr0Bb0uO4ymJhI',
+      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
       instagramClientId: process.env.INSTAGRAM_CLIENT_ID || '',
       eas: {
         projectId: EAS_PROJECT_ID || 'e5c57346-e187-4439-897d-085cf29a7456',

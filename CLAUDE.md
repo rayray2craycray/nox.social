@@ -107,15 +107,22 @@ process. Do not install, import, or reference either package. These were the cau
 crashes in builds 55 and 57. If video playback is needed in the future, it must be tested
 on a physical device first via `npx expo run:ios --device` before submitting an EAS build.
 
+### DO NOT call native module methods during provider initialization
+Any native module method (Location, Camera, Haptics, etc.) called in a `useEffect` inside
+a context provider will fire at app startup and can trigger the same TurboModule void-method
+ObjC exception crash on iOS New Arch. Build 75 crashed because `FeedContext.tsx` called
+`Location.requestForegroundPermissionsAsync()` in a mount-time `useEffect`. Native module
+calls must be deferred to user-initiated actions or screen-level effects (after navigation).
+
 ### Context provider order is load-bearing
 The 18 context providers nested in `app/_layout.tsx` must remain in their current order.
 Reordering them can cause initialization crashes on real devices. Do not restructure
 the provider tree without incremental TestFlight testing after each change.
 
-### Frontend uses mock data — not connected to backend yet
-All contexts currently read from `mocks/`. The frontend is not yet wired to the backend API.
-Do not write logic that assumes live API responses unless you are explicitly integrating a
-specific context as part of that task.
+### All contexts are wired to the real backend API
+No mock data is used. All queries call the backend API first and fall back to AsyncStorage
+as an offline cache. AsyncStorage is only used as the primary store for local user
+preferences (feed filter, location settings, performer mode toggle).
 
 ### Test on device after every native change
 When touching context providers, native modules, or `app.config.js` plugins, build and test
@@ -169,22 +176,25 @@ render in lists. See `PERFORMANCE.md` for patterns.
 
 ---
 
-## Current Status (~70% complete)
+## Current Status (~80% complete)
 - ✅ Full UI across all screens
 - ✅ Backend API (50+ endpoints, live on Heroku)
 - ✅ Input validation (Zod) and sanitization utilities
 - ✅ Global error boundary, API service layer, extracted constants
-- ✅ Testing infrastructure (Jest + React Testing Library configured)
-- ❌ Frontend not connected to backend (mock data in all contexts)
-- ❌ Real OAuth not implemented (TODOs in `contexts/ToastContext.tsx`)
-- ❌ Sentry DSN not configured (error tracking inactive)
-- ❌ Test coverage incomplete (~70% target not yet reached)
-- ❌ CI/CD pipeline not set up
+- ✅ Testing infrastructure (Jest + React Testing Library, 24 suites, 442 tests)
+- ✅ All contexts wired to real backend API — zero mock data (AsyncStorage used only as offline cache)
+- ✅ Toast POS OAuth flow implemented (expo-web-browser + expo-secure-store)
+- ✅ Sentry configured (`@sentry/browser` — avoids TurboModule crashes)
+- ✅ CI/CD pipeline (`.github/workflows/frontend-ci.yml` + `security-audit.yml`)
+- ✅ Security audit completed (`SECURITY_AUDIT.md`) — hardcoded keys removed, credentials cleaned
+- ✅ Test coverage at ~55% (1307 tests across 56 suites — up from 21%/442 tests)
+- ✅ JWT weak fallbacks removed from all backend JS files (throws if JWT_SECRET missing)
+- ✅ Build 76 TurboModule crash fixed (module-scope native calls deferred)
+
+- ✅ Backend input validation — Zod schemas + validation middleware (`backend/src/validators/`, `backend/src/middleware/validation.js`)
+- ✅ Build 78 submitted to TestFlight (crash fix + all improvements)
 
 ## Remaining Work (priority order)
-1. Wire all contexts to the real backend API (replace mock imports)
-2. Implement real OAuth flow in `ToastContext.tsx`
-3. Configure Sentry DSN for error tracking
-4. Achieve 70%+ test coverage
-5. Security audit + load testing
-6. CI/CD pipeline (GitHub Actions)
+1. Increase test coverage (currently ~55%, target 70%) — add more screen/component tests
+2. Rotate all exposed credentials (see SECURITY_AUDIT.md — Google Maps, Resend, MongoDB, Cloudinary, JWT)
+3. Load testing

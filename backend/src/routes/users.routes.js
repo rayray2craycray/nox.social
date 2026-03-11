@@ -23,7 +23,7 @@ function hashPassword(password) {
 function generateToken(userId) {
   return jwt.sign(
     { sub: userId, iat: Date.now() },
-    process.env.JWT_SECRET || 'your-secret-key',
+    process.env.JWT_SECRET,
     { expiresIn: '24h' }
   );
 }
@@ -191,7 +191,7 @@ router.get('/users/me', (req, res) => {
 
   try {
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = users.get(decoded.sub);
 
     if (!user) {
@@ -217,7 +217,7 @@ router.patch('/users/me', (req, res) => {
 
   try {
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = users.get(decoded.sub);
 
     if (!user) {

@@ -20,6 +20,7 @@ import { useChat } from '@/contexts/ChatContext';
 import UserProfileModal from '@/components/UserProfileModal';
 import { useLocalSearchParams } from 'expo-router';
 import { Calendar, Clock, DollarSign } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type TabType = 'servers' | 'messages';
 
@@ -42,14 +43,12 @@ export default function ServersScreen() {
       console.log('[Servers] Joined servers:', joinedServers.length);
 
       // Check AsyncStorage directly to see what's stored
-      import('@react-native-async-storage/async-storage').then(({ default: AsyncStorage }) => {
-        AsyncStorage.getItem('vibelink_profile').then((stored) => {
-          if (stored) {
-            const storedProfile = JSON.parse(stored);
-            console.log('[Servers] AsyncStorage profile badges:', storedProfile.badges?.length || 0);
-            console.log('[Servers] AsyncStorage badge venueIds:', storedProfile.badges?.map((b: any) => b.venueId) || []);
-          }
-        });
+      AsyncStorage.getItem('vibelink_profile').then((stored) => {
+        if (stored) {
+          const storedProfile = JSON.parse(stored);
+          console.log('[Servers] AsyncStorage profile badges:', storedProfile.badges?.length || 0);
+          console.log('[Servers] AsyncStorage badge venueIds:', storedProfile.badges?.map((b: any) => b.venueId) || []);
+        }
       });
     }
   }, [profile.badges, joinedServers]);

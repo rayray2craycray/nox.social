@@ -7,6 +7,12 @@ const express = require('express');
 const router = express.Router();
 const venueController = require('../controllers/venue.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
+const { validate } = require('../middleware/validation');
+const {
+  updateVenueInfoSchema,
+  updateVenueDisplaySchema,
+  assignVenueRoleSchema,
+} = require('../validators/venues.validator');
 const {
   checkVenuePermission,
   hasVenueAccess,
@@ -36,6 +42,7 @@ router.patch(
   '/:venueId/info',
   authMiddleware,
   checkVenuePermission('EDIT_VENUE_INFO'),
+  validate(updateVenueInfoSchema),
   venueController.updateVenueInfo
 );
 
@@ -48,6 +55,7 @@ router.patch(
   '/:venueId/display',
   authMiddleware,
   checkVenuePermission('EDIT_VENUE_DISPLAY'),
+  validate(updateVenueDisplaySchema),
   venueController.updateVenueDisplay
 );
 
@@ -60,6 +68,7 @@ router.post(
   '/:venueId/roles',
   authMiddleware,
   checkVenuePermission('MANAGE_STAFF'),
+  validate(assignVenueRoleSchema),
   venueController.assignVenueRole
 );
 

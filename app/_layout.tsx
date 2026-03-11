@@ -28,12 +28,12 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
 import { initSentry, captureException } from "@/config/sentry";
 
-// DO NOT call SplashScreen.preventAutoHideAsync() here.
-// Calling it sets userControlledAutoHideEnabled=true, which blocks expo-router's
-// _internal_maybeHideAsync path. Combined with returning null from RootLayoutNav
-// (which prevents RCTContentDidAppearNotification from firing on New Arch),
-// this creates a deadlock where no code path can hide the splash.
-// Instead, we let expo-router manage the splash lifecycle automatically.
+// Take explicit control of the splash screen. This sets
+// userControlledAutoHideEnabled=true on the native module, which blocks
+// expo-router's _internal_maybeHideAsync — but that's fine because we call
+// hideAsync() ourselves once the app is ready. The native SplashScreenManager
+// also has a 5-second failsafe timer that force-hides the splash no matter what.
+SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
@@ -128,16 +128,12 @@ export default function RootLayout() {
     initSentry();
   }, []);
 
-  // Fallback: force-hide the splash screen after a delay. expo-router should
-  // hide it automatically via _internal_maybeHideAsync once the navigation
-  // state is ready, but if anything goes wrong (New Arch timing, surface state,
-  // etc.) this ensures we never get stuck. The 2-second delay gives expo-router
-  // time to do its thing first.
+  // Hide the splash screen once the React tree has mounted.
+  // We call hideAsync() immediately (no delay) since we called
+  // preventAutoHideAsync() at module level. The native SplashScreenManager
+  // also has a 5-second failsafe timer in case JS never gets this far.
   useEffect(() => {
-    const fallback = setTimeout(() => {
-      SplashScreen.hideAsync().catch(() => {});
-    }, 2000);
-    return () => clearTimeout(fallback);
+    SplashScreen.hideAsync().catch(() => {});
   }, []);
 
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {

@@ -24,30 +24,30 @@ export const [FeedProvider, useFeed] = createContextHook(() => {
   const [feedSettings, setFeedSettings] = useState<FeedSettings>(defaultFeedSettings);
   const [userVideos, setUserVideos] = useState<VibeVideo[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [useMockData, setUseMockData] = useState(false);
   const { profile, getVenueVibe, calculateVibePercentage } = useAppState();
   const { friendLocations } = useSocial();
   const { userId, accessToken } = useAuth();
 
-  // Get user location
-  useEffect(() => {
-    const getUserLocation = async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.High,
-          });
-          setUserLocation({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          });
-        }
-      } catch (error) {
-        console.error('Failed to get user location:', error);
+  // Lazy location getter — called on demand, NOT at mount time.
+  // Calling Location.requestForegroundPermissionsAsync() in a useEffect during
+  // provider initialization triggers a TurboModule void-method ObjC exception
+  // on iOS New Arch, causing an EXC_CRASH (SIGABRT). This was the root cause
+  // of the Build 75 crash.
+  const refreshLocation = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
       }
-    };
-    getUserLocation();
+    } catch (error) {
+      console.error('Failed to get user location:', error);
+    }
   }, []);
 
   const feedSettingsQuery = useQuery({
@@ -62,14 +62,25 @@ export const [FeedProvider, useFeed] = createContextHook(() => {
   });
 
   const userVideosQuery = useQuery({
-    queryKey: ['user-videos'],
+    queryKey: ['user-videos', userId],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem(STORAGE_KEYS.USER_VIDEOS);
-      if (stored) {
-        return JSON.parse(stored) as VibeVideo[];
+      if (!userId) return [];
+      try {
+        const response = await contentApi.getUserHighlights(userId);
+        if (response.data) {
+          // Cache for offline
+          await AsyncStorage.setItem(STORAGE_KEYS.USER_VIDEOS, JSON.stringify(response.data));
+          return response.data as unknown as VibeVideo[];
+        }
+      } catch (error) {
+        if (__DEV__) console.log('[Feed] API unavailable for user videos, using cache');
       }
+      // Fallback to cache
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.USER_VIDEOS);
+      if (stored) return JSON.parse(stored) as VibeVideo[];
       return [];
     },
+    enabled: !!userId,
   });
 
   useEffect(() => {
@@ -272,37 +283,50 @@ export const [FeedProvider, useFeed] = createContextHook(() => {
 
   const isEmpty = currentVideos.length === 0;
 
-  // TODO: Implement suggested performers from API
-  // Should call contentApi.getTrendingPerformers() or contentApi.searchPerformers()
+  const suggestedPerformersQuery = useQuery({
+    queryKey: ['suggested-performers'],
+    queryFn: async () => {
+      try {
+        const response = await contentApi.getTrendingPerformers();
+        return response.data || [];
+      } catch (error) {
+        if (__DEV__) console.log('[Feed] Failed to fetch suggested performers:', error);
+        return [];
+      }
+    },
+    enabled: feedSettings.selectedFilter === 'FOLLOWING' && isEmpty,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const suggestedPerformers = useMemo(() => {
     if (feedSettings.selectedFilter !== 'FOLLOWING' || !isEmpty) return [];
+    return (suggestedPerformersQuery.data || []).filter(
+      (p: any) => !profile.followedPerformers.includes(p.id || p._id)
+    ).slice(0, 5);
+  }, [feedSettings.selectedFilter, isEmpty, suggestedPerformersQuery.data, profile.followedPerformers]);
 
-    // Extract unique performer IDs from nearby videos
-    const nearbyPerformerIds = Array.from(new Set(
-      nearbyVideos
-        .filter(video => video.performerId && !profile.followedPerformers.includes(video.performerId))
-        .map(video => video.performerId)
-    )).slice(0, 5);
+  const suggestedVenuesQuery = useQuery({
+    queryKey: ['suggested-venues'],
+    queryFn: async () => {
+      try {
+        // Use events to extract unique venue IDs and return them
+        const response = await contentApi.getActiveHighlights();
+        const highlights = response.data || [];
+        const venueIds = [...new Set(highlights.map((h: any) => h.venueId).filter(Boolean))];
+        return venueIds.slice(0, 5).map(id => ({ id, venueId: id }));
+      } catch (error) {
+        if (__DEV__) console.log('[Feed] Failed to fetch suggested venues:', error);
+        return [];
+      }
+    },
+    enabled: feedSettings.selectedFilter === 'FOLLOWING' && isEmpty,
+    staleTime: 5 * 60 * 1000,
+  });
 
-    // TODO: Fetch performer details from API using these IDs
-    // For now, return empty array - UI will handle empty state
-    return [];
-  }, [feedSettings.selectedFilter, isEmpty, nearbyVideos, profile.followedPerformers]);
-
-  // TODO: Implement suggested venues from API
-  // Should call venuesApi or similar to get venue details
   const suggestedVenues = useMemo(() => {
     if (feedSettings.selectedFilter !== 'FOLLOWING' || !isEmpty) return [];
-
-    // Extract unique venue IDs from nearby videos
-    const nearbyVenueIds = Array.from(new Set(
-      nearbyVideos.map(video => video.venueId)
-    )).slice(0, 5);
-
-    // TODO: Fetch venue details from API using these IDs
-    // For now, return empty array - UI will handle empty state
-    return [];
-  }, [feedSettings.selectedFilter, isEmpty, nearbyVideos]);
+    return suggestedVenuesQuery.data || [];
+  }, [feedSettings.selectedFilter, isEmpty, suggestedVenuesQuery.data]);
 
   return {
     feedSettings,
@@ -315,6 +339,7 @@ export const [FeedProvider, useFeed] = createContextHook(() => {
     suggestedPerformers,
     suggestedVenues,
     uploadVideo,
+    refreshLocation,
     isLoading: feedSettingsQuery.isLoading,
   };
 });

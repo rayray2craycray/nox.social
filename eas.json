@@ -60,9 +60,8 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "your-apple-id@example.com",
-        "ascAppId": "1234567890",
-        "appleTeamId": "ABCDE12345"
+        "ascAppId": "6759268441",
+        "appleTeamId": "UEJL484624"
       },
       "android": {
         "serviceAccountKeyPath": "./google-play-service-account.json",
@@ -72,9 +71,8 @@
     },
     "staging": {
       "ios": {
-        "appleId": "your-apple-id@example.com",
-        "ascAppId": "1234567890",
-        "appleTeamId": "ABCDE12345"
+        "ascAppId": "6759268441",
+        "appleTeamId": "UEJL484624"
       },
       "android": {
         "serviceAccountKeyPath": "./google-play-service-account.json",

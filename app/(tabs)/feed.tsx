@@ -112,11 +112,16 @@ function renderSticker(sticker: string, onPress?: () => void) {
 }
 
 export default function FeedScreen() {
-  const { videos, selectedFilter, setFilter, isEmpty, suggestedPerformers } = useFeed();
+  const { videos, selectedFilter, setFilter, isEmpty, suggestedPerformers, refreshLocation } = useFeed();
   const { followPerformer, isFollowing } = useAppState();
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set());
   const isFocused = useIsFocused();
+
+  // Request location when user navigates to feed (not at provider init)
+  useEffect(() => {
+    refreshLocation();
+  }, [refreshLocation]);
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {

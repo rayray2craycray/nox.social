@@ -108,7 +108,7 @@ function verifyToken(req) {
 
   try {
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     return decoded.sub; // userId
   } catch (error) {
     return null;

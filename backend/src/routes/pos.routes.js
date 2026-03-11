@@ -9,6 +9,13 @@ const posController = require('../controllers/pos.controller');
 const spendRulesController = require('../controllers/spend-rules.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { adminMiddleware } = require('../middleware/admin.middleware');
+const { validate } = require('../middleware/validation');
+const {
+  connectPOSSchema,
+  validateCredentialsSchema,
+  createSpendRuleSchema,
+  updateSpendRuleSchema,
+} = require('../validators/pos.validator');
 
 // ============================================================================
 // POS Integration Management
@@ -20,7 +27,7 @@ const { adminMiddleware } = require('../middleware/admin.middleware');
  * Body: { venueId, provider: 'TOAST' | 'SQUARE', credentials: { apiKey, locationId, environment } }
  * Auth: Required (HEAD_MODERATOR)
  */
-router.post('/connect', authMiddleware, posController.connectPOS);
+router.post('/connect', authMiddleware, validate(connectPOSSchema), posController.connectPOS);
 
 /**
  * Get POS integration status
@@ -42,7 +49,7 @@ router.post('/disconnect/:venueId', authMiddleware, posController.disconnectPOS)
  * Body: { provider, credentials }
  * Auth: Required
  */
-router.post('/validate', authMiddleware, posController.validateCredentials);
+router.post('/validate', authMiddleware, validate(validateCredentialsSchema), posController.validateCredentials);
 
 // ============================================================================
 // Transaction Management
@@ -89,7 +96,7 @@ router.get('/rules/:venueId', authMiddleware, spendRulesController.getRules);
  * Body: { threshold, tierUnlocked, serverAccessLevel, isLiveOnly?, liveTimeWindow?, performerId? }
  * Auth: Required (HEAD_MODERATOR)
  */
-router.post('/rules/:venueId', authMiddleware, spendRulesController.createRule);
+router.post('/rules/:venueId', authMiddleware, validate(createSpendRuleSchema), spendRulesController.createRule);
 
 /**
  * Update spend rule
@@ -97,7 +104,7 @@ router.post('/rules/:venueId', authMiddleware, spendRulesController.createRule);
  * Body: Partial spend rule fields
  * Auth: Required (HEAD_MODERATOR)
  */
-router.patch('/rules/:venueId/:ruleId', authMiddleware, spendRulesController.updateRule);
+router.patch('/rules/:venueId/:ruleId', authMiddleware, validate(updateSpendRuleSchema), spendRulesController.updateRule);
 
 /**
  * Delete spend rule

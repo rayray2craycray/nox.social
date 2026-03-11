@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/auth.middleware');
+const { validate } = require('../middleware/validation');
+const { createEventSchema, updateEventSchema } = require('../validators/events.validator');
 
 const eventsController = require('../controllers/events.controller');
 const ticketsController = require('../controllers/tickets.controller');
@@ -23,8 +25,8 @@ router.get('/tickets/qr/:qrCode', ticketsController.getTicketByQRCode);
 // ============================================
 
 // Events Management (venue owners/admins only)
-router.post('/', authMiddleware, eventsController.createEvent);
-router.patch('/:eventId', authMiddleware, eventsController.updateEvent);
+router.post('/', authMiddleware, validate(createEventSchema), eventsController.createEvent);
+router.patch('/:eventId', authMiddleware, validate(updateEventSchema), eventsController.updateEvent);
 router.delete('/:eventId', authMiddleware, eventsController.deleteEvent);
 
 // Ticket Purchases and Management

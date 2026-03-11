@@ -18,6 +18,15 @@ const {
   resetPassword,
 } = require('../controllers/auth.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
+const { validate } = require('../middleware/validation');
+const {
+  signUpSchema,
+  signInSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  refreshTokenSchema,
+  updateProfileSchema,
+} = require('../validators/auth.validator');
 
 const router = express.Router();
 
@@ -26,13 +35,13 @@ const router = express.Router();
  */
 
 // POST /auth/signup - Register new user
-router.post('/signup', signUp);
+router.post('/signup', validate(signUpSchema), signUp);
 
 // POST /auth/signin - Authenticate user
-router.post('/signin', signIn);
+router.post('/signin', validate(signInSchema), signIn);
 
 // POST /auth/refresh - Refresh access token
-router.post('/refresh', refresh);
+router.post('/refresh', validate(refreshTokenSchema), refresh);
 
 // POST /auth/signout - Sign out and revoke token
 router.post('/signout', signOut);
@@ -41,13 +50,13 @@ router.post('/signout', signOut);
 router.get('/me', authMiddleware, getMe);
 
 // PUT /auth/profile - Update user profile (protected)
-router.put('/profile', authMiddleware, updateProfile);
+router.put('/profile', authMiddleware, validate(updateProfileSchema), updateProfile);
 
 // POST /auth/forgot-password - Initiate password reset
-router.post('/forgot-password', forgotPassword);
+router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
 
 // POST /auth/reset-password - Complete password reset
-router.post('/reset-password', resetPassword);
+router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 
 /**
  * Instagram OAuth Routes

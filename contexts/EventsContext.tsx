@@ -11,7 +11,6 @@ import {
   GuestListEntry,
   CheckInRecord,
 } from '@/types';
-// Mock data imports removed - using empty defaults when API unavailable
 import { eventsApi } from '@/services/api';
 import { useAuth } from './AuthContext';
 
@@ -121,24 +120,36 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     queryKey: ['ticketTiers'],
     queryFn: async () => {
       try {
+        // Ticket tiers come embedded in event data
+        const response = await eventsApi.getUpcomingEvents();
+        const events = response.data || [];
+        const tiers = events.flatMap((event: any) =>
+          (event.ticketTiers || []).map((tier: any) => ({
+            ...tier,
+            id: tier._id || tier.id,
+            eventId: event._id || event.id,
+          }))
+        );
+        if (tiers.length > 0) {
+          await AsyncStorage.setItem(STORAGE_KEYS.TICKET_TIERS, JSON.stringify(tiers));
+        }
+        return tiers;
+      } catch (error) {
+        if (__DEV__) console.log('[Events] API unavailable for ticket tiers, using cache');
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.TICKET_TIERS);
         return stored ? JSON.parse(stored) : [];
-      } catch {
-        return [];
       }
     },
   });
 
   // Ticket Transfers Query
   const ticketTransfersQuery = useQuery({
-    queryKey: ['ticketTransfers'],
+    queryKey: ['ticketTransfers', userId],
     queryFn: async () => {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEYS.TICKET_TRANSFERS);
-        return stored ? JSON.parse(stored) : [];
-      } catch {
-        return [];
-      }
+      // Transfers are tracked locally after API mutations complete
+      // The actual transfer is done via eventsApi.transferTicket()
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.TICKET_TRANSFERS);
+      return stored ? JSON.parse(stored) : [];
     },
   });
 
@@ -147,26 +158,45 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     queryKey: ['guestList'],
     queryFn: async (): Promise<GuestListEntry[]> => {
       try {
-        // TODO: Fetch guest list from API when available (venue-specific)
-        return [];
+        // Fetch guest lists for all upcoming events
+        const eventsData = eventsQuery.data || [];
+        const allEntries: GuestListEntry[] = [];
+
+        for (const event of eventsData.slice(0, 10)) {
+          try {
+            const response = await eventsApi.getEventGuestList(event.id);
+            if (response.data) {
+              const entries = response.data.map((entry: any) => ({
+                ...entry,
+                id: entry._id || entry.id,
+              }));
+              allEntries.push(...entries);
+            }
+          } catch {
+            // Skip events without guest list data
+          }
+        }
+
+        if (allEntries.length > 0) {
+          await AsyncStorage.setItem(STORAGE_KEYS.GUEST_LIST, JSON.stringify(allEntries));
+        }
+        return allEntries;
       } catch (error) {
-        // Silently handle missing endpoint
-        if (__DEV__) console.log('[Events] Endpoint not implemented: guest list', error);
-        return [];
+        if (__DEV__) console.log('[Events] API unavailable for guest list, using cache');
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.GUEST_LIST);
+        return stored ? JSON.parse(stored) : [];
       }
     },
+    enabled: (eventsQuery.data || []).length > 0,
   });
 
   // Check-In Records Query
   const checkInRecordsQuery = useQuery({
     queryKey: ['checkInRecords'],
     queryFn: async () => {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEYS.CHECK_IN_RECORDS);
-        return stored ? JSON.parse(stored) : [];
-      } catch {
-        return [];
-      }
+      // Check-in records are stored locally after API check-in mutations
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.CHECK_IN_RECORDS);
+      return stored ? JSON.parse(stored) : [];
     },
   });
 

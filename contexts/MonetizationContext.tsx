@@ -2,7 +2,6 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DynamicPricing, PriceAlert } from '@/types';
-// Mock data imports removed - using empty defaults when API unavailable
 import { pricingApi } from '@/services/api';
 import * as Haptics from 'expo-haptics';
 import { Alert } from 'react-native';

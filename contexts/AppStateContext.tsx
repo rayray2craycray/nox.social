@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserProfile, UserRole, VibeCheckVote, VenueVibeData, UserVibeCooldown, VibeEnergyLevel, WaitTimeRange } from '@/types';
 import { VIBE_CHECK } from '@/constants/app';
 import { getSecureItem, setSecureItem, deleteSecureItem, SECURE_KEYS, migrateToSecureStorage } from '@/utils/secureStorage';
+import { apiClient } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 const STORAGE_KEYS = {
   PROFILE: 'vibelink_profile',
@@ -38,8 +40,124 @@ export interface LinkedCard {
   isDefault: boolean;
 }
 
+// --------------------------------------------------------------------------
+// Helper: fetch profile from GET /api/auth/me, fall back to AsyncStorage
+// --------------------------------------------------------------------------
+async function fetchProfileFromApi(accessToken: string | null): Promise<UserProfile> {
+  if (!accessToken) {
+    throw new Error('No access token');
+  }
+
+  const response = await apiClient.get<{ success: boolean; data: any }>('/auth/me');
+
+  if (!response?.success || !response.data) {
+    throw new Error('Invalid /auth/me response');
+  }
+
+  const apiUser = response.data;
+
+  // Read the locally-cached profile so we can merge fields the backend
+  // doesn't know about (badges, incognito, followed performers, etc.)
+  let localProfile: UserProfile = defaultProfile;
+  try {
+    const stored = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
+    if (stored) {
+      localProfile = JSON.parse(stored);
+    }
+  } catch {
+    // ignore parse errors
+  }
+
+  // Merge: backend-authoritative fields overwrite, local-only fields preserved
+  const merged: UserProfile = {
+    ...localProfile,
+    id: apiUser.id || apiUser._id || localProfile.id,
+    displayName: apiUser.displayName ?? localProfile.displayName,
+    profileImageUrl: apiUser.profileImageUrl,
+    bio: apiUser.bio ?? localProfile.bio,
+    isAuthenticated: true,
+  };
+
+  // Persist merge result to AsyncStorage for offline use
+  await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(merged));
+
+  return merged;
+}
+
+// --------------------------------------------------------------------------
+// Helper: fetch vibe data from GET /api/v1/venues/:venueId/vibe-data
+// --------------------------------------------------------------------------
+async function fetchVenueVibeData(venueId: string): Promise<VenueVibeData | null> {
+  try {
+    const response = await apiClient.get<any>(`/v1/venues/${venueId}/vibe-data`);
+
+    if (!response) return null;
+
+    // Map backend shape -> frontend VenueVibeData shape
+    const vibeData: VenueVibeData = {
+      venueId: response.venueId || venueId,
+      musicScore: response.music ?? 0,
+      densityScore: response.density ?? 0,
+      energyLevel: mapEnergyFromBackend(response.energy),
+      waitTime: mapWaitTimeFromBackend(response.waitTime),
+      lastUpdated: response.lastUpdated || new Date().toISOString(),
+      totalVotes: response.totalVotes ?? 0,
+    };
+
+    return vibeData;
+  } catch (error) {
+    if (__DEV__) {
+      console.log('[AppState] Failed to fetch vibe data for', venueId, error);
+    }
+    return null;
+  }
+}
+
+// Map backend energy int (0-100) to frontend VibeEnergyLevel
+function mapEnergyFromBackend(energy: number | string): VibeEnergyLevel {
+  if (typeof energy === 'string') return energy as VibeEnergyLevel;
+  if (energy <= 33) return 'Chill';
+  if (energy <= 66) return 'Social';
+  return 'Wild';
+}
+
+// Map backend energy level to backend int (0-100)
+function mapEnergyToBackend(energy: VibeEnergyLevel): number {
+  switch (energy) {
+    case 'Chill': return 20;
+    case 'Social': return 50;
+    case 'Wild': return 85;
+    default: return 50;
+  }
+}
+
+// Map backend waitTime int (minutes) to frontend WaitTimeRange
+function mapWaitTimeFromBackend(waitTime: number | string): WaitTimeRange {
+  if (typeof waitTime === 'string') return waitTime as WaitTimeRange;
+  if (waitTime <= 10) return '0-10m';
+  if (waitTime <= 30) return '10-30m';
+  return '30m+';
+}
+
+// Map frontend WaitTimeRange to backend int (minutes)
+function mapWaitTimeToBackend(waitTime: WaitTimeRange): number {
+  switch (waitTime) {
+    case '0-10m': return 5;
+    case '10-30m': return 20;
+    case '30m+': return 45;
+    default: return 10;
+  }
+}
+
+// Map frontend music score (1-5) to backend (0-100)
+function mapScoreToBackend(score: number): number {
+  return Math.round((score / 5) * 100);
+}
+
 export const [AppStateProvider, useAppState] = createContextHook(() => {
   const queryClient = useQueryClient();
+  const { userId, accessToken, isAuthenticated: authIsAuthenticated } = useAuth();
+
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
   const [vibeCooldowns, setVibeCooldowns] = useState<UserVibeCooldown[]>([]);
   const [venueVibeData, setVenueVibeData] = useState<VenueVibeData[]>([]);
@@ -52,8 +170,34 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
   }>>([]);
   const [linkedCards, setLinkedCards] = useState<LinkedCard[]>([]);
 
+  // --------------------------------------------------------------------------
+  // Profile query: API-first, AsyncStorage fallback
+  // --------------------------------------------------------------------------
   const profileQuery = useQuery({
-    queryKey: ['profile'],
+    queryKey: ['profile', userId],
+    queryFn: async () => {
+      try {
+        return await fetchProfileFromApi(accessToken);
+      } catch (error) {
+        if (__DEV__) {
+          console.log('[AppState] API profile fetch failed, falling back to cache:', error);
+        }
+        // Fallback to AsyncStorage
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
+        if (stored) {
+          return JSON.parse(stored) as UserProfile;
+        }
+        return defaultProfile;
+      }
+    },
+    enabled: !!userId && !!accessToken,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
+
+  // Fallback query when not authenticated — just reads local cache
+  const localProfileQuery = useQuery({
+    queryKey: ['profile', 'local'],
     queryFn: async () => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
       if (stored) {
@@ -61,6 +205,7 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
       }
       return defaultProfile;
     },
+    enabled: !userId || !accessToken,
   });
 
   const cooldownsQuery = useQuery({
@@ -85,11 +230,13 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     },
   });
 
+  // Sync profile query data into state
   useEffect(() => {
-    if (profileQuery.data) {
-      setProfile(profileQuery.data);
+    const data = profileQuery.data ?? localProfileQuery.data;
+    if (data) {
+      setProfile(data);
     }
-  }, [profileQuery.data]);
+  }, [profileQuery.data, localProfileQuery.data]);
 
   useEffect(() => {
     if (cooldownsQuery.data) {
@@ -120,16 +267,21 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     migrateExistingData();
   }, []); // Run once on mount
 
+  // --------------------------------------------------------------------------
+  // Update profile: write to API + local cache
+  // --------------------------------------------------------------------------
   const updateProfileMutation = useMutation({
     mutationFn: async (updates: Partial<UserProfile>) => {
       if (__DEV__) {
         console.log('[AppState] updateProfile called with:', updates);
       }
-      // Read current profile from storage to avoid stale closure issues
+
+      // Always persist locally
       const currentProfile = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
       const profileData = currentProfile ? JSON.parse(currentProfile) : defaultProfile;
       const updated = { ...profileData, ...updates };
       await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(updated));
+
       if (__DEV__) {
         console.log('[AppState] Profile updated, badges:', updated.badges.map((b: any) => b.venueId));
       }
@@ -190,8 +342,8 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
   }, [profile.badges]);
 
   const setUserRole = useCallback((role: UserRole) => {
-    updateProfile({ 
-      role, 
+    updateProfile({
+      role,
       isAuthenticated: role !== null,
       isVenueManager: role === 'VENUE',
       managedVenues: role === 'VENUE' ? ['venue-1'] : [],
@@ -248,6 +400,9 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     return Math.max(0, remaining);
   }, [vibeCooldowns]);
 
+  // --------------------------------------------------------------------------
+  // Submit vibe check: POST /api/v1/venues/:venueId/vibe-check
+  // --------------------------------------------------------------------------
   const submitVibeCheck = useMutation({
     mutationFn: async (vote: {
       venueId: string;
@@ -260,8 +415,9 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
       const isVIP = userBadge?.badgeType === 'WHALE' || userBadge?.badgeType === 'PLATINUM';
       const weight = isVIP ? 2.0 : 1.0;
 
+      // Build the local vote object for return value / local state
       const newVote: VibeCheckVote = {
-        userId: profile.id,
+        userId: userId || profile.id,
         venueId: vote.venueId,
         music: vote.music,
         density: vote.density,
@@ -271,6 +427,7 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
         timestamp: new Date().toISOString(),
       };
 
+      // Update cooldown locally first (optimistic)
       const newCooldown: UserVibeCooldown = {
         venueId: vote.venueId,
         lastVoteTimestamp: newVote.timestamp,
@@ -284,6 +441,51 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
       await AsyncStorage.setItem(STORAGE_KEYS.VIBE_COOLDOWNS, JSON.stringify(updatedCooldowns));
       setVibeCooldowns(updatedCooldowns);
 
+      // Attempt API call
+      if (accessToken) {
+        try {
+          const apiResponse = await apiClient.post<{
+            vibeCheck: any;
+            updatedVibeData: any;
+          }>(`/v1/venues/${vote.venueId}/vibe-check`, {
+            music: mapScoreToBackend(vote.music),
+            density: mapScoreToBackend(vote.density),
+            energy: mapEnergyToBackend(vote.energy),
+            waitTime: mapWaitTimeToBackend(vote.waitTime),
+          });
+
+          // If backend returned updated vibe data, use it
+          if (apiResponse?.updatedVibeData) {
+            const backendVibe = apiResponse.updatedVibeData;
+            const updatedVibeData: VenueVibeData = {
+              venueId: vote.venueId,
+              musicScore: backendVibe.music != null ? backendVibe.music / 20 : vote.music,
+              densityScore: backendVibe.density != null ? backendVibe.density / 20 : vote.density,
+              energyLevel: mapEnergyFromBackend(backendVibe.energy),
+              waitTime: mapWaitTimeFromBackend(backendVibe.waitTime),
+              lastUpdated: backendVibe.lastUpdated || newVote.timestamp,
+              totalVotes: backendVibe.totalVotes ?? 1,
+            };
+
+            setVenueVibeData(prev => [
+              ...prev.filter(v => v.venueId !== vote.venueId),
+              updatedVibeData,
+            ]);
+
+            // Invalidate venue vibe query cache
+            queryClient.invalidateQueries({ queryKey: ['venue-vibe', vote.venueId] });
+
+            return newVote;
+          }
+        } catch (error) {
+          if (__DEV__) {
+            console.log('[AppState] API vibe-check failed, using local calculation:', error);
+          }
+          // Fall through to local calculation
+        }
+      }
+
+      // Fallback: local vibe data calculation (same as before)
       const existingData = venueVibeData.find(v => v.venueId === vote.venueId);
       const updatedVibeData: VenueVibeData = {
         venueId: vote.venueId,
@@ -295,8 +497,8 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
         totalVotes: existingData ? existingData.totalVotes + weight : weight,
       };
 
-      setVenueVibeData([
-        ...venueVibeData.filter(v => v.venueId !== vote.venueId),
+      setVenueVibeData(prev => [
+        ...prev.filter(v => v.venueId !== vote.venueId),
         updatedVibeData,
       ]);
 
@@ -304,6 +506,9 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     },
   });
 
+  // --------------------------------------------------------------------------
+  // Get venue vibe: API-first, local fallback
+  // --------------------------------------------------------------------------
   const getVenueVibe = useCallback((venueId: string): VenueVibeData | null => {
     const vibeData = venueVibeData.find(v => v.venueId === venueId);
     if (!vibeData) return null;
@@ -312,6 +517,26 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     if (timeSinceUpdate >= VIBE_CHECK.DATA_DECAY_MS) return null;
 
     return vibeData;
+  }, [venueVibeData]);
+
+  // Fetch venue vibe data from API and update local state.
+  // Consumers should call this when they need fresh vibe data for a venue.
+  const fetchVenueVibe = useCallback(async (venueId: string): Promise<VenueVibeData | null> => {
+    try {
+      const apiData = await fetchVenueVibeData(venueId);
+      if (apiData) {
+        setVenueVibeData(prev => [
+          ...prev.filter(v => v.venueId !== venueId),
+          apiData,
+        ]);
+        return apiData;
+      }
+    } catch {
+      // ignore, fall through to local
+    }
+
+    // Return local data
+    return venueVibeData.find(v => v.venueId === venueId) ?? null;
   }, [venueVibeData]);
 
   const calculateVibePercentage = useCallback((venueId: string): number | null => {
@@ -330,15 +555,28 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
 
   const createAccount = useMutation({
     mutationFn: async ({ username, password }: { username: string; password: string }) => {
-      // TODO: Replace with backend API call to /api/auth/register
-      const credentials = {
-        username,
-        password,
-        createdAt: new Date().toISOString(),
-      };
+      try {
+        const response = await apiClient.post<{ token?: string; accessToken?: string; user?: any }>('/auth/signup', {
+          username,
+          password,
+          displayName: username,
+        });
 
-      // Store credentials securely using SecureStore
-      await setSecureItem(SECURE_KEYS.USER_CREDENTIALS, JSON.stringify(credentials));
+        if (response?.token || response?.accessToken) {
+          await setSecureItem(SECURE_KEYS.AUTH_TOKEN, response.token || response.accessToken || '');
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.log('[AppState] API signup failed, storing locally:', error);
+        }
+        // Store credentials locally as fallback
+        const credentials = {
+          username,
+          password,
+          createdAt: new Date().toISOString(),
+        };
+        await setSecureItem(SECURE_KEYS.USER_CREDENTIALS, JSON.stringify(credentials));
+      }
 
       const updated = {
         ...profile,
@@ -370,7 +608,6 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
   }, [broadcastMessages]);
 
   const addLinkedCard = useCallback(async (card: Omit<LinkedCard, 'id'>) => {
-    // TODO: Replace with backend API call to /api/payment/cards/add
     const newCard: LinkedCard = {
       ...card,
       id: Date.now().toString(),
@@ -382,7 +619,6 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
   }, [linkedCards]);
 
   const removeLinkedCard = useCallback(async (cardId: string) => {
-    // TODO: Replace with backend API call to /api/payment/cards/remove
     const updated = linkedCards.filter(card => card.id !== cardId);
     await setSecureItem(SECURE_KEYS.LINKED_CARDS, JSON.stringify(updated));
     setLinkedCards(updated);
@@ -390,7 +626,7 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
 
   return {
     profile,
-    isLoading: profileQuery.isLoading,
+    isLoading: profileQuery.isLoading || localProfileQuery.isLoading,
     toggleIncognito,
     followPerformer,
     isFollowing,
@@ -405,6 +641,7 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     getVibeCooldownRemaining,
     submitVibeCheck,
     getVenueVibe,
+    fetchVenueVibe,
     calculateVibePercentage,
     createAccount,
     addBroadcastMessage,

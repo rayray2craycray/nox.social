@@ -10,7 +10,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { exchangeInstagramCode, syncInstagram } from './api';
 import { getSecureItem, setSecureItem, deleteSecureItem, SECURE_KEYS } from '@/utils/secureStorage';
 
-WebBrowser.maybeCompleteAuthSession();
+// IMPORTANT: Do NOT call WebBrowser.maybeCompleteAuthSession() at module scope.
+// Native module methods called during import trigger TurboModule void-method ObjC
+// exceptions on iOS New Arch, causing EXC_CRASH (SIGABRT) at startup (Build 76 crash).
 
 const USE_MOCK_DATA = process.env.EXPO_PUBLIC_USE_MOCK_DATA === 'true' || process.env.NODE_ENV === 'development';
 const ENABLE_INSTAGRAM_SYNC = process.env.EXPO_PUBLIC_ENABLE_INSTAGRAM_SYNC === 'true';
@@ -51,7 +53,8 @@ export interface InstagramSyncResult {
 const INSTAGRAM_CONFIG = {
   clientId: process.env.EXPO_PUBLIC_INSTAGRAM_CLIENT_ID || '',
   clientSecret: '', // Never used in client - backend handles this
-  redirectUri: process.env.EXPO_PUBLIC_INSTAGRAM_REDIRECT_URI || AuthSession.makeRedirectUri({
+  // Lazy getter to avoid native module call at import time
+  getRedirectUri: () => process.env.EXPO_PUBLIC_INSTAGRAM_REDIRECT_URI || AuthSession.makeRedirectUri({
     scheme: 'nox',
     path: 'instagram-callback',
   }),
@@ -136,12 +139,12 @@ export async function connectInstagram(): Promise<InstagramUser | null> {
     }
 
     // Build OAuth authorization URL
-    const authUrl = `https://api.instagram.com/oauth/authorize?client_id=${INSTAGRAM_CONFIG.clientId}&redirect_uri=${encodeURIComponent(INSTAGRAM_CONFIG.redirectUri)}&scope=${INSTAGRAM_CONFIG.scopes.join(',')}&response_type=code`;
+    const authUrl = `https://api.instagram.com/oauth/authorize?client_id=${INSTAGRAM_CONFIG.clientId}&redirect_uri=${encodeURIComponent(INSTAGRAM_CONFIG.getRedirectUri())}&scope=${INSTAGRAM_CONFIG.scopes.join(',')}&response_type=code`;
 
     // Open OAuth browser session
     const result = await WebBrowser.openAuthSessionAsync(
       authUrl,
-      INSTAGRAM_CONFIG.redirectUri
+      INSTAGRAM_CONFIG.getRedirectUri()
     );
 
     if (result.type !== 'success' || !result.url) {

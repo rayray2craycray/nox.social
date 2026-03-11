@@ -1,0 +1,107 @@
+# Security Audit Pipeline
+#
+# Runs dependency vulnerability checks on a weekly schedule and on pull requests.
+#
+# Status badge:
+#   ![Security Audit](https://github.com/<owner>/nox.social/actions/workflows/security-audit.yml/badge.svg)
+
+name: Security Audit
+
+on:
+  schedule:
+    # Every Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ───────────────────────────────────────────────
+  # Frontend dependency audit
+  # ───────────────────────────────────────────────
+  frontend-audit:
+    name: Frontend Dependency Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # bun audit is not yet stable; fall back to npm audit against the lockfile
+      - name: Run npm audit (frontend)
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  # ───────────────────────────────────────────────
+  # Backend dependency audit
+  # ───────────────────────────────────────────────
+  backend-audit:
+    name: Backend Dependency Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit (backend)
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  # ───────────────────────────────────────────────
+  # OWASP Dependency-Check (optional, best-effort)
+  # ───────────────────────────────────────────────
+  owasp-check:
+    name: OWASP Dependency-Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency-Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'nox-social'
+          path: '.'
+          format: 'HTML'
+          args: >-
+            --enableExperimental
+            --failOnCVSS 7
+        continue-on-error: true
+
+      - name: Upload OWASP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: owasp-dependency-check-report
+          path: reports/
+          retention-days: 30

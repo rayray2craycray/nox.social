@@ -46,6 +46,9 @@ jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn(() =>
     Promise.resolve({ status: 'granted' })
   ),
+  getForegroundPermissionsAsync: jest.fn(() =>
+    Promise.resolve({ status: 'granted' })
+  ),
   getCurrentPositionAsync: jest.fn(() =>
     Promise.resolve({
       coords: {
@@ -54,6 +57,14 @@ jest.mock('expo-location', () => ({
       },
     })
   ),
+  Accuracy: {
+    Lowest: 1,
+    Low: 2,
+    Balanced: 3,
+    High: 4,
+    Highest: 5,
+    BestForNavigation: 6,
+  },
 }));
 
 // Mock expo-haptics
@@ -105,7 +116,9 @@ jest.mock('react-native-gesture-handler', () => {
 });
 
 // Silence the warning: Animated: `useNativeDriver` is not supported
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+// In RN 0.81+ the NativeAnimatedHelper module was moved/removed.
+// Use jest.config.js moduleNameMapper as a safe fallback instead.
+jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper', () => ({}), { virtual: true });
 
 // Mock react-query
 global.setImmediate = global.setImmediate || ((fn, ...args) => global.setTimeout(fn, 0, ...args));

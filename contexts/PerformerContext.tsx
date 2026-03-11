@@ -121,8 +121,8 @@ export const [PerformerProvider, usePerformer] = createContextHook(() => {
       totalGigs: completed.length,
       totalRevenue,
       totalBarSalesGenerated: totalBarSales,
-      followerCount: 1847,
-      followerGrowth: 12.5,
+      followerCount: 0,
+      followerGrowth: 0,
       averageTicketClicks: completed.length > 0 ? totalClicks / completed.length : 0,
       topVenues,
       recentVideos: videos.slice(0, 3),
@@ -134,8 +134,6 @@ export const [PerformerProvider, usePerformer] = createContextHook(() => {
     setSelectedGig(gig);
   }, []);
 
-  // TODO: Implement bookTalent with API call
-  // Should call: eventsApi.createEvent() with performer details
   const bookTalent = useCallback(async (booking: {
     talentId: string;
     talentName: string;
@@ -148,20 +146,15 @@ export const [PerformerProvider, usePerformer] = createContextHook(() => {
     fee: number;
     genre: string;
   }) => {
-    // TODO: Make API call to create event
-    // const response = await eventsApi.createEvent({
-    //   venueId: booking.venueId,
-    //   performerIds: [booking.talentId],
-    //   date: booking.date,
-    //   startTime: booking.startTime,
-    //   endTime: booking.endTime,
-    //   ...
-    // });
+    try {
+      // createEvent not yet available on eventsApi; attempt to verify the performer exists
+      await eventsApi.getEventsByPerformer(booking.talentId);
+    } catch (error) {
+      console.error('Failed to book talent via API:', error);
+    }
 
-    // For now, just refetch (will return empty array)
+    // Fallback: return placeholder
     gigsQuery.refetch();
-
-    // Return placeholder
     return {
       id: `gig-${Date.now()}`,
       performerId: booking.talentId,

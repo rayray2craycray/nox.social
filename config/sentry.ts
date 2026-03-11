@@ -1,120 +1,171 @@
-import * as Sentry from '@sentry/react-native';
-import Constants from 'expo-constants';
+/**
+ * Sentry error tracking via @sentry/browser (JS-only SDK).
+ *
+ * We use @sentry/browser instead of @sentry/react-native because the latter
+ * relies on TurboModule native methods that cause SIGABRT crashes on iOS with
+ * New Architecture enabled (SDK 54). The browser SDK is pure JavaScript — no
+ * native modules, no ObjC exceptions, no crash risk.
+ *
+ * Trade-off: we lose native crash reporting (C++/ObjC-level crashes) and some
+ * device-level context, but we gain reliable JS error tracking, breadcrumbs,
+ * user context, and performance traces without any native integration risk.
+ */
 
-const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
-const ENVIRONMENT = process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT || 'development';
+import * as Sentry from '@sentry/browser';
 
+type SeverityLevel = 'fatal' | 'error' | 'warning' | 'log' | 'info' | 'debug';
+
+const SENTRY_DSN =
+  process.env.EXPO_PUBLIC_SENTRY_DSN ??
+  'https://b198d5a4180a329ad71dc1fa5e213d0f@o4510789682266113.ingest.us.sentry.io/4510789691834368';
+
+const SENTRY_ENVIRONMENT =
+  process.env.EXPO_PUBLIC_SENTRY_ENVIRONMENT ?? 'development';
+
+const IS_PRODUCTION = SENTRY_ENVIRONMENT === 'production';
+
+let isInitialized = false;
+
+/**
+ * Initialize Sentry. Safe to call at mount time — no native modules involved.
+ * Only enables sending in production; in dev it logs a message and no-ops.
+ */
 export const initSentry = () => {
-  // Only initialize Sentry if DSN is provided and not in development
-  if (!SENTRY_DSN) {
-    console.log('[Sentry] Skipping initialization - No DSN provided');
-    return;
-  }
+  if (isInitialized) return;
+  isInitialized = true;
 
   if (__DEV__) {
-    console.log('[Sentry] Skipping initialization - Development mode');
-    return;
+    console.log('[Sentry] Dev mode — initialized with debug transport (events not sent)');
   }
 
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    environment: ENVIRONMENT,
-    enableAutoSessionTracking: true,
-    sessionTrackingIntervalMillis: 30000, // 30 seconds
-
-    // Performance Monitoring
-    tracesSampleRate: ENVIRONMENT === 'production' ? 0.2 : 1.0, // 20% in prod, 100% in staging
-
-    // Set release version
-    release: Constants.expoConfig?.version || '1.0.0',
-    dist: Constants.expoConfig?.android?.versionCode?.toString() ||
-          Constants.expoConfig?.ios?.buildNumber ||
-          '1',
-
-    // Breadcrumbs
-    maxBreadcrumbs: 50,
-    attachStacktrace: true,
-
-    // Events filtering
-    beforeSend(event, hint) {
-      // Filter out known non-critical errors
-      const error = hint.originalException;
-
-      if (error && typeof error === 'object' && 'message' in error) {
-        const message = String(error.message);
-
-        // Ignore network errors in development
-        if (__DEV__ && message.includes('Network request failed')) {
-          return null;
-        }
-
-        // Ignore AbortController timeouts (handled gracefully)
-        if (message.includes('AbortError') || message.includes('timeout')) {
-          return null;
-        }
-      }
-
-      return event;
-    },
-
-    // Integrations
-    integrations: [
-      Sentry.reactNavigationIntegration(),
-    ],
-  });
-
-  console.log('[Sentry] Initialized successfully');
-  console.log(`[Sentry] Environment: ${ENVIRONMENT}`);
+  try {
+    Sentry.init({
+      dsn: SENTRY_DSN,
+      environment: SENTRY_ENVIRONMENT,
+      enabled: IS_PRODUCTION,
+      tracesSampleRate: 0.2,
+      // Disable features that rely on browser DOM APIs not available in RN
+      autoSessionTracking: false,
+      integrations: (defaults) =>
+        defaults.filter((integration) => {
+          // Remove integrations that depend on browser-specific globals
+          // (document, window.history, etc.) which don't exist in React Native.
+          const browserOnly = [
+            'BrowserApiErrors',
+            'Breadcrumbs',
+            'GlobalHandlers',
+            'HttpContext',
+            'TryCatch',
+          ];
+          return !browserOnly.includes(integration.name);
+        }),
+    });
+  } catch (error) {
+    // Never let Sentry initialization crash the app
+    console.warn('[Sentry] Failed to initialize:', error);
+  }
 };
 
-// Helper to capture exceptions with additional context (no-op if Sentry not initialized)
-export const captureException = (error: Error, context?: Record<string, any>) => {
+/**
+ * Capture an exception and send it to Sentry with optional extra context.
+ */
+export const captureException = (
+  error: Error,
+  context?: Record<string, any>,
+) => {
   if (__DEV__) {
     console.error('[Sentry] Exception:', error, context);
-    return;
   }
-  if (!SENTRY_DSN) return;
+
   try {
-    Sentry.captureException(error, {
-      contexts: {
-        custom: context ?? {},
-      },
+    Sentry.withScope((scope) => {
+      if (context) {
+        scope.setExtras(context);
+      }
+      Sentry.captureException(error);
     });
-  } catch (_) {
-    // ignore so app never crashes due to Sentry
+  } catch (e) {
+    console.warn('[Sentry] Failed to capture exception:', e);
   }
 };
 
-// Helper to capture messages/logs (no-op if Sentry not initialized)
-export const captureMessage = (message: string, level: Sentry.SeverityLevel = 'info') => {
+/**
+ * Capture a message at the given severity level.
+ */
+export const captureMessage = (
+  message: string,
+  level: SeverityLevel = 'info',
+) => {
   if (__DEV__) {
     console.log(`[Sentry] Message (${level}):`, message);
-    return;
   }
-  if (!SENTRY_DSN) return;
+
   try {
     Sentry.captureMessage(message, level);
-  } catch (_) {}
+  } catch (e) {
+    console.warn('[Sentry] Failed to capture message:', e);
+  }
 };
 
-// Helper to add breadcrumbs for debugging (no-op if Sentry not initialized)
-export const addBreadcrumb = (message: string, category: string, data?: Record<string, any>) => {
-  if (!SENTRY_DSN) return;
+/**
+ * Set the current user context on all future Sentry events.
+ */
+export const setUser = (user: {
+  id: string;
+  email?: string;
+  username?: string;
+}) => {
   try {
-    Sentry.addBreadcrumb({ message, category, data, level: 'info' });
-  } catch (_) {}
+    Sentry.setUser(user);
+  } catch (e) {
+    console.warn('[Sentry] Failed to set user:', e);
+  }
 };
 
-// Helper to set user context (no-op if Sentry not initialized)
-export const setUserContext = (userId: string | null, email?: string, username?: string) => {
-  if (!SENTRY_DSN) return;
+/**
+ * Clear the current user context (e.g. on logout).
+ */
+export const clearUser = () => {
   try {
-    if (userId) {
-      Sentry.setUser({ id: userId, email, username });
-    } else {
-      Sentry.setUser(null);
-    }
-  } catch (_) {}
+    Sentry.setUser(null);
+  } catch (e) {
+    console.warn('[Sentry] Failed to clear user:', e);
+  }
+};
+
+/**
+ * Add a breadcrumb for debugging context in Sentry event trails.
+ */
+export const addBreadcrumb = (
+  message: string,
+  category: string,
+  data?: Record<string, any>,
+) => {
+  try {
+    Sentry.addBreadcrumb({
+      message,
+      category,
+      data,
+      level: 'info',
+    });
+  } catch (e) {
+    // silent
+  }
+};
+
+/**
+ * Legacy alias — kept for backward compatibility with existing call sites.
+ */
+export const setUserContext = (
+  userId: string | null,
+  email?: string,
+  username?: string,
+) => {
+  if (userId) {
+    setUser({ id: userId, email, username });
+  } else {
+    clearUser();
+  }
 };
 
 export default Sentry;

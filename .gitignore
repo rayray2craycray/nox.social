@@ -42,3 +42,9 @@ yarn-error.*
 
 .env
 rork-eslint.config.js
+
+# Sensitive files — never commit
+CREDENTIALS_AND_KEYS.md
+REBUILD_GUIDE_COMPLETE.md
+PRODUCTION_SECRETS.txt
+coverage/
