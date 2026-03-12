@@ -162,6 +162,7 @@ describe('PerformerContext', () => {
       performerId: 'performer-me',
       venueId: 'venue-1',
       venueName: 'Test Venue',
+      venueImageUrl: 'https://example.com/venue.jpg',
       date: '2025-06-01',
       startTime: '22:00',
       endTime: '02:00',

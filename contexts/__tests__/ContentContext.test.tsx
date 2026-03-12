@@ -160,7 +160,7 @@ describe('ContentContext', () => {
     const wrapper = createWrapper();
     const { result } = renderHook(() => useContent(), { wrapper });
 
-    const filtered = await result.current.getFilteredEvents({});
+    const filtered = await result.current.getFilteredEvents({ dateRange: { start: '', end: '' } });
     expect(filtered).toEqual([]);
   });
 
@@ -375,10 +375,13 @@ describe('ContentContext', () => {
     await act(async () => {
       result.current.uploadHighlight({
         venueId: 'venue-1',
+        venueName: 'Test Venue',
         videoUrl: 'https://example.com/video.mp4',
         thumbnailUrl: 'https://example.com/thumb.jpg',
         duration: 30,
         userId: 'test-user-id',
+        userName: 'test-user',
+        viewCount: 0,
       });
       await new Promise(r => setTimeout(r, 50));
     });
@@ -448,6 +451,7 @@ describe('ContentContext', () => {
     await act(async () => {
       events = await result.current.getFilteredEvents({
         venueIds: ['v1', 'v2'],
+        dateRange: { start: '', end: '' },
       });
     });
 
@@ -471,6 +475,7 @@ describe('ContentContext', () => {
     await act(async () => {
       events = await result.current.getFilteredEvents({
         genres: ['EDM'],
+        dateRange: { start: '', end: '' },
       });
     });
 
@@ -494,6 +499,7 @@ describe('ContentContext', () => {
     await act(async () => {
       events = await result.current.getFilteredEvents({
         priceRange: { min: 0, max: 20 },
+        dateRange: { start: '', end: '' },
       });
     });
 
@@ -510,7 +516,7 @@ describe('ContentContext', () => {
 
     let events: any;
     await act(async () => {
-      events = await result.current.getFilteredEvents({});
+      events = await result.current.getFilteredEvents({ dateRange: { start: '', end: '' } });
     });
 
     expect(events).toEqual([]);

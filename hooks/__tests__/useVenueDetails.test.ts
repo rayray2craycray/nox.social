@@ -27,6 +27,7 @@ const mockDetails = {
   placeId: 'place-123',
   name: 'Test Nightclub',
   address: '123 Club St, San Francisco, CA',
+  formattedAddress: '123 Club St, San Francisco, CA 94103',
   rating: 4.5,
   totalRatings: 300,
   type: 'CLUB' as const,

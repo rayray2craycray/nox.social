@@ -265,8 +265,8 @@ export const [GrowthProvider, useGrowth] = createContextHook(() => {
     queryKey: ['storyTemplates'],
     queryFn: async (): Promise<StoryTemplate[]> => {
       try {
-        const response = await growthApi.getShareableContent?.();
-        return response?.data?.templates || [];
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.SHAREABLE_CONTENT);
+        return stored ? JSON.parse(stored).templates || [] : [];
       } catch {
         return [];
       }

@@ -44,8 +44,6 @@ export const initSentry = () => {
       environment: SENTRY_ENVIRONMENT,
       enabled: IS_PRODUCTION,
       tracesSampleRate: 0.2,
-      // Disable features that rely on browser DOM APIs not available in RN
-      autoSessionTracking: false,
       integrations: (defaults) =>
         defaults.filter((integration) => {
           // Remove integrations that depend on browser-specific globals

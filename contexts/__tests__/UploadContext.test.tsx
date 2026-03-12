@@ -137,7 +137,7 @@ describe('UploadContext', () => {
   it('should return null when image picking is canceled', async () => {
     mockImagePicker.launchImageLibraryAsync.mockResolvedValueOnce({
       canceled: true,
-      assets: [],
+      assets: null,
     });
 
     const wrapper = createWrapper();

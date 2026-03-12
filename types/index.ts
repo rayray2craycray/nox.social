@@ -390,6 +390,7 @@ export interface POSIntegration {
     timezone?: string;
     webhookUrl?: string;
     environment?: 'SANDBOX' | 'PRODUCTION'; // Added for environment tracking
+    restaurantExternalId?: string;
   };
   syncConfig: {
     enabled: boolean;

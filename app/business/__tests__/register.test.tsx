@@ -113,23 +113,23 @@ jest.mock('@/utils/validation', () => {
       return { success: true, data };
     },
     venueNameSchema: createMockSchema(
-      (v: string) => v && v.length >= 2,
+      (v: string) => Boolean(v && v.length >= 2),
       'Venue name must be at least 2 characters'
     ),
     businessEmailSchema: createMockSchema(
-      (v: string) => v && v.includes('@') && v.includes('.'),
+      (v: string) => Boolean(v && v.includes('@') && v.includes('.')),
       'Invalid email address'
     ),
     phoneSchema: createMockSchema(
-      (v: string) => v && v.length >= 10,
+      (v: string) => Boolean(v && v.length >= 10),
       'Invalid phone number'
     ),
     websiteSchema: createMockSchema(
-      (v: string) => v && v.startsWith('http'),
+      (v: string) => Boolean(v && v.startsWith('http')),
       'Invalid website URL'
     ),
     zipCodeSchema: createMockSchema(
-      (v: string) => v && /^\d{5}$/.test(v),
+      (v: string) => Boolean(v && /^\d{5}$/.test(v)),
       'Invalid ZIP code'
     ),
   };

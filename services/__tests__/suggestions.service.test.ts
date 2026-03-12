@@ -54,9 +54,7 @@ describe('suggestions.service', () => {
           contactId: 'contact-1',
           name: 'John Contact',
           phoneNumber: '+1234567890',
-          userId: 'user-1',
-          matchType: 'exact' as any,
-        },
+          userId: 'user-1',        },
       ]);
 
       const result = await getPersonalizedSuggestions([], [], {
@@ -122,9 +120,7 @@ describe('suggestions.service', () => {
           contactId: 'contact-1',
           name: 'Already Followed',
           phoneNumber: '+1234567890',
-          userId: 'followed-user',
-          matchType: 'exact' as any,
-        },
+          userId: 'followed-user',        },
       ]);
 
       const result = await getPersonalizedSuggestions(['followed-user'], [], {
@@ -143,9 +139,7 @@ describe('suggestions.service', () => {
           contactId: 'c-1',
           name: 'Duplicate User (Contact)',
           phoneNumber: '+1111111111',
-          userId: 'dup-user',
-          matchType: 'exact' as any,
-        },
+          userId: 'dup-user',        },
       ]);
 
       mockGetInstagramSuggestions.mockResolvedValueOnce([
@@ -178,7 +172,6 @@ describe('suggestions.service', () => {
         name: `Contact ${i}`,
         phoneNumber: `+1${i.toString().padStart(10, '0')}`,
         userId: `user-${i}`,
-        matchType: 'exact' as any,
       }));
 
       mockGetContactSuggestions.mockResolvedValueOnce(manyContacts);
@@ -200,9 +193,7 @@ describe('suggestions.service', () => {
           contactId: 'c-1',
           name: 'Cached Contact',
           phoneNumber: '+1111111111',
-          userId: 'user-cached',
-          matchType: 'exact' as any,
-        },
+          userId: 'user-cached',        },
       ]);
 
       // First call - should hit the service
@@ -318,7 +309,7 @@ describe('suggestions.service', () => {
         avatarUrl: '',
         isOnline: false,
         mutualFriends: 0,
-        source: { type: 'VENUE' as const, venueName: 'Cool Club' },
+        source: { type: 'VENUE' as const, venueId: 'v1', venueName: 'Cool Club' },
         priority: 40,
       };
       expect(getSuggestionSourceLabel(suggestion)).toBe('Frequents Cool Club');
@@ -342,7 +333,7 @@ describe('suggestions.service', () => {
     it('should return green for CONTACT', () => {
       const suggestion = {
         id: '1', displayName: 'T', avatarUrl: '', isOnline: false,
-        mutualFriends: 0, source: { type: 'CONTACT' as const }, priority: 100,
+        mutualFriends: 0, source: { type: 'CONTACT' as const, phoneNumber: '+1234567890' }, priority: 100,
       };
       expect(getSuggestionSourceColor(suggestion)).toBe('#10B981');
     });
@@ -350,7 +341,7 @@ describe('suggestions.service', () => {
     it('should return purple for INSTAGRAM', () => {
       const suggestion = {
         id: '1', displayName: 'T', avatarUrl: '', isOnline: false,
-        mutualFriends: 0, source: { type: 'INSTAGRAM' as const }, priority: 80,
+        mutualFriends: 0, source: { type: 'INSTAGRAM' as const, instagramUsername: 'testuser' }, priority: 80,
       };
       expect(getSuggestionSourceColor(suggestion)).toBe('#8B5CF6');
     });
@@ -358,7 +349,7 @@ describe('suggestions.service', () => {
     it('should return blue for MUTUAL_FRIENDS', () => {
       const suggestion = {
         id: '1', displayName: 'T', avatarUrl: '', isOnline: false,
-        mutualFriends: 0, source: { type: 'MUTUAL_FRIENDS' as const }, priority: 60,
+        mutualFriends: 0, source: { type: 'MUTUAL_FRIENDS' as const, count: 0 }, priority: 60,
       };
       expect(getSuggestionSourceColor(suggestion)).toBe('#3B82F6');
     });
@@ -366,7 +357,7 @@ describe('suggestions.service', () => {
     it('should return amber for VENUE', () => {
       const suggestion = {
         id: '1', displayName: 'T', avatarUrl: '', isOnline: false,
-        mutualFriends: 0, source: { type: 'VENUE' as const }, priority: 40,
+        mutualFriends: 0, source: { type: 'VENUE' as const, venueId: 'v1', venueName: 'Club' }, priority: 40,
       };
       expect(getSuggestionSourceColor(suggestion)).toBe('#F59E0B');
     });
@@ -387,9 +378,7 @@ describe('suggestions.service', () => {
           contactId: 'c-1',
           name: 'Contact',
           phoneNumber: '+111',
-          userId: 'u-1',
-          matchType: 'exact' as any,
-        },
+          userId: 'u-1',        },
       ]);
 
       // First call

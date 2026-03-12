@@ -13,16 +13,16 @@ jest.mock('expo-haptics', () => ({
 
 jest.mock('@/services/api', () => ({
   eventsApi: {
-    getUpcomingEvents: jest.fn().mockResolvedValue({ data: [] }),
-    getUserTickets: jest.fn().mockResolvedValue({ data: [] }),
+    getUpcomingEvents: jest.fn().mockResolvedValue({ success: true, data: [] }),
+    getUserTickets: jest.fn().mockResolvedValue({ success: true, data: [] }),
     purchaseTicket: jest.fn(),
     transferTicket: jest.fn(),
     validateTicket: jest.fn(),
     checkInTicket: jest.fn(),
     addToGuestList: jest.fn(),
     checkInGuest: jest.fn(),
-    getEventsByPerformer: jest.fn().mockResolvedValue({ data: [] }),
-    getEventGuestList: jest.fn().mockResolvedValue({ data: [] }),
+    getEventsByPerformer: jest.fn().mockResolvedValue({ success: true, data: [] }),
+    getEventGuestList: jest.fn().mockResolvedValue({ success: true, data: [] }),
   },
 }));
 
@@ -149,7 +149,7 @@ describe('EventsContext', () => {
 
   it('should validate QR code via API', async () => {
     mockEventsApi.validateTicket.mockResolvedValueOnce({
-      data: { valid: true, ticket: { id: 'ticket-1', qrCode: 'qr-123' } as any },
+      success: true, data: { valid: true, ticket: { id: 'ticket-1', qrCode: 'qr-123' } as any },
     });
 
     const wrapper = createWrapper();
@@ -250,10 +250,11 @@ describe('EventsContext', () => {
 
   it('should load events from API and map _id to id', async () => {
     mockEventsApi.getUpcomingEvents.mockResolvedValueOnce({
+      success: true,
       data: [
         { _id: 'mongo-id-1', title: 'Event One', venueId: { _id: 'venue-mongo' }, date: '2027-01-01', status: 'UPCOMING' },
         { _id: 'mongo-id-2', title: 'Event Two', venueId: 'venue-plain', date: '2027-02-01', status: 'UPCOMING' },
-      ],
+      ] as any,
     });
 
     const wrapper = createWrapper();
@@ -272,11 +273,12 @@ describe('EventsContext', () => {
     const pastDate = new Date(Date.now() - 86400000).toISOString();
 
     mockEventsApi.getUpcomingEvents.mockResolvedValueOnce({
+      success: true,
       data: [
         { _id: 'e1', title: 'Future', date: futureDate, status: 'UPCOMING' },
         { _id: 'e2', title: 'Past', date: pastDate, status: 'UPCOMING' },
         { _id: 'e3', title: 'Cancelled', date: futureDate, status: 'CANCELLED' },
-      ],
+      ] as any,
     });
 
     const wrapper = createWrapper();
@@ -292,9 +294,10 @@ describe('EventsContext', () => {
   it('should getEventById correctly', async () => {
     const futureDate = new Date(Date.now() + 86400000).toISOString();
     mockEventsApi.getUpcomingEvents.mockResolvedValueOnce({
+      success: true,
       data: [
         { _id: 'e10', title: 'Test Event', date: futureDate, status: 'UPCOMING', venueId: 'v1' },
-      ],
+      ] as any,
     });
 
     const wrapper = createWrapper();
@@ -315,10 +318,11 @@ describe('EventsContext', () => {
   it('should getEventsByVenueId correctly', async () => {
     const futureDate = new Date(Date.now() + 86400000).toISOString();
     mockEventsApi.getUpcomingEvents.mockResolvedValueOnce({
+      success: true,
       data: [
         { _id: 'e20', title: 'V1 Event', date: futureDate, venueId: 'venue-1', status: 'UPCOMING' },
         { _id: 'e21', title: 'V2 Event', date: futureDate, venueId: 'venue-2', status: 'UPCOMING' },
-      ],
+      ] as any,
     });
 
     const wrapper = createWrapper();
@@ -335,11 +339,12 @@ describe('EventsContext', () => {
 
   it('should filter userTickets by userId and exclude cancelled', async () => {
     mockEventsApi.getUserTickets.mockResolvedValueOnce({
+      success: true,
       data: [
         { _id: 't1', userId: 'test-user-id', eventId: 'e1', status: 'ACTIVE' },
         { _id: 't2', userId: 'test-user-id', eventId: 'e2', status: 'CANCELLED' },
         { _id: 't3', userId: 'other-user', eventId: 'e3', status: 'ACTIVE' },
-      ],
+      ] as any,
     });
 
     const wrapper = createWrapper();
@@ -353,9 +358,10 @@ describe('EventsContext', () => {
 
   it('should return QR code for existing ticket', async () => {
     mockEventsApi.getUserTickets.mockResolvedValueOnce({
+      success: true,
       data: [
         { _id: 'ticket-qr', userId: 'test-user-id', qrCode: 'qr-data-abc', status: 'ACTIVE' },
-      ],
+      ] as any,
     });
 
     const wrapper = createWrapper();
@@ -371,7 +377,7 @@ describe('EventsContext', () => {
 
   it('should handle QR validation returning invalid', async () => {
     mockEventsApi.validateTicket.mockResolvedValueOnce({
-      data: { valid: false },
+      success: true, data: { valid: false },
     });
 
     const wrapper = createWrapper();
@@ -388,6 +394,7 @@ describe('EventsContext', () => {
 
   it('should getTicketTiersForEvent with loaded tiers', async () => {
     mockEventsApi.getUpcomingEvents.mockResolvedValue({
+      success: true,
       data: [
         {
           _id: 'event-t1',
@@ -399,7 +406,7 @@ describe('EventsContext', () => {
             { _id: 'tier-2', name: 'VIP', price: 50 },
           ],
         },
-      ],
+      ] as any,
     });
 
     const wrapper = createWrapper();
@@ -448,7 +455,7 @@ describe('EventsContext', () => {
   });
 
   it('should transfer ticket via API', async () => {
-    mockEventsApi.transferTicket.mockResolvedValueOnce({ data: { id: 'transfer-1' } });
+    mockEventsApi.transferTicket.mockResolvedValueOnce({ success: true, data: { id: 'transfer-1' } } as any);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => useEvents(), { wrapper });
@@ -462,8 +469,8 @@ describe('EventsContext', () => {
 
   it('should add to guest list via API', async () => {
     mockEventsApi.addToGuestList.mockResolvedValueOnce({
-      data: { id: 'gl-1', guestName: 'Guest One' },
-    });
+      success: true, data: { id: 'gl-1', guestName: 'Guest One' },
+    } as any);
 
     const wrapper = createWrapper();
     const { result } = renderHook(() => useEvents(), { wrapper });

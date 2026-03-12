@@ -1,31 +1,51 @@
 diff --git a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-index 2a67797..97bda23 100644
+index 2a67797..ee93778 100644
 --- a/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
 +++ b/node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm
-@@ -371,7 +371,11 @@ id convertJSIValueToObjCObject(
-         // See https://github.com/reactwg/react-native-new-architecture/discussions/276#discussioncomment-12567155
+@@ -363,18 +363,19 @@ id convertJSIValueToObjCObject(
+       TurboModulePerfLogger::asyncMethodCallExecutionStart(moduleName, methodName, asyncCallCounter);
+     }
+ 
++    // iOS 26 ARM64 crash fix: @finally triggers objc_exception_rethrow even after
++    // @catch handles the exception. Remove @finally entirely and inline cleanup.
+     @try {
+       [inv invokeWithTarget:strongModule];
++      [retainedObjectsForInvocation removeAllObjects];
+     } @catch (NSException *exception) {
++      [retainedObjectsForInvocation removeAllObjects];
+       if (isSync) {
+-        // We can only convert NSException to JSError in sync method calls.
+-        // See https://github.com/reactwg/react-native-new-architecture/discussions/276#discussioncomment-12567155
          throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
        } else {
 -        @throw exception;
-+        // On iOS 26+, @throw inside an async dispatch block has no ObjC handler and
-+        // triggers objc_exception_rethrow → __cxa_rethrow → std::terminate → SIGABRT.
-+        // Log and swallow instead.
 +        NSLog(@"[iOS26Fix] async method exception swallowed: %s::%s %@ %@",
 +              moduleName, methodName, exception.name, exception.reason);
        }
-     } @finally {
-       [retainedObjectsForInvocation removeAllObjects];
-@@ -435,7 +439,12 @@ TraceSection s(
+-    } @finally {
+-      [retainedObjectsForInvocation removeAllObjects];
+     }
+ 
+     if (!isSync) {
+@@ -432,12 +433,19 @@ TraceSection s(
+       TurboModulePerfLogger::asyncMethodCallExecutionStart(moduleName, methodName, asyncCallCounter);
+     }
+ 
++    // iOS 26 ARM64 crash fix: @finally triggers objc_exception_rethrow even after
++    // @catch handles the exception. Remove @finally entirely and inline cleanup.
      @try {
        [inv invokeWithTarget:strongModule];
++      [retainedObjectsForInvocation removeAllObjects];
      } @catch (NSException *exception) {
 -      throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
-+      // Do not rethrow NSExceptions from void TurboModule methods.
-+      // On iOS 26+, a C++ rethrow (throw convertNSExceptionToJSError(...)) inside
-+      // an async dispatch block has no handler and triggers std::terminate/SIGABRT.
-+      // Swallowing and logging is safe: void methods have no return value to propagate.
-+      NSLog(@"[RCTTurboModule] Exception in void method %s::%s: %@ %@",
-+            moduleName, methodName, exception.name, exception.reason);
-     } @finally {
+-    } @finally {
        [retainedObjectsForInvocation removeAllObjects];
++      if (shouldVoidMethodsExecuteSync_) {
++        throw convertNSExceptionToJSError(runtime, exception, std::string{moduleName}, methodNameStr);
++      } else {
++        NSLog(@"[RCTTurboModule] Exception in void method %s::%s: %@ %@",
++              moduleName, methodName, exception.name, exception.reason);
++      }
      }
+ 
+     if (shouldVoidMethodsExecuteSync_) {

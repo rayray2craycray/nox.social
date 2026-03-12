@@ -1,5 +1,5 @@
 import createContextHook from '@nkzw/create-context-hook';
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -527,14 +527,33 @@ export const [SocialProvider, useSocial] = createContextHook(() => {
     }
   }, []);
 
-  const getFriendProfile = useCallback(async (targetUserId: string): Promise<FriendProfile | undefined> => {
-    try {
-      const user = await getUserById(targetUserId);
-      return user as unknown as FriendProfile;
-    } catch (error) {
-      console.error('Failed to get friend profile:', error);
-      return undefined;
+  const profileCacheRef = useRef<Record<string, FriendProfile>>({});
+  const profileFetchingRef = useRef<Set<string>>(new Set());
+  const [, forceProfileUpdate] = useState(0);
+
+  const getFriendProfile = useCallback((targetUserId: string): FriendProfile | undefined => {
+    // Return from cache synchronously
+    if (profileCacheRef.current[targetUserId]) {
+      return profileCacheRef.current[targetUserId];
     }
+    // Trigger background fetch if not already fetching
+    if (!profileFetchingRef.current.has(targetUserId)) {
+      profileFetchingRef.current.add(targetUserId);
+      getUserById(targetUserId)
+        .then((user) => {
+          if (user) {
+            profileCacheRef.current[targetUserId] = user as unknown as FriendProfile;
+            forceProfileUpdate((n) => n + 1);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to get friend profile:', error);
+        })
+        .finally(() => {
+          profileFetchingRef.current.delete(targetUserId);
+        });
+    }
+    return undefined;
   }, []);
 
   const suggestedPeople = useMemo(() => {

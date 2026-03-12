@@ -23,8 +23,8 @@ const APP_VERSION = process.env.APP_VERSION || '1.0.0';
 const BUILD_NUMBER = process.env.BUILD_NUMBER || '1';
 
 // Bundle identifiers
-const IOS_BUNDLE_ID = process.env.IOS_BUNDLE_ID || 'social.nox.nightlife';
-const ANDROID_PACKAGE = process.env.ANDROID_PACKAGE || 'social.nox.nightlife';
+const IOS_BUNDLE_ID = process.env.IOS_BUNDLE_ID || 'social.nox';
+const ANDROID_PACKAGE = process.env.ANDROID_PACKAGE || 'social.nox';
 
 // EAS Build configuration
 const EAS_PROJECT_ID = process.env.EAS_PROJECT_ID || '';

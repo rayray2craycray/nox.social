@@ -371,7 +371,7 @@ describe('useUpload', () => {
     });
 
     expect(result.current.uploadError).toBeTruthy();
-    expect(result.current.uploadError.message).toBe('Not authenticated');
+    expect(result.current.uploadError!.message).toBe('Not authenticated');
     expect(Alert.alert).toHaveBeenCalledWith('Upload Failed', 'Not authenticated');
 
     // Restore original mock
