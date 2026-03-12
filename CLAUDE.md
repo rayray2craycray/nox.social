@@ -49,9 +49,8 @@ hit EAS. If this fails, fix it before proceeding.
 ```bash
 npx tsc --noEmit
 ```
-Note: this project has pre-existing TS errors (expo-router typed routes, backend types) that
-do not block Metro bundling. Only block the build on **new** errors introduced by your
-changes. Compare output before and after your changes to identify new errors.
+Must complete with zero errors. As of Build 83, all TS errors are resolved. Any new errors
+must be fixed before proceeding.
 
 ### Step 3 — Physical device test (catches native/TurboModule crashes)
 ```bash
@@ -62,7 +61,18 @@ TurboModule crashes (like the expo-video and expo-av crashes in builds 55 and 57
 they reach TestFlight. The iOS simulator does NOT reliably reproduce native crashes.
 If no device is available, note this and proceed with extra caution.
 
-### Step 4 — Commit check (ensures EAS builds your latest code)
+### Step 4 — Patch verification (ensures native patches are compiled into the binary)
+```bash
+grep -q "iOS26Fix" node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm && echo "RN patch OK" || echo "FAIL: RN patch missing"
+grep -q "disableActivityIndicatorAutoHide" node_modules/expo-splash-screen/ios/SplashScreenManager.swift && echo "FAIL: splash patch missing" || echo "Splash patch OK"
+grep -q "RCT_USE_PREBUILT_RNCORE" eas.json && echo "Build-from-source OK" || echo "FAIL: RCT_USE_PREBUILT_RNCORE missing from eas.json"
+```
+All three must say OK. **React Native 0.81.5 ships prebuilt frameworks by default — patches
+to source files are NEVER compiled unless `RCT_USE_PREBUILT_RNCORE=0` is set in eas.json.**
+This was the root cause of builds 76-82 all crashing with the same unpatched binary.
+If any check fails, run `npx patch-package` and verify `eas.json` has the env var.
+
+### Step 5 — Commit check (ensures EAS builds your latest code)
 ```bash
 git status --porcelain
 ```
@@ -71,9 +81,9 @@ working tree.** If there are uncommitted changes, the build will use stale code.
 root cause of Build 78 shipping the same binary as Build 76 — fixes were local only.
 Always `git add` and `git commit` before running `eas build`.
 
-Only after all four pass:
+Only after all five pass:
 ```bash
-eas build --platform ios --profile production --non-interactive
+eas build --platform ios --profile production --non-interactive --clear-cache
 eas submit --platform ios --latest --non-interactive
 ```
 

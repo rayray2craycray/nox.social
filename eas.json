@@ -45,7 +45,8 @@
         "EXPO_PUBLIC_DEBUG_MODE": "false",
         "IOS_BUNDLE_ID": "social.nox",
         "ANDROID_PACKAGE": "social.nox",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "RCT_USE_PREBUILT_RNCORE": "0"
       }
     },
     "production-ios": {
