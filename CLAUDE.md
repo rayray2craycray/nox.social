@@ -64,7 +64,7 @@ If no device is available, note this and proceed with extra caution.
 ### Step 4 — Patch verification (ensures native patches are compiled into the binary)
 ```bash
 grep -q "iOS26Fix" node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios/ReactCommon/RCTTurboModule.mm && echo "RN patch OK" || echo "FAIL: RN patch missing"
-grep -q "disableActivityIndicatorAutoHide" node_modules/expo-splash-screen/ios/SplashScreenManager.swift && echo "FAIL: splash patch missing" || echo "Splash patch OK"
+grep "disableActivityIndicatorAutoHide" node_modules/expo-splash-screen/ios/SplashScreenManager.swift | grep -qv "^.*//.*disableActivityIndicatorAutoHide" && echo "FAIL: splash patch missing (call still present)" || echo "Splash patch OK"
 grep -q "RCT_USE_PREBUILT_RNCORE" eas.json && echo "Build-from-source OK" || echo "FAIL: RCT_USE_PREBUILT_RNCORE missing from eas.json"
 ```
 All three must say OK. **React Native 0.81.5 ships prebuilt frameworks by default — patches
