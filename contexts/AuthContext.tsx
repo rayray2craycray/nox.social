@@ -65,28 +65,19 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Race AsyncStorage reads against a 3-second timeout. If the native
-        // module is stuck after a caught void-method exception, getItem calls
-        // may never resolve. The timeout ensures isLoading always unblocks so
-        // the sign-in screen is shown rather than a permanent spinner.
-        const authStorageTimeout = new Promise<null>(resolve =>
-          setTimeout(() => resolve(null), 3000)
+        // Wrap AsyncStorage reads in a 5-second timeout so the app doesn't
+        // freeze if the TurboModule Promise never resolves (iOS 26 edge case).
+        const storageTimeout = new Promise<null[]>((_, reject) =>
+          setTimeout(() => reject(new Error('AsyncStorage timeout')), 5000)
         );
-        const asyncResult = await Promise.race([
+        const [token, expiryStr, userData] = await Promise.race([
           Promise.all([
             AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
             AsyncStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY),
             AsyncStorage.getItem(STORAGE_KEYS.USER_DATA),
-          ]).then(values => ({ values })),
-          authStorageTimeout,
+          ]),
+          storageTimeout,
         ]);
-
-        if (!asyncResult) {
-          console.warn('[Auth] AsyncStorage timed out during init — treating as unauthenticated');
-          return;
-        }
-
-        const [token, expiryStr, userData] = asyncResult.values;
 
         if (token && expiryStr && userData) {
           const expiry = parseInt(expiryStr, 10);
@@ -110,8 +101,11 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
               await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(mappedUser));
             }
 
-            // Set auth token in API client
-            await apiClient.setAuthToken(token);
+            // Set auth token in API client (timeout guards against iOS 26 AsyncStorage hang)
+            await Promise.race([
+              apiClient.setAuthToken(token),
+              new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+            ]);
 
             setAccessToken(token);
             setUser(mappedUser);
@@ -128,7 +122,25 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       }
     };
 
-    initializeAuth();
+    // Hard deadline: no matter what hangs inside initializeAuth, setIsLoading(false)
+    // fires within 10 seconds so the app never stays on the black loading screen.
+    let isActive = true;
+    const safetyTimer = setTimeout(() => {
+      if (isActive) {
+        console.warn('[Auth] initializeAuth safety timeout: forcing isLoading=false');
+        setIsLoading(false);
+      }
+    }, 10000);
+
+    initializeAuth().finally(() => {
+      isActive = false;
+      clearTimeout(safetyTimer);
+    });
+
+    return () => {
+      isActive = false;
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   // Auto refresh token 5 minutes before expiry
@@ -160,18 +172,29 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
   const attemptTokenRefresh = async () => {
     try {
-      const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+      const refreshToken = await Promise.race([
+        AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
+      ]);
       if (!refreshToken) {
         throw new Error('No refresh token available');
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refreshToken }),
-      });
+      const controller = new AbortController();
+      const refreshTimeout = setTimeout(() => controller.abort(), 15000);
+      let response: Response;
+      try {
+        response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ refreshToken }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(refreshTimeout);
+      }
 
       if (!response.ok) {
         throw new Error('Token refresh failed');
@@ -343,19 +366,26 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       // Continue with local sign out even if API fails
     }
 
-    // Clear AsyncStorage
-    await Promise.all([
-      AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN),
-      AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
-      AsyncStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY),
-      AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA),
+    // Clear AsyncStorage with a timeout to prevent hanging (iOS 26 TurboModule edge case).
+    const clearStorageTimeout = new Promise<void>((resolve) => setTimeout(resolve, 5000));
+    await Promise.race([
+      Promise.all([
+        AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN),
+        AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
+        AsyncStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY),
+        AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA),
+      ]),
+      clearStorageTimeout,
     ]);
 
     // Clear React Query cache
     queryClient.clear();
 
-    // Clear auth token from API client
-    await apiClient.clearAuthToken();
+    // Clear auth token from API client (timeout guards against iOS 26 AsyncStorage hang)
+    await Promise.race([
+      apiClient.clearAuthToken(),
+      new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+    ]);
 
     // Update state
     setAccessToken(null);
