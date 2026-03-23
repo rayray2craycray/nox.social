@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { View, Text } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppStateProvider, DiscoveryProvider } from "@/contexts/AppStateContext";
@@ -24,12 +25,8 @@ import { NetworkProvider } from "@/contexts/NetworkContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
-import { initSentry, captureException } from "@/config/sentry";
 
-// SplashScreen.preventAutoHideAsync() removed — this native TurboModule call
-// causes an ObjC exception crash on iOS New Arch at startup. The splash is
-// hidden automatically by the native stage-based auto-hide in
-// RCTSurfaceHostingView._updateViews when the surface transitions to "running".
+// SplashScreen.preventAutoHideAsync() removed - testing if this native call causes iOS 26 crash
 
 const queryClient = new QueryClient();
 
@@ -94,69 +91,99 @@ function RootLayoutNav() {
   );
 }
 
+// Diagnostic error boundary that always shows errors visually (even in production)
+class DiagnosticBoundary extends React.Component<
+  { name: string; children: React.ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#ff0000', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: 'bold' }}>
+            Error in: {this.props.name}
+          </Text>
+          <Text style={{ color: '#ffffff', fontSize: 14, marginTop: 10 }}>
+            {this.state.error.message}
+          </Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function RootLayout() {
   // Splash is hidden by the native stage-based auto-hide in RCTSurfaceHostingView._updateViews
   // when the surface transitions to "running" (React content ready). No explicit JS call needed.
 
-  // Defer Sentry initialization to after React mounts — safe because it uses
-  // @sentry/browser (JS-only, no native modules).
-  useEffect(() => {
-    initSentry();
-  }, []);
-
   const handleError = (error: Error, errorInfo: React.ErrorInfo) => {
-    captureException(error, {
-      errorInfo: errorInfo.componentStack,
-      errorBoundary: 'GlobalErrorBoundary',
-    });
     console.error('Global error caught:', error, errorInfo);
   };
 
   return (
-    <ErrorBoundary onError={handleError}>
-      <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <AuthProvider>
-            <ChatProvider>
-              <ToastProvider>
-                <NetworkProvider>
-                  <AppStateProvider>
-                <GlowProvider>
-                  <POSProvider>
-                    <UploadProvider>
-                      <ModerationProvider>
-                      <SocialProvider>
-                        <GrowthProvider>
-                          <EventsProvider>
-                            <ContentProvider>
-                              <MonetizationProvider>
-                                <RetentionProvider>
-                                  <VenueManagementProvider>
-                                    <FeedProvider>
-                                      <DiscoveryProvider>
-                                        <PerformerProvider>
-                                          <RootLayoutNav />
-                                        </PerformerProvider>
-                                      </DiscoveryProvider>
-                                    </FeedProvider>
-                                  </VenueManagementProvider>
-                                </RetentionProvider>
-                              </MonetizationProvider>
-                            </ContentProvider>
-                          </EventsProvider>
-                        </GrowthProvider>
-                      </SocialProvider>
-                      </ModerationProvider>
-                    </UploadProvider>
-                  </POSProvider>
-                </GlowProvider>
-                  </AppStateProvider>
-                </NetworkProvider>
-              </ToastProvider>
-            </ChatProvider>
-          </AuthProvider>
-        </GestureHandlerRootView>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <DiagnosticBoundary name="Root">
+      <ErrorBoundary onError={handleError}>
+        <QueryClientProvider client={queryClient}>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <DiagnosticBoundary name="AuthProvider">
+              <AuthProvider>
+                <DiagnosticBoundary name="ChatProvider">
+                  <ChatProvider>
+                    <DiagnosticBoundary name="ToastProvider">
+                      <ToastProvider>
+                        <DiagnosticBoundary name="NetworkProvider">
+                          <NetworkProvider>
+                            <DiagnosticBoundary name="AppStateProvider">
+                              <AppStateProvider>
+                                <DiagnosticBoundary name="GlowProvider">
+                                  <GlowProvider>
+                                    <DiagnosticBoundary name="InnerProviders">
+                                      <POSProvider>
+                                        <UploadProvider>
+                                          <ModerationProvider>
+                                            <SocialProvider>
+                                              <GrowthProvider>
+                                                <EventsProvider>
+                                                  <ContentProvider>
+                                                    <MonetizationProvider>
+                                                      <RetentionProvider>
+                                                        <VenueManagementProvider>
+                                                          <FeedProvider>
+                                                            <DiscoveryProvider>
+                                                              <PerformerProvider>
+                                                                <RootLayoutNav />
+                                                              </PerformerProvider>
+                                                            </DiscoveryProvider>
+                                                          </FeedProvider>
+                                                        </VenueManagementProvider>
+                                                      </RetentionProvider>
+                                                    </MonetizationProvider>
+                                                  </ContentProvider>
+                                                </EventsProvider>
+                                              </GrowthProvider>
+                                            </SocialProvider>
+                                          </ModerationProvider>
+                                        </UploadProvider>
+                                      </POSProvider>
+                                    </DiagnosticBoundary>
+                                  </GlowProvider>
+                                </DiagnosticBoundary>
+                              </AppStateProvider>
+                            </DiagnosticBoundary>
+                          </NetworkProvider>
+                        </DiagnosticBoundary>
+                      </ToastProvider>
+                    </DiagnosticBoundary>
+                  </ChatProvider>
+                </DiagnosticBoundary>
+              </AuthProvider>
+            </DiagnosticBoundary>
+          </GestureHandlerRootView>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </DiagnosticBoundary>
   );
 }
