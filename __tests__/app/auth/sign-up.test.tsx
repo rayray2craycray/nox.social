@@ -64,7 +64,7 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
-import SignUpScreen from '../../auth/sign-up';
+import SignUpScreen from '@/app/auth/sign-up';
 
 // ---- Helpers ----
 

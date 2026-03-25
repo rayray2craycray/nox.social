@@ -106,7 +106,7 @@ jest.mock('lucide-react-native', () => {
   );
 });
 
-import SettingsScreen from '../settings';
+import SettingsScreen from '@/app/settings';
 
 // ---- Helpers ----
 
