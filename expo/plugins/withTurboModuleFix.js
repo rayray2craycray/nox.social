@@ -28,7 +28,7 @@ module.exports = function withTurboModuleFix(config) {
     // This key is unknown to iOS and is harmlessly ignored at runtime.
     // Its presence here ensures the EAS fingerprint changes when this plugin is added/updated,
     // forcing a fresh native compilation that picks up the patch-package fix.
-    config.modResults['RCTTurboModuleFixVersion'] = '8';
+    config.modResults['RCTTurboModuleFixVersion'] = '9';
     return config;
   });
 };
