@@ -148,7 +148,7 @@ jest.mock('@/components/UserProfileModal', () => {
   };
 });
 
-import ServersScreen from '../servers';
+import ServersScreen from '@/app/app/servers';
 
 // ---- Helpers ----
 

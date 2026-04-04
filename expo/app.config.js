@@ -38,8 +38,8 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'nox',
-    userInterfaceStyle: 'automatic',
-    newArchEnabled: true, // Re-enabled: SDK 54 fixed the expo-splash-screen New Arch bug
+    userInterfaceStyle: 'dark',
+    // newArchEnabled not set — matches working nox-rebuild config.
 
     splash: {
       image: './assets/images/splash-icon.png',

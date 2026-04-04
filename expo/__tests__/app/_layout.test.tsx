@@ -221,7 +221,7 @@ jest.mock('@/components/AgeVerificationGate', () => {
   };
 });
 
-import RootLayout from '../_layout';
+import RootLayout from '@/app/app/_layout';
 
 // ---- Tests ----
 

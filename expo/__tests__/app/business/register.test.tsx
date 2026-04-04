@@ -135,7 +135,7 @@ jest.mock('@/utils/validation', () => {
   };
 });
 
-import BusinessRegisterScreen from '../register';
+import BusinessRegisterScreen from '@/app/app/register';
 
 // ---- Helpers ----
 

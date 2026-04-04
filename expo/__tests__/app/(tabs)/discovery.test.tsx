@@ -159,7 +159,7 @@ jest.mock('@/hooks/useNearbyVenues', () => ({
   useNearbyVenues: () => mockNearbyVenuesReturn,
 }));
 
-import DiscoveryScreen from '../discovery';
+import DiscoveryScreen from '@/app/app/discovery';
 
 // ---- Helpers ----
 

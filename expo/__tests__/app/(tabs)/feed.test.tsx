@@ -145,7 +145,7 @@ jest.mock('@/contexts/GrowthContext', () => ({
   }),
 }));
 
-import FeedScreen from '../feed';
+import FeedScreen from '@/app/app/feed';
 
 // ---- Helpers ----
 

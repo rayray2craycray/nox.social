@@ -62,7 +62,7 @@ jest.mock('lucide-react-native', () => {
   );
 });
 
-import EventDetailScreen from '../[id]';
+import EventDetailScreen from '@/app/app/[id]';
 
 // ---- Helpers ----
 

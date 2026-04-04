@@ -69,7 +69,7 @@ jest.mock('lucide-react-native', () => {
   );
 });
 
-import TicketsScreen from '../index';
+import TicketsScreen from '@/app/app/index';
 
 // ---- Helpers ----
 

@@ -56,7 +56,7 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
-import ForgotPasswordScreen from '../../auth/forgot-password';
+import ForgotPasswordScreen from '@/app/auth/forgot-password';
 
 // ---- Helpers ----
 

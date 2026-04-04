@@ -67,7 +67,7 @@ jest.mock('@/contexts/GlowContext', () => ({
   }),
 }));
 
-import POSIntegrationScreen from '../pos-integration';
+import POSIntegrationScreen from '@/app/app/pos-integration';
 
 function createQueryClient() {
   return new QueryClient({

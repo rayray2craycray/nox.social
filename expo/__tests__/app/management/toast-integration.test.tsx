@@ -76,7 +76,7 @@ jest.mock('@/contexts/GlowContext', () => ({
   }),
 }));
 
-import ToastIntegrationScreen from '../toast-integration';
+import ToastIntegrationScreen from '@/app/app/toast-integration';
 
 function createQueryClient() {
   return new QueryClient({

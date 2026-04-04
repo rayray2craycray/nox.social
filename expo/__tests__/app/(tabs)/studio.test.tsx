@@ -201,7 +201,7 @@ jest.mock('../studio-components/VideoTrimmer', () => ({
   },
 }));
 
-import StudioScreen from '../studio';
+import StudioScreen from '@/app/app/studio';
 
 // ---- Helpers ----
 

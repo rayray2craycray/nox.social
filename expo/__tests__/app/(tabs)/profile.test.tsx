@@ -186,7 +186,7 @@ jest.mock('@/services/venues.service', () => ({
   },
 }));
 
-import ProfileScreen from '../profile';
+import ProfileScreen from '@/app/app/profile';
 
 // ---- Helpers ----
 

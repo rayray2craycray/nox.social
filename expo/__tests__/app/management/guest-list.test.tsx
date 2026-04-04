@@ -84,7 +84,7 @@ jest.mock('@/contexts/EventsContext', () => ({
   }),
 }));
 
-import GuestListScreen from '../guest-list';
+import GuestListScreen from '@/app/app/guest-list';
 
 function createQueryClient() {
   return new QueryClient({
