@@ -16,12 +16,12 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 
 // Import extracted components
-import { StatsCard } from './studio-components/StatsCard';
-import { GigCard } from './studio-components/GigCard';
-import { FilterSelector } from './studio-components/FilterSelector';
-import { StickerSelector } from './studio-components/StickerSelector';
-import { VideoTrimmer } from './studio-components/VideoTrimmer';
-import { COLORS, PromoStep, SafeZoneType, VibeFilter, StickerType } from './studio-components/types';
+import { StatsCard } from '@/components/studio-components/StatsCard';
+import { GigCard } from '@/components/studio-components/GigCard';
+import { FilterSelector } from '@/components/studio-components/FilterSelector';
+import { StickerSelector } from '@/components/studio-components/StickerSelector';
+import { VideoTrimmer } from '@/components/studio-components/VideoTrimmer';
+import { COLORS, PromoStep, SafeZoneType, VibeFilter, StickerType } from '@/components/studio-components/types';
 
 // Helper function to get filter preview styles
 function getFilterPreviewStyle(filter: VibeFilter) {
