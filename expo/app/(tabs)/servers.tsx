@@ -212,35 +212,15 @@ interface DirectMessagesListProps {
 }
 
 function DirectMessagesList({ onSelectConversation }: DirectMessagesListProps) {
-  const mockConversations = [
-    {
-      id: 'conv-1',
-      userId: 'user-2',
-      userName: 'Alex Chen',
-      lastMessage: 'See you tonight at The Midnight Lounge!',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      unreadCount: 2,
-      isOnline: true,
-    },
-    {
-      id: 'conv-2',
-      userId: 'user-3',
-      userName: 'Sarah Martinez',
-      lastMessage: 'That venue was amazing! 🔥',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      unreadCount: 0,
-      isOnline: false,
-    },
-    {
-      id: 'conv-3',
-      userId: 'user-4',
-      userName: 'Marcus Wright',
-      lastMessage: 'Got VIP access! Come join',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      unreadCount: 1,
-      isOnline: true,
-    },
-  ];
+  const conversations: Array<{
+    id: string;
+    userId: string;
+    userName: string;
+    lastMessage: string;
+    timestamp: string;
+    unreadCount: number;
+    isOnline: boolean;
+  }> = [];
 
   return (
     <>
@@ -253,14 +233,14 @@ function DirectMessagesList({ onSelectConversation }: DirectMessagesListProps) {
       </View>
 
       <ScrollView style={styles.conversationList} showsVerticalScrollIndicator={false}>
-        {mockConversations.length === 0 ? (
+        {conversations.length === 0 ? (
           <View style={styles.emptyState}>
             <MessageSquare size={48} color="#666" />
             <Text style={styles.emptyStateTitle}>No messages yet</Text>
             <Text style={styles.emptyStateText}>Start a conversation with your friends!</Text>
           </View>
         ) : (
-          mockConversations.map((conversation) => (
+          conversations.map((conversation) => (
             <TouchableOpacity
               key={conversation.id}
               style={styles.conversationCard}
@@ -322,75 +302,25 @@ function DirectMessageChat({ conversationId, onBack, onOpenUserProfile }: Direct
     fee: '',
   });
 
-  // Mock conversations data (need to look up the userId)
-  const mockConversations = [
-    { id: 'conv-1', userId: 'user-2', userName: 'Alex Chen' },
-    { id: 'conv-2', userId: 'user-3', userName: 'Sarah Martinez' },
-    { id: 'conv-3', userId: 'user-4', userName: 'Marcus Wright' },
-  ];
-
-  // Look up the conversation to get the actual userId
-  const conversation = mockConversations.find(c => c.id === conversationId);
-  const otherUserId = conversation?.userId || conversationId.replace('conv-', '');
+  // Look up the conversation to get the actual userId from the deep-link format (conv-<userId>)
+  const otherUserId = conversationId.replace('conv-', '');
   const otherUserProfile = getFriendProfile(otherUserId);
-  const otherUserName = otherUserProfile?.displayName || conversation?.userName || 'User';
+  const otherUserName = otherUserProfile?.displayName || 'User';
 
   // Check if current user is a venue manager and the other user is a performer
   const isVenueManager = profile.isVenueManager;
   const isTalent = otherUserProfile?.isVerified && otherUserProfile.verifiedCategory === 'PERFORMER';
   const canBook = isVenueManager && isTalent;
 
-  // Debug logging
-  console.log('🔍 Booking Debug:', {
-    conversationId,
-    otherUserId,
-    otherUserName,
-    otherUserProfile,
-    isVenueManager,
-    isTalent,
-    canBook,
-    profileIsVenueManager: profile.isVenueManager,
-  });
-
-  // Initialize messages based on conversationId
-  const getInitialMessages = () => {
-    // Check if this is one of the pre-existing conversations
-    if (conversationId === 'conv-1' || otherUserId === 'user-2') {
-      return [
-        {
-          id: 'msg-1',
-          senderId: 'user-2',
-          senderName: otherUserName,
-          content: 'Hey! Are you going to The Midnight Lounge tonight?',
-          timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          isOwn: false,
-          isEncrypted: true,
-        },
-        {
-          id: 'msg-2',
-          senderId: 'user-me',
-          senderName: 'You',
-          content: 'Yeah! What time are you heading there?',
-          timestamp: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-          isOwn: true,
-          isEncrypted: true,
-        },
-        {
-          id: 'msg-3',
-          senderId: 'user-2',
-          senderName: otherUserName,
-          content: 'Probably around 10pm. See you tonight at The Midnight Lounge!',
-          timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-          isOwn: false,
-          isEncrypted: true,
-        },
-      ];
-    }
-    // New conversation - start empty
-    return [];
-  };
-
-  const [messages, setMessages] = useState(getInitialMessages());
+  const [messages, setMessages] = useState<Array<{
+    id: string;
+    senderId: string;
+    senderName: string;
+    content: string;
+    timestamp: string;
+    isOwn: boolean;
+    isEncrypted: boolean;
+  }>>([]);
 
   const handleSendMessage = () => {
     if (!message.trim()) return;

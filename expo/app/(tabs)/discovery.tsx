@@ -76,12 +76,38 @@ export default function DiscoveryScreen() {
   };
 
   useEffect(() => {
-    checkLocationPermission();
+    requestLocationAccess();
   }, []);
 
-  const checkLocationPermission = async () => {
-    const { status } = await Location.getForegroundPermissionsAsync();
-    setLocationPermission(status === 'granted');
+  const requestLocationAccess = async () => {
+    const existing = await Location.getForegroundPermissionsAsync();
+    if (existing.status === 'granted') {
+      setLocationPermission(true);
+      return;
+    }
+
+    if (existing.canAskAgain) {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setLocationPermission(status === 'granted');
+      if (status !== 'granted') {
+        showLocationDeniedAlert();
+      }
+      return;
+    }
+
+    setLocationPermission(false);
+    showLocationDeniedAlert();
+  };
+
+  const showLocationDeniedAlert = () => {
+    Alert.alert(
+      'Location Access Needed',
+      'Nox uses your location to show nearby venues. Enable location access in Settings to see the map.',
+      [
+        { text: 'Not Now', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ],
+    );
   };
 
   const recenterMap = () => {
@@ -175,12 +201,12 @@ export default function DiscoveryScreen() {
     return openGroupPurchases.filter((gp: GroupPurchase) => gp.venueId === selectedVenueId);
   }, [selectedVenueId, openGroupPurchases]);
 
-  if (isLoadingVenues || !userLocation) {
+  if (isLoadingVenues && !userLocation) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#ff0080" />
         <Text style={styles.loadingText}>
-          {isLoadingVenues ? 'Finding nearby venues...' : 'Getting your location...'}
+          {userLocation ? 'Finding nearby venues...' : 'Getting your location...'}
         </Text>
         <Text style={styles.loadingSubtext}>
           Searching within 50 miles
@@ -189,12 +215,31 @@ export default function DiscoveryScreen() {
     );
   }
 
-  // Show error alert if venues failed to load
-  if (venuesError) {
-    Alert.alert(
-      'Unable to Load Venues',
-      'Could not fetch nearby venues. Please check your connection and ensure location permissions are granted.',
-      [{ text: 'OK' }]
+  if (venuesError && !isLoadingVenues) {
+    return (
+      <View style={styles.loadingContainer}>
+        <MapPin size={48} color="#ff0080" />
+        <Text style={styles.loadingText}>Unable to load venues</Text>
+        <Text style={styles.loadingSubtext}>{venuesError}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            refreshVenues();
+          }}
+        >
+          <RefreshCw size={16} color="#fff" />
+          <Text style={styles.retryButtonText}>Try again</Text>
+        </TouchableOpacity>
+        {!locationPermission && (
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: '#1a1a2e', marginTop: 12 }]}
+            onPress={() => Linking.openSettings()}
+          >
+            <Text style={styles.retryButtonText}>Open Settings</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     );
   }
 
@@ -1138,6 +1183,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginTop: 8,
+    textAlign: 'center' as const,
+    paddingHorizontal: 32,
+  },
+  retryButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    backgroundColor: '#ff0080',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 20,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600' as const,
   },
   mapControls: {
     position: 'absolute' as const,
