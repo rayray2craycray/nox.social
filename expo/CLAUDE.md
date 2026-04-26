@@ -1,5 +1,42 @@
 # Nox Nightlife App — Claude Code Instructions
 
+## gstack
+This project uses **gstack** (https://github.com/garrytan/gstack), installed at
+`~/.claude/skills/gstack`, to optimize coding workflows. Always prefer gstack
+slash commands when one fits the task — they replace ad-hoc prompting with
+structured, role-specific workflows that produce better output.
+
+**Use proactively, don't wait to be asked.** Map common tasks to gstack:
+
+| Task | Slash command |
+|---|---|
+| Plan a non-trivial feature/refactor before coding | `/plan-eng-review`, `/plan-ceo-review` |
+| Review pending changes / a PR | `/review` |
+| Investigate a bug, regression, or unknown system | `/investigate` |
+| Manually QA a flow in a real browser | `/qa` (or `/qa-only` for QA without changes) |
+| Open the project in the gstack browser | `/browse`, `/open-gstack-browser` |
+| Visual / design review of UI changes | `/design-review` |
+| Pre-merge / pre-deploy gate | `/ship`, `/land-and-deploy` |
+| Lock a working state to roll back to | `/freeze` (and `/unfreeze` to release) |
+| Tighten / hot-path-protect a file | `/guard` |
+| Benchmark a flow | `/benchmark` |
+| End-of-task retrospective | `/retro` |
+| Pair on a tricky change | `/pair-agent` |
+
+Other skills available: `/office-hours`, `/plan-design-review`,
+`/plan-devex-review`, `/design-consultation`, `/design-shotgun`,
+`/design-html`, `/devex-review`, `/cso`, `/canary`, `/document-release`,
+`/learn`, `/codex`, `/careful`, `/setup-deploy`, `/setup-gbrain`. Type
+`/<name>` to invoke; the user will see the same.
+
+For UI/UX changes on Nox specifically: prefer `/qa` to verify the flow in a
+real browser (or via TestFlight build artifact when iOS-only) over claiming
+"works as expected" without evidence — TestFlight regressions like the
+build 83-91 black screen and the build 92 map-tab failure both would have
+been caught by `/qa` before submission.
+
+Run `/gstack-upgrade` periodically to stay current.
+
 ## Project Overview
 Nox is a nightlife social app (venues, events, videos, performers).
 - **App name:** Nox Nightlife
