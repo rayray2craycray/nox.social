@@ -6,6 +6,7 @@
 const express = require('express');
 const { body, param, query, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 
 const router = express.Router();
 
@@ -176,6 +177,81 @@ router.get('/venues', [
     venues: venuesWithVibes,
     total: venuesWithVibes.length,
   });
+});
+
+/**
+ * GET /api/v1/venues/nearby
+ * Proxy to Google Places nearbysearch. Server-side key (GOOGLE_MAPS_API_KEY)
+ * stays on Heroku — clients never see it.
+ *
+ * Must be registered before /:venueId so Express doesn't match venueId='nearby'.
+ */
+router.get('/venues/nearby', [
+  query('latitude').isFloat({ min: -90, max: 90 }),
+  query('longitude').isFloat({ min: -180, max: 180 }),
+  query('radius').optional().isInt({ min: 1, max: 50000 }),
+  query('keywords').optional().isString(),
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    return res.status(500).json({
+      message: 'Server misconfigured: GOOGLE_MAPS_API_KEY not set',
+      code: 'PLACES_KEY_MISSING',
+    });
+  }
+
+  const { latitude, longitude } = req.query;
+  const radius = req.query.radius ? parseInt(req.query.radius, 10) : 8000;
+  const keywords = req.query.keywords
+    ? String(req.query.keywords).split(',').map(k => k.trim()).filter(Boolean)
+    : ['nightclub', 'bar', 'lounge', 'club'];
+
+  try {
+    const responses = await Promise.all(
+      keywords.map(keyword =>
+        axios
+          .get('https://maps.googleapis.com/maps/api/place/nearbysearch/json', {
+            params: { location: `${latitude},${longitude}`, radius, keyword, key: apiKey },
+            timeout: 10000,
+          })
+          .then(r => r.data)
+          .catch(err => ({ status: 'ERROR', error_message: err.message }))
+      )
+    );
+
+    if (responses.every(r => r.status === 'REQUEST_DENIED')) {
+      const first = responses.find(r => r.status === 'REQUEST_DENIED');
+      return res.status(502).json({
+        status: 'REQUEST_DENIED',
+        error_message: first.error_message,
+        message: 'Google Places rejected the request — check key restrictions, billing, or enabled APIs.',
+      });
+    }
+
+    const merged = [];
+    const seen = new Set();
+    for (const r of responses) {
+      if (r.status !== 'OK' || !Array.isArray(r.results)) continue;
+      for (const place of r.results) {
+        if (seen.has(place.place_id)) continue;
+        seen.add(place.place_id);
+        merged.push(place);
+      }
+    }
+
+    return res.json({ status: 'OK', results: merged });
+  } catch (err) {
+    console.error('[venues/nearby] proxy error:', err.message);
+    return res.status(502).json({
+      message: 'Failed to reach Google Places',
+      code: 'PLACES_UPSTREAM_ERROR',
+    });
+  }
 });
 
 /**

@@ -5,6 +5,7 @@
 
 import * as Location from 'expo-location';
 import { GOOGLE_MAPS_API_KEY } from './config';
+import apiClient from './api/config';
 
 /**
  * Venue types we're interested in
@@ -272,89 +273,63 @@ export const fetchNearbyVenues = async (
   maxResults: number = 100
 ): Promise<DiscoveredVenue[]> => {
   try {
-    if (!GOOGLE_MAPS_API_KEY) {
-      console.error('Google Maps API key not configured');
-      throw new Error('Google Maps API key not configured. Please add GOOGLE_MAPS_API_KEY to app.config.js');
+    const searchRadius = Math.min(milesToMeters(radiusMiles), 50000);
+
+    const { data } = await apiClient.get<{
+      status: string;
+      results?: GooglePlace[];
+      error_message?: string;
+    }>('/v1/venues/nearby', {
+      params: { latitude, longitude, radius: searchRadius },
+    });
+
+    if (data.status === 'REQUEST_DENIED') {
+      throw new Error(`Google Places API error: ${data.error_message || 'request denied'}`);
+    }
+    if (data.status !== 'OK' || !Array.isArray(data.results)) {
+      return [];
     }
 
-    const radiusMeters = milesToMeters(radiusMiles);
-    const allVenues: DiscoveredVenue[] = [];
+    const venues: DiscoveredVenue[] = data.results
+      .filter((place) => isNightlifeVenue(place))
+      .map((place) => {
+        const distance = calculateDistance(
+          latitude,
+          longitude,
+          place.geometry.location.lat,
+          place.geometry.location.lng
+        );
 
-    // Search for each venue type
-    // Note: Google Places API has a max radius of 50,000 meters (~31 miles)
-    // For 50 miles, we'll use 50km and filter client-side
-    const searchRadius = Math.min(radiusMeters, 50000);
+        const addressParts = place.formatted_address?.split(',') || [];
+        const city = addressParts.length > 1 ? addressParts[addressParts.length - 2]?.trim() : undefined;
+        const state = addressParts.length > 0 ? addressParts[addressParts.length - 1]?.trim().split(' ')[0] : undefined;
 
-    // Search with different keywords to get comprehensive results
-    const keywords = ['nightclub', 'bar', 'lounge', 'club'];
+        return {
+          id: place.place_id,
+          name: place.name,
+          type: determineVenueType(place.types, place.name),
+          location: {
+            latitude: place.geometry.location.lat,
+            longitude: place.geometry.location.lng,
+            address: place.formatted_address || place.vicinity || '',
+            city,
+            state,
+          },
+          distance,
+          rating: place.rating,
+          totalRatings: place.user_ratings_total,
+          priceLevel: place.price_level,
+          isOpen: place.opening_hours?.open_now,
+          photoUrl: place.photos?.[0]?.photo_reference
+            ? getPhotoUrl(place.photos[0].photo_reference)
+            : undefined,
+          placeId: place.place_id,
+        };
+      })
+      .filter((venue) => venue.distance <= radiusMiles)
+      .sort((a, b) => a.distance - b.distance);
 
-    for (const keyword of keywords) {
-      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${searchRadius}&keyword=${keyword}&key=${GOOGLE_MAPS_API_KEY}`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.status === 'OK' && data.results) {
-        const venues = data.results
-          .filter((place: GooglePlace) => isNightlifeVenue(place))
-          .map((place: GooglePlace) => {
-            const distance = calculateDistance(
-              latitude,
-              longitude,
-              place.geometry.location.lat,
-              place.geometry.location.lng
-            );
-
-            // Extract city and state from address
-            const addressParts = place.formatted_address?.split(',') || [];
-            const city = addressParts.length > 1 ? addressParts[addressParts.length - 2]?.trim() : undefined;
-            const state = addressParts.length > 0 ? addressParts[addressParts.length - 1]?.trim().split(' ')[0] : undefined;
-
-            const venue: DiscoveredVenue = {
-              id: place.place_id,
-              name: place.name,
-              type: determineVenueType(place.types, place.name),
-              location: {
-                latitude: place.geometry.location.lat,
-                longitude: place.geometry.location.lng,
-                address: place.formatted_address || place.vicinity || '',
-                city,
-                state,
-              },
-              distance,
-              rating: place.rating,
-              totalRatings: place.user_ratings_total,
-              priceLevel: place.price_level,
-              isOpen: place.opening_hours?.open_now,
-              photoUrl: place.photos?.[0]?.photo_reference
-                ? getPhotoUrl(place.photos[0].photo_reference)
-                : undefined,
-              placeId: place.place_id,
-            };
-
-            return venue;
-          });
-
-        allVenues.push(...venues);
-      } else if (data.status === 'REQUEST_DENIED') {
-        console.error('Google Places API request denied:', data.error_message);
-        throw new Error(`Google Places API error: ${data.error_message}`);
-      }
-    }
-
-    // Remove duplicates (same place_id)
-    const uniqueVenues = Array.from(
-      new Map(allVenues.map(venue => [venue.id, venue])).values()
-    );
-
-    // Filter by 50-mile radius (client-side for accurate distance)
-    const filteredVenues = uniqueVenues.filter(venue => venue.distance <= radiusMiles);
-
-    // Sort by distance
-    filteredVenues.sort((a, b) => a.distance - b.distance);
-
-    // Limit results
-    return filteredVenues.slice(0, maxResults);
+    return venues.slice(0, maxResults);
   } catch (error) {
     console.error('Error fetching nearby venues:', error);
     throw error;
