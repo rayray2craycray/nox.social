@@ -2,6 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setSecureItem, getSecureItem, deleteSecureItem, SECURE_KEYS } from '@/utils/secureStorage';
 import { router } from 'expo-router';
 import { Alert, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -37,11 +38,35 @@ interface SignInData {
 }
 
 const STORAGE_KEYS = {
+  // Legacy AsyncStorage keys for tokens — kept only for one-shot migration to SecureStore.
+  // Sensitive token data now lives under SECURE_KEYS.AUTH_TOKEN / SECURE_KEYS.REFRESH_TOKEN.
   ACCESS_TOKEN: 'vibelink_access_token',
   REFRESH_TOKEN: 'vibelink_refresh_token',
+  // Non-sensitive — stays in AsyncStorage.
   TOKEN_EXPIRY: 'vibelink_token_expiry',
   USER_DATA: 'vibelink_user_data',
 };
+
+// One-shot migration: if a user has existing AsyncStorage tokens from a pre-SecureStore
+// build, copy them into SecureStore and delete the plaintext originals.
+async function migrateLegacyTokens(): Promise<void> {
+  try {
+    const [legacyAccess, legacyRefresh] = await Promise.all([
+      AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
+      AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
+    ]);
+    if (legacyAccess) {
+      await setSecureItem(SECURE_KEYS.AUTH_TOKEN, legacyAccess);
+      await AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    }
+    if (legacyRefresh) {
+      await setSecureItem(SECURE_KEYS.REFRESH_TOKEN, legacyRefresh);
+      await AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    }
+  } catch (e) {
+    console.warn('[Auth] Legacy token migration failed:', e);
+  }
+}
 
 // Get API URL from environment variable or fall back to localhost
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL
@@ -65,14 +90,17 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Wrap AsyncStorage reads in a 5-second timeout so the app doesn't
+        // Migrate any legacy plaintext tokens to SecureStore on first run after upgrade.
+        await migrateLegacyTokens();
+
+        // Wrap storage reads in a 5-second timeout so the app doesn't
         // freeze if the TurboModule Promise never resolves (iOS 26 edge case).
         const storageTimeout = new Promise<null[]>((_, reject) =>
-          setTimeout(() => reject(new Error('AsyncStorage timeout')), 5000)
+          setTimeout(() => reject(new Error('Storage read timeout')), 5000)
         );
         const [token, expiryStr, userData] = await Promise.race([
           Promise.all([
-            AsyncStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN),
+            getSecureItem(SECURE_KEYS.AUTH_TOKEN),
             AsyncStorage.getItem(STORAGE_KEYS.TOKEN_EXPIRY),
             AsyncStorage.getItem(STORAGE_KEYS.USER_DATA),
           ]),
@@ -173,7 +201,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
   const attemptTokenRefresh = async () => {
     try {
       const refreshToken = await Promise.race([
-        AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN),
+        getSecureItem(SECURE_KEYS.REFRESH_TOKEN),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)),
       ]);
       if (!refreshToken) {
@@ -207,8 +235,8 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         const expiresAt = Date.now() + expiresIn * 1000;
 
         await Promise.all([
-          AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, newAccessToken),
-          AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, newRefreshToken),
+          setSecureItem(SECURE_KEYS.AUTH_TOKEN, newAccessToken),
+          setSecureItem(SECURE_KEYS.REFRESH_TOKEN, newRefreshToken),
           AsyncStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, expiresAt.toString()),
         ]);
 
@@ -257,10 +285,10 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
         id: userData._id || userData.id,
       };
 
-      // Save to AsyncStorage
+      // Save tokens to SecureStore, non-sensitive data to AsyncStorage
       await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token),
-        AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken),
+        setSecureItem(SECURE_KEYS.AUTH_TOKEN, token),
+        setSecureItem(SECURE_KEYS.REFRESH_TOKEN, refreshToken),
         AsyncStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, expiresAt.toString()),
         AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(mappedUser)),
       ]);
@@ -320,14 +348,14 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       };
       console.log('[Auth] Mapped user:', mappedUser);
 
-      // Save to AsyncStorage
+      // Save tokens to SecureStore, non-sensitive data to AsyncStorage
       await Promise.all([
-        AsyncStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, token),
-        AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken),
+        setSecureItem(SECURE_KEYS.AUTH_TOKEN, token),
+        setSecureItem(SECURE_KEYS.REFRESH_TOKEN, refreshToken),
         AsyncStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRY, expiresAt.toString()),
         AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(mappedUser)),
       ]);
-      console.log('[Auth] Saved to AsyncStorage');
+      console.log('[Auth] Saved tokens (SecureStore) + user data (AsyncStorage)');
 
       // Set auth token in API client
       await apiClient.setAuthToken(token);
@@ -366,12 +394,12 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       // Continue with local sign out even if API fails
     }
 
-    // Clear AsyncStorage with a timeout to prevent hanging (iOS 26 TurboModule edge case).
+    // Clear stored auth with a timeout to prevent hanging (iOS 26 TurboModule edge case).
     const clearStorageTimeout = new Promise<void>((resolve) => setTimeout(resolve, 5000));
     await Promise.race([
       Promise.all([
-        AsyncStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN),
-        AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
+        deleteSecureItem(SECURE_KEYS.AUTH_TOKEN),
+        deleteSecureItem(SECURE_KEYS.REFRESH_TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN_EXPIRY),
         AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA),
       ]),
