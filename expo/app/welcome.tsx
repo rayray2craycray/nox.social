@@ -64,7 +64,7 @@ export default function WelcomeScreen() {
     if (!selectedRole) return;
     
     setUserRole(selectedRole);
-    router.push('/create-account');
+    router.push('/auth/sign-up');
   };
 
   return (
