@@ -24,10 +24,13 @@ import { NetworkProvider } from "@/contexts/NetworkContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
+import { initSentry } from "@/config/sentry";
 
 // No SplashScreen.preventAutoHideAsync() — splash is hidden by the native
 // stage-based auto-hide in RCTSurfaceHostingView._updateViews when the surface
 // transitions to "running" (React content ready). No explicit JS call needed.
+
+initSentry();
 
 const queryClient = new QueryClient();
 
