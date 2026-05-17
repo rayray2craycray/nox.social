@@ -27,8 +27,8 @@ export default function ForgotPasswordScreen() {
     setIsSubmitting(true);
 
     try {
-      // TODO: Implement actual password reset API call
-      const response = await fetch('http://localhost:3000/api/auth/forgot-password', {
+      const apiBase = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/api$/, '');
+      const response = await fetch(`${apiBase}/api/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

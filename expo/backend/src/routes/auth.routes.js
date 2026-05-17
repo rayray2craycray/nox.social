@@ -16,6 +16,7 @@ const {
   updateProfile,
   forgotPassword,
   resetPassword,
+  deleteMyAccount,
 } = require('../controllers/auth.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validation');
@@ -48,6 +49,9 @@ router.post('/signout', signOut);
 
 // GET /auth/me - Get current user profile (protected)
 router.get('/me', authMiddleware, getMe);
+
+// DELETE /auth/me - Permanently delete current user's account (App Store requirement)
+router.delete('/me', authMiddleware, deleteMyAccount);
 
 // PUT /auth/profile - Update user profile (protected)
 router.put('/profile', authMiddleware, validate(updateProfileSchema), updateProfile);

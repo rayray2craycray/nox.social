@@ -426,6 +426,27 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   }, [accessToken, queryClient]);
 
+  const deleteAccount = useCallback(async () => {
+    if (!accessToken) {
+      throw new Error('Not signed in');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      throw new Error(result.message || result.error || 'Failed to delete account');
+    }
+
+    // Backend deleted the user; locally clear everything via the existing signOut flow.
+    await signOut();
+  }, [accessToken, signOut]);
+
   const updateProfile = useCallback(async (updates: Partial<User>) => {
     if (!user || !accessToken) return;
 
@@ -480,6 +501,7 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
     signUp: signUpMutation.mutate,
     signIn: signInMutation.mutate,
     signOut,
+    deleteAccount,
     updateProfile,
     getAuthHeader,
 

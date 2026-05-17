@@ -54,7 +54,7 @@ interface Transaction {
 export default function SettingsScreen() {
   const { profile, toggleIncognito, setUserRole, linkedCards, addLinkedCard, removeLinkedCard } = useAppState();
   const { locationSettings, updateLocationSettings, toggleGhostMode } = useSocial();
-  const { signOut } = useAuth();
+  const { signOut, deleteAccount } = useAuth();
   const [transactions] = useState<Transaction[]>([
     {
       id: '1',
@@ -130,9 +130,16 @@ export default function SettingsScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            // TODO: Call backend API to delete account
-            // await apiClient.delete('/users/me');
-            router.replace('/welcome');
+            try {
+              await deleteAccount();
+              // deleteAccount() calls signOut() internally on success, which
+              // already navigates to /auth/sign-in. Nothing more to do here.
+            } catch (e: any) {
+              Alert.alert(
+                'Could Not Delete Account',
+                e?.message || 'Something went wrong. Please try again or contact support.',
+              );
+            }
           },
         },
       ]

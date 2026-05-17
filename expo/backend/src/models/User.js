@@ -23,6 +23,17 @@ const userSchema = new mongoose.Schema({
     select: false, // Don't return password by default
   },
 
+  // Password reset
+  passwordResetToken: {
+    type: String,
+    select: false,
+    index: true,
+  },
+  passwordResetExpires: {
+    type: Date,
+    select: false,
+  },
+
   // Basic user info
   displayName: {
     type: String,
