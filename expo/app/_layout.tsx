@@ -25,6 +25,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
 import { initSentry } from "@/config/sentry";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 // No SplashScreen.preventAutoHideAsync() — splash is hidden by the native
 // stage-based auto-hide in RCTSurfaceHostingView._updateViews when the surface
@@ -38,6 +39,9 @@ function RootLayoutNav() {
   const { GlowOverlay } = useGlow();
   const [showAgeGate, setShowAgeGate] = useState(false);
   const [isAgeVerified, setIsAgeVerified] = useState(false);
+
+  // Register Expo push token with backend once authenticated. No-op until then.
+  usePushNotifications();
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -68,7 +72,6 @@ function RootLayoutNav() {
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="welcome" options={{ headerShown: false }} />
-        <Stack.Screen name="create-account" options={{ headerShown: false }} />
         <Stack.Screen name="auth/sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="auth/sign-up" options={{ headerShown: false }} />
         <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />

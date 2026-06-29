@@ -121,6 +121,16 @@ const userSchema = new mongoose.Schema({
     default: false,
   },
 
+  // Push notification tokens. Each device gets its own Expo push token; a
+  // user can have multiple (iPhone + iPad, multiple installs, etc.).
+  pushTokens: [
+    {
+      token: { type: String, required: true },
+      platform: { type: String, enum: ['ios', 'android', 'web'] },
+      registeredAt: { type: Date, default: Date.now },
+    },
+  ],
+
   // Role and permissions
   role: {
     type: String,

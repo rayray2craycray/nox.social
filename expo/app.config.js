@@ -54,6 +54,7 @@ module.exports = {
       jsEngine: 'jsc',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        NSUserTrackingUsageDescription: 'Nox uses this permission to deliver more relevant content and improve the app. Your information is never sold to third parties.',
         NSCameraUsageDescription: 'Nox needs camera access to capture venue moments and create video highlights.',
         NSMicrophoneUsageDescription: 'Nox needs microphone access to record video highlights.',
         NSPhotoLibraryUsageDescription: 'Nox needs photo library access to upload your memories.',
@@ -133,6 +134,12 @@ module.exports = {
           isAndroidBackgroundLocationEnabled: false,
           isIosBackgroundLocationEnabled: false,
           locationAlwaysAndWhenInUsePermission: 'Nox needs your location to verify venue check-ins.',
+        },
+      ],
+      [
+        'expo-notifications',
+        {
+          // Custom small icon/color come later — defaults are fine for v1.0.
         },
       ],
     ],

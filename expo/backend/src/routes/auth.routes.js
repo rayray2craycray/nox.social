@@ -53,6 +53,53 @@ router.get('/me', authMiddleware, getMe);
 // DELETE /auth/me - Permanently delete current user's account (App Store requirement)
 router.delete('/me', authMiddleware, deleteMyAccount);
 
+// POST /auth/push-token - Register an Expo push token for the current user.
+// Called from the app whenever expo-notifications hands us a token.
+router.post('/push-token', authMiddleware, async (req, res) => {
+  const { token, platform } = req.body || {};
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ success: false, error: 'token required' });
+  }
+  try {
+    await User.updateOne(
+      { _id: req.user.id },
+      {
+        $pull: { pushTokens: { token } }, // dedupe: remove any prior entry with same token
+      },
+    );
+    await User.updateOne(
+      { _id: req.user.id },
+      {
+        $push: {
+          pushTokens: { token, platform: platform || 'ios', registeredAt: new Date() },
+        },
+      },
+    );
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[push-token] failed to register:', err);
+    return res.status(500).json({ success: false, error: 'Failed to register token' });
+  }
+});
+
+// DELETE /auth/push-token - Unregister a token (called on signOut and on logout)
+router.delete('/push-token', authMiddleware, async (req, res) => {
+  const { token } = req.body || {};
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ success: false, error: 'token required' });
+  }
+  try {
+    await User.updateOne(
+      { _id: req.user.id },
+      { $pull: { pushTokens: { token } } },
+    );
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[push-token DELETE] failed:', err);
+    return res.status(500).json({ success: false, error: 'Failed to unregister' });
+  }
+});
+
 // PUT /auth/profile - Update user profile (protected)
 router.put('/profile', authMiddleware, validate(updateProfileSchema), updateProfile);
 
