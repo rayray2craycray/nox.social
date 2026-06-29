@@ -13,6 +13,63 @@ const Venue = require('../models/Venue');
 const { sendVerificationEmail } = require('../services/email.service');
 const logger = require('../utils/logger');
 
+// Email verification links are clicked from a webmail inbox in a browser, so
+// the GET /verify-email/:token endpoint returns these styled HTML pages
+// instead of JSON. Mobile users get a deep link back into the app.
+const APP_DEEP_LINK = 'nox://business/verified';
+
+function htmlPage(title, heading, body, accentColor = '#8B5CF6') {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0a0a0a; color: #fff; margin: 0; min-height: 100vh;
+         display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .card { max-width: 480px; background: #1a1a1a; border-radius: 16px;
+          padding: 32px; text-align: center; border: 1px solid #2a2a2a; }
+  h1 { margin: 0 0 16px; font-size: 24px; color: ${accentColor}; }
+  p { margin: 8px 0; line-height: 1.5; color: #ccc; }
+  a.button { display: inline-block; margin-top: 16px; padding: 12px 24px;
+             background: ${accentColor}; color: #fff; text-decoration: none;
+             border-radius: 8px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>${heading}</h1>
+    ${body}
+  </div>
+</body>
+</html>`;
+}
+
+function verificationSuccessHTML(venueName) {
+  return htmlPage(
+    'Email Verified · Nox',
+    '✓ Email verified',
+    `<p>Welcome, ${venueName ? venueName.replace(/</g, '&lt;') : 'venue owner'}!</p>
+     <p>You're now the head moderator of your venue on Nox.</p>
+     <p>Open the Nox app to start managing your venue.</p>
+     <a class="button" href="${APP_DEEP_LINK}">Open Nox</a>`,
+    '#10B981',
+  );
+}
+
+function verificationErrorHTML(message) {
+  return htmlPage(
+    'Verification Failed · Nox',
+    'Verification failed',
+    `<p>${message.replace(/</g, '&lt;')}</p>
+     <p>Open the Nox app and request a new verification email.</p>
+     <a class="button" href="${APP_DEEP_LINK}">Open Nox</a>`,
+    '#EF4444',
+  );
+}
+
 /**
  * Register a new business profile
  * POST /api/business/register
@@ -151,8 +208,12 @@ exports.registerBusiness = async (req, res) => {
       expiresAt,
     });
 
-    // Send verification email
-    const verificationUrl = `${process.env.APP_URL || 'http://localhost:19006'}/business/verify-email?token=${token}`;
+    // Send verification email — point directly at the backend GET handler so
+    // the click works out of the inbox without a separate landing-page deploy.
+    // verifyEmail returns HTML below; deep-link redirect happens client-side.
+    const apiBase = process.env.PUBLIC_API_URL ||
+      `${req.protocol}://${req.get('host')}/api`;
+    const verificationUrl = `${apiBase}/business/verify-email/${token}`;
 
     try {
       await sendVerificationEmail(businessEmail, sanitizedVenueName, verificationUrl);
@@ -224,20 +285,18 @@ exports.verifyEmail = async (req, res) => {
     if (!verificationToken) {
       await session.abortTransaction();
       logger.warn('Email verification failed: invalid or expired token');
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid or expired verification token. Please request a new verification email.',
-      });
+      return res.status(400)
+        .type('html')
+        .send(verificationErrorHTML('This verification link is invalid or has expired.'));
     }
 
     // Check if already verified
     if (verificationToken.verifiedAt) {
       await session.abortTransaction();
       logger.warn('Email verification failed: token already used');
-      return res.status(400).json({
-        success: false,
-        error: 'This verification link has already been used.',
-      });
+      return res.status(400)
+        .type('html')
+        .send(verificationErrorHTML('This verification link has already been used.'));
     }
 
     // Get business profile
@@ -250,10 +309,9 @@ exports.verifyEmail = async (req, res) => {
       logger.error('Email verification failed: business profile not found', {
         businessProfileId: verificationToken.businessProfileId,
       });
-      return res.status(404).json({
-        success: false,
-        error: 'Business profile not found.',
-      });
+      return res.status(404)
+        .type('html')
+        .send(verificationErrorHTML('We could not find your business profile.'));
     }
 
     // Mark token as verified
@@ -342,29 +400,7 @@ exports.verifyEmail = async (req, res) => {
       venueId: venue._id.toString(),
     });
 
-    res.json({
-      success: true,
-      data: {
-        businessProfile: {
-          id: businessProfile._id,
-          emailVerified: businessProfile.emailVerified,
-          emailVerifiedAt: businessProfile.emailVerifiedAt,
-          status: businessProfile.status,
-          venueId: venue._id,
-        },
-        venue: {
-          id: venue._id,
-          name: venue.name,
-          type: venue.type,
-        },
-        venueRole: {
-          id: venueRole._id,
-          role: venueRole.role,
-          permissions: venueRole.permissions,
-        },
-      },
-      message: 'Email verified successfully! You are now the HEAD_MODERATOR of your venue.',
-    });
+    res.type('html').send(verificationSuccessHTML(venue.name));
   } catch (error) {
     // Rollback transaction on error
     await session.abortTransaction();
@@ -374,10 +410,9 @@ exports.verifyEmail = async (req, res) => {
       stack: error.stack,
     });
 
-    res.status(500).json({
-      success: false,
-      error: 'An error occurred during verification. Please try again later.',
-    });
+    res.status(500)
+      .type('html')
+      .send(verificationErrorHTML('An unexpected error occurred. Please try again.'));
   } finally {
     session.endSession();
   }
@@ -424,8 +459,10 @@ exports.resendVerificationEmail = async (req, res) => {
       expiresAt,
     });
 
-    // Send verification email
-    const verificationUrl = `${process.env.APP_URL || 'http://localhost:19000'}/verify-email/${token}`;
+    // Send verification email — same URL pattern as initial registration.
+    const apiBase = process.env.PUBLIC_API_URL ||
+      `${req.protocol}://${req.get('host')}/api`;
+    const verificationUrl = `${apiBase}/business/verify-email/${token}`;
     await sendVerificationEmail(
       businessProfile.businessEmail,
       businessProfile.venueName,
