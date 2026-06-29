@@ -1,466 +1,394 @@
 /**
  * Venue Routes
- * Endpoints for venue discovery, vibe checks, and venue management
+ * Endpoints for venue discovery, vibe checks, and venue management.
+ *
+ * Migrated from in-memory Map storage to MongoDB-backed persistence on
+ * 2026-06-29 (Phase 1, v1.0 launch prep). The /venues/nearby Google Places
+ * proxy remains pass-through to Google and does not touch the DB.
  */
 
 const express = require('express');
-const { body, param, query, validationResult } = require('express-validator');
+const { query, body, param, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
+const Venue = require('../models/Venue');
 
 const router = express.Router();
 
-// In-memory storage (replace with real database)
-const venues = new Map();
-const vibeChecks = new Map();
-const vibeData = new Map();
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-// Initialize mock venues
-const mockVenues = [
-  {
-    id: 'venue-1',
-    name: 'The Midnight Lounge',
-    category: 'LOUNGE',
-    description: 'Upscale cocktail lounge with live jazz',
-    address: {
-      street: '123 Main St',
-      city: 'San Francisco',
-      state: 'CA',
-      zip: '94102',
-    },
-    location: {
-      latitude: 37.7749,
-      longitude: -122.4194,
-    },
-    photos: [
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945',
-      'https://images.unsplash.com/photo-1514933651103-005eec06c04b',
-    ],
-    hours: {
-      monday: { open: '17:00', close: '02:00' },
-      tuesday: { open: '17:00', close: '02:00' },
-      wednesday: { open: '17:00', close: '02:00' },
-      thursday: { open: '17:00', close: '02:00' },
-      friday: { open: '17:00', close: '02:00' },
-      saturday: { open: '17:00', close: '02:00' },
-      sunday: { open: '17:00', close: '00:00' },
-    },
-    currentStatus: 'OPEN',
-    capacity: 200,
-    currentOccupancy: 150,
-    isToastEnabled: true,
-    spendToUnlock: 50,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'venue-2',
-    name: 'Neon Nightclub',
-    category: 'NIGHTCLUB',
-    description: 'High-energy nightclub with top DJs',
-    address: {
-      street: '456 Club Ave',
-      city: 'San Francisco',
-      state: 'CA',
-      zip: '94103',
-    },
-    location: {
-      latitude: 37.7739,
-      longitude: -122.4184,
-    },
-    photos: [
-      'https://images.unsplash.com/photo-1571266028243-d220c6e2d6cf',
-    ],
-    hours: {
-      thursday: { open: '21:00', close: '04:00' },
-      friday: { open: '21:00', close: '04:00' },
-      saturday: { open: '21:00', close: '04:00' },
-    },
-    currentStatus: 'OPEN',
-    capacity: 500,
-    currentOccupancy: 350,
-    isToastEnabled: true,
-    spendToUnlock: 100,
-    createdAt: new Date().toISOString(),
-  },
-];
-
-// Initialize venues
-mockVenues.forEach(venue => venues.set(venue.id, venue));
-
-// Initialize mock vibe data
-mockVenues.forEach(venue => {
-  vibeData.set(venue.id, {
-    venueId: venue.id,
-    music: 82,
-    density: 75,
-    energy: 88,
-    waitTime: 15,
-    totalVotes: 47,
-    lastUpdated: new Date().toISOString(),
-  });
-});
-
-// Helper: Verify JWT token
+/**
+ * Returns the authenticated userId (string) from a Bearer token, or null.
+ * Mirrors the inline pattern used elsewhere in routes/*.routes.js.
+ */
 function verifyToken(req) {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
   try {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return decoded.sub; // userId
-  } catch (error) {
+    return decoded.userId || decoded.sub || null;
+  } catch {
     return null;
   }
 }
 
 /**
- * GET /api/v1/venues
- * Get all venues (with optional filtering)
+ * Look up a Venue by either its Mongo _id or its googlePlaceId. The map tab
+ * sources venues from Google Places, so most venueIds passed to /vibe-check
+ * etc. are Place IDs that may or may not exist in our DB yet.
  */
-router.get('/venues', [
-  query('category').optional().isString(),
-  query('latitude').optional().isFloat(),
-  query('longitude').optional().isFloat(),
-  query('radius').optional().isInt({ min: 1, max: 50 }),
-], (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+async function findVenueByEitherId(venueId) {
+  // Try Mongo _id first (must be 24-char hex)
+  if (/^[0-9a-fA-F]{24}$/.test(venueId)) {
+    const byMongoId = await Venue.findById(venueId);
+    if (byMongoId) return byMongoId;
   }
-
-  const { category, latitude, longitude, radius } = req.query;
-
-  let venueList = Array.from(venues.values());
-
-  // Filter by category
-  if (category) {
-    venueList = venueList.filter(v => v.category === category);
-  }
-
-  // Filter by distance (if lat/lng provided)
-  if (latitude && longitude) {
-    const userLat = parseFloat(latitude);
-    const userLng = parseFloat(longitude);
-    const searchRadius = radius ? parseInt(radius) : 10; // km
-
-    venueList = venueList.filter(v => {
-      const distance = calculateDistance(
-        userLat,
-        userLng,
-        v.location.latitude,
-        v.location.longitude
-      );
-      return distance <= searchRadius;
-    });
-  }
-
-  // Add vibe data to each venue
-  const venuesWithVibes = venueList.map(venue => {
-    const vibe = vibeData.get(venue.id) || {
-      music: 0,
-      density: 0,
-      energy: 0,
-      waitTime: 0,
-      totalVotes: 0,
-    };
-
-    return {
-      ...venue,
-      vibeData: vibe,
-    };
-  });
-
-  res.json({
-    venues: venuesWithVibes,
-    total: venuesWithVibes.length,
-  });
-});
+  return Venue.findOne({ googlePlaceId: venueId });
+}
 
 /**
- * GET /api/v1/venues/nearby
- * Proxy to Google Places nearbysearch. Server-side key (GOOGLE_MAPS_API_KEY)
- * stays on Heroku — clients never see it.
- *
- * Must be registered before /:venueId so Express doesn't match venueId='nearby'.
+ * Serialize a Venue document for API response, normalizing _id → id and
+ * always including a (possibly default) vibeData block.
  */
-router.get('/venues/nearby', [
-  query('latitude').isFloat({ min: -90, max: 90 }),
-  query('longitude').isFloat({ min: -180, max: 180 }),
-  query('radius').optional().isInt({ min: 1, max: 50000 }),
-  query('keywords').optional().isString(),
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+function serializeVenue(venue) {
+  const obj = venue.toObject ? venue.toObject() : venue;
+  return {
+    id: obj._id?.toString() || obj.id,
+    googlePlaceId: obj.googlePlaceId,
+    name: obj.name,
+    type: obj.type,
+    location: obj.location,
+    rating: obj.rating,
+    priceLevel: obj.priceLevel,
+    hours: obj.hours,
+    imageUrl: obj.imageUrl,
+    tags: obj.tags,
+    genres: obj.genres,
+    capacity: obj.capacity,
+    features: obj.features,
+    isOpen: obj.isOpen,
+    currentVibeLevel: obj.currentVibeLevel,
+    coverCharge: obj.coverCharge,
+    status: obj.status,
+    vibeData: serializeVibeData(obj.vibeData, obj._id?.toString() || obj.id),
+    createdAt: obj.createdAt,
+  };
+}
+
+function serializeVibeData(vd, venueId) {
+  return {
+    venueId,
+    music: vd?.music || 0,
+    density: vd?.density || 0,
+    energy: vd?.energy || 0,
+    waitTime: vd?.waitTime || 0,
+    totalVotes: vd?.totalVotes || 0,
+    lastUpdated: vd?.lastUpdated || new Date().toISOString(),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/venues
+// List venues with optional filters. Was the in-memory mock list; now reads
+// from MongoDB. Almost no consumers in the current frontend (map tab uses
+// /venues/nearby instead), but kept for completeness.
+// ---------------------------------------------------------------------------
+router.get(
+  '/venues',
+  [
+    query('category').optional().isString(),
+    query('latitude').optional().isFloat({ min: -90, max: 90 }),
+    query('longitude').optional().isFloat({ min: -180, max: 180 }),
+    query('radius').optional().isFloat({ min: 0.1, max: 100 }), // km
+    query('limit').optional().isInt({ min: 1, max: 100 }),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    try {
+      const { category, latitude, longitude, radius } = req.query;
+      const limit = req.query.limit ? parseInt(req.query.limit, 10) : 50;
+
+      const filter = { status: 'ACTIVE' };
+      if (category) filter.type = category;
+
+      let cursor;
+      if (latitude && longitude) {
+        // Geospatial nearby query (2dsphere index on location.coordinates)
+        const radiusKm = radius ? parseFloat(radius) : 10;
+        cursor = Venue.find({
+          ...filter,
+          'location.coordinates': {
+            $near: {
+              $geometry: {
+                type: 'Point',
+                coordinates: [parseFloat(longitude), parseFloat(latitude)],
+              },
+              $maxDistance: radiusKm * 1000, // meters
+            },
+          },
+        }).limit(limit);
+      } else {
+        cursor = Venue.find(filter).limit(limit);
+      }
+
+      const venues = await cursor;
+      res.json({
+        venues: venues.map(serializeVenue),
+        total: venues.length,
+      });
+    } catch (err) {
+      console.error('[GET /venues] error:', err);
+      res.status(500).json({ message: 'Failed to fetch venues' });
+    }
   }
+);
 
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({
-      message: 'Server misconfigured: GOOGLE_MAPS_API_KEY not set',
-      code: 'PLACES_KEY_MISSING',
-    });
-  }
+// ---------------------------------------------------------------------------
+// GET /api/v1/venues/nearby
+// Google Places nearbysearch proxy. Unchanged from the 4/29 implementation —
+// does not touch the DB. Must be registered before /:venueId so Express
+// doesn't match venueId='nearby'.
+// ---------------------------------------------------------------------------
+router.get(
+  '/venues/nearby',
+  [
+    query('latitude').isFloat({ min: -90, max: 90 }),
+    query('longitude').isFloat({ min: -180, max: 180 }),
+    query('radius').optional().isInt({ min: 1, max: 50000 }),
+    query('keywords').optional().isString(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-  const { latitude, longitude } = req.query;
-  const radius = req.query.radius ? parseInt(req.query.radius, 10) : 8000;
-  const keywords = req.query.keywords
-    ? String(req.query.keywords).split(',').map(k => k.trim()).filter(Boolean)
-    : ['nightclub', 'bar', 'lounge', 'club'];
-
-  try {
-    const responses = await Promise.all(
-      keywords.map(keyword =>
-        axios
-          .get('https://maps.googleapis.com/maps/api/place/nearbysearch/json', {
-            params: { location: `${latitude},${longitude}`, radius, keyword, key: apiKey },
-            timeout: 10000,
-          })
-          .then(r => r.data)
-          .catch(err => ({ status: 'ERROR', error_message: err.message }))
-      )
-    );
-
-    if (responses.every(r => r.status === 'REQUEST_DENIED')) {
-      const first = responses.find(r => r.status === 'REQUEST_DENIED');
-      return res.status(502).json({
-        status: 'REQUEST_DENIED',
-        error_message: first.error_message,
-        message: 'Google Places rejected the request — check key restrictions, billing, or enabled APIs.',
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({
+        message: 'Server misconfigured: GOOGLE_MAPS_API_KEY not set',
+        code: 'PLACES_KEY_MISSING',
       });
     }
 
-    const merged = [];
-    const seen = new Set();
-    for (const r of responses) {
-      if (r.status !== 'OK' || !Array.isArray(r.results)) continue;
-      for (const place of r.results) {
-        if (seen.has(place.place_id)) continue;
-        seen.add(place.place_id);
-        merged.push(place);
+    const { latitude, longitude } = req.query;
+    const radius = req.query.radius ? parseInt(req.query.radius, 10) : 8000;
+    const keywords = req.query.keywords
+      ? String(req.query.keywords).split(',').map((k) => k.trim()).filter(Boolean)
+      : ['nightclub', 'bar', 'lounge', 'club'];
+
+    try {
+      const responses = await Promise.all(
+        keywords.map((keyword) =>
+          axios
+            .get('https://maps.googleapis.com/maps/api/place/nearbysearch/json', {
+              params: { location: `${latitude},${longitude}`, radius, keyword, key: apiKey },
+              timeout: 10000,
+            })
+            .then((r) => r.data)
+            .catch((err) => ({ status: 'ERROR', error_message: err.message }))
+        )
+      );
+
+      if (responses.every((r) => r.status === 'REQUEST_DENIED')) {
+        const first = responses.find((r) => r.status === 'REQUEST_DENIED');
+        return res.status(502).json({
+          status: 'REQUEST_DENIED',
+          error_message: first.error_message,
+          message: 'Google Places rejected the request — check key restrictions, billing, or enabled APIs.',
+        });
       }
+
+      const merged = [];
+      const seen = new Set();
+      for (const r of responses) {
+        if (r.status !== 'OK' || !Array.isArray(r.results)) continue;
+        for (const place of r.results) {
+          if (seen.has(place.place_id)) continue;
+          seen.add(place.place_id);
+          merged.push(place);
+        }
+      }
+
+      return res.json({ status: 'OK', results: merged });
+    } catch (err) {
+      console.error('[venues/nearby] proxy error:', err.message);
+      return res.status(502).json({
+        message: 'Failed to reach Google Places',
+        code: 'PLACES_UPSTREAM_ERROR',
+      });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/venues/:venueId
+// Look up by Mongo _id or by googlePlaceId.
+// ---------------------------------------------------------------------------
+router.get(
+  '/venues/:venueId',
+  [param('venueId').isString().notEmpty()],
+  async (req, res) => {
+    try {
+      const venue = await findVenueByEitherId(req.params.venueId);
+      if (!venue) {
+        return res
+          .status(404)
+          .json({ message: 'Venue not found', code: 'VENUE_NOT_FOUND' });
+      }
+      res.json(serializeVenue(venue));
+    } catch (err) {
+      console.error('[GET /venues/:venueId] error:', err);
+      res.status(500).json({ message: 'Failed to fetch venue' });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/venues/:venueId/vibe-data
+// Current aggregated vibe scores. Returns zero-filled object if the venue
+// has no submissions yet — the frontend (AppStateContext) handles ?? 0.
+// ---------------------------------------------------------------------------
+router.get(
+  '/venues/:venueId/vibe-data',
+  [param('venueId').isString().notEmpty()],
+  async (req, res) => {
+    try {
+      const venue = await findVenueByEitherId(req.params.venueId);
+      if (!venue) {
+        // For unknown Place IDs (venue not yet in DB), return zeros rather
+        // than 404 so the UI shows "no votes yet" rather than an error state.
+        return res.json(serializeVibeData(null, req.params.venueId));
+      }
+      res.json(serializeVibeData(venue.vibeData, venue._id.toString()));
+    } catch (err) {
+      console.error('[GET /vibe-data] error:', err);
+      res.status(500).json({ message: 'Failed to fetch vibe data' });
+    }
+  }
+);
+
+// ---------------------------------------------------------------------------
+// POST /api/v1/venues/:venueId/vibe-check
+// Submit a vibe check. Auto-creates a stub Venue document on first vote for
+// a Google Place ID we haven't seen — keeps the user flow unblocked without
+// requiring a separate "import venue" step.
+// ---------------------------------------------------------------------------
+router.post(
+  '/venues/:venueId/vibe-check',
+  [
+    param('venueId').isString().notEmpty(),
+    body('music').isInt({ min: 0, max: 100 }),
+    body('density').isInt({ min: 0, max: 100 }),
+    body('energy').isInt({ min: 0, max: 100 }),
+    body('waitTime').isInt({ min: 0, max: 180 }),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
+    const userId = verifyToken(req);
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ message: 'Authorization token required', code: 'UNAUTHORIZED' });
     }
 
-    return res.json({ status: 'OK', results: merged });
-  } catch (err) {
-    console.error('[venues/nearby] proxy error:', err.message);
-    return res.status(502).json({
-      message: 'Failed to reach Google Places',
-      code: 'PLACES_UPSTREAM_ERROR',
-    });
+    const { venueId } = req.params;
+    const { music, density, energy, waitTime } = req.body;
+
+    try {
+      let venue = await findVenueByEitherId(venueId);
+
+      if (!venue) {
+        // First-time check-in for a Google Place we haven't ingested yet.
+        // Insert a minimal stub; the data-richening pass (image, hours, etc.)
+        // can happen async via the Google details API later.
+        if (!/^[0-9a-fA-F]{24}$/.test(venueId)) {
+          venue = await Venue.create({
+            googlePlaceId: venueId,
+            name: 'Unnamed Venue',
+            type: 'BAR',
+            location: {
+              latitude: 0,
+              longitude: 0,
+              address: 'Unknown',
+              city: 'Unknown',
+              state: 'Unknown',
+            },
+            status: 'PENDING_APPROVAL',
+            vibeData: {
+              music: 0,
+              density: 0,
+              energy: 0,
+              waitTime: 0,
+              totalVotes: 0,
+            },
+          });
+        } else {
+          return res
+            .status(404)
+            .json({ message: 'Venue not found', code: 'VENUE_NOT_FOUND' });
+        }
+      }
+
+      // Weighted rolling average: new vote gets 30% weight.
+      const current = venue.vibeData || {
+        music: 0,
+        density: 0,
+        energy: 0,
+        waitTime: 0,
+        totalVotes: 0,
+      };
+      const w = 0.3;
+      venue.vibeData = {
+        music: Math.round(current.music * (1 - w) + music * w),
+        density: Math.round(current.density * (1 - w) + density * w),
+        energy: Math.round(current.energy * (1 - w) + energy * w),
+        waitTime: Math.round(current.waitTime * (1 - w) + waitTime * w),
+        totalVotes: (current.totalVotes || 0) + 1,
+        lastUpdated: new Date(),
+      };
+      await venue.save();
+
+      console.log(`✅ Vibe check on ${venue.name} (${venue._id}) by user ${userId}`);
+
+      res.status(201).json({
+        vibeCheck: {
+          id: `vibe-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          venueId: venue._id.toString(),
+          userId,
+          music,
+          density,
+          energy,
+          waitTime,
+          createdAt: new Date().toISOString(),
+        },
+        updatedVibeData: serializeVibeData(venue.vibeData, venue._id.toString()),
+      });
+    } catch (err) {
+      console.error('[POST /vibe-check] error:', err);
+      res.status(500).json({ message: 'Failed to submit vibe check' });
+    }
   }
-});
+);
 
-/**
- * GET /api/v1/venues/:venueId
- * Get venue details
- */
-router.get('/venues/:venueId', [
-  param('venueId').isString().notEmpty(),
-], (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+// ---------------------------------------------------------------------------
+// GET /api/v1/venues/:venueId/vibe-checks
+// History of vibe checks. The in-memory mock returned the last N raw checks;
+// for v1.0 we don't store individual checks (only the rolling aggregate),
+// so this returns an empty array. Add a VibeCheck collection in v1.1 if we
+// want to bring this back.
+// ---------------------------------------------------------------------------
+router.get(
+  '/venues/:venueId/vibe-checks',
+  [param('venueId').isString().notEmpty()],
+  async (_req, res) => {
+    res.json({ vibeChecks: [], total: 0 });
   }
-
-  const { venueId } = req.params;
-  const venue = venues.get(venueId);
-
-  if (!venue) {
-    return res.status(404).json({
-      message: 'Venue not found',
-      code: 'VENUE_NOT_FOUND',
-    });
-  }
-
-  // Add vibe data
-  const vibe = vibeData.get(venueId) || {
-    music: 0,
-    density: 0,
-    energy: 0,
-    waitTime: 0,
-    totalVotes: 0,
-  };
-
-  res.json({
-    ...venue,
-    vibeData: vibe,
-  });
-});
-
-/**
- * GET /api/v1/venues/:venueId/vibe-data
- * Get current vibe data for a venue
- */
-router.get('/venues/:venueId/vibe-data', [
-  param('venueId').isString().notEmpty(),
-], (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { venueId } = req.params;
-  const venue = venues.get(venueId);
-
-  if (!venue) {
-    return res.status(404).json({
-      message: 'Venue not found',
-      code: 'VENUE_NOT_FOUND',
-    });
-  }
-
-  const vibe = vibeData.get(venueId) || {
-    venueId,
-    music: 0,
-    density: 0,
-    energy: 0,
-    waitTime: 0,
-    totalVotes: 0,
-    lastUpdated: new Date().toISOString(),
-  };
-
-  res.json(vibe);
-});
-
-/**
- * POST /api/v1/venues/:venueId/vibe-check
- * Submit a vibe check (requires authentication)
- */
-router.post('/venues/:venueId/vibe-check', [
-  param('venueId').isString().notEmpty(),
-  body('music').isInt({ min: 0, max: 100 }),
-  body('density').isInt({ min: 0, max: 100 }),
-  body('energy').isInt({ min: 0, max: 100 }),
-  body('waitTime').isInt({ min: 0, max: 180 }),
-], (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  // Verify authentication
-  const userId = verifyToken(req);
-  if (!userId) {
-    return res.status(401).json({
-      message: 'Authorization token required',
-      code: 'UNAUTHORIZED',
-    });
-  }
-
-  const { venueId } = req.params;
-  const { music, density, energy, waitTime } = req.body;
-
-  const venue = venues.get(venueId);
-  if (!venue) {
-    return res.status(404).json({
-      message: 'Venue not found',
-      code: 'VENUE_NOT_FOUND',
-    });
-  }
-
-  // Create vibe check
-  const vibeCheckId = `vibe-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  const vibeCheck = {
-    id: vibeCheckId,
-    venueId,
-    userId,
-    music,
-    density,
-    energy,
-    waitTime,
-    createdAt: new Date().toISOString(),
-  };
-
-  vibeChecks.set(vibeCheckId, vibeCheck);
-
-  // Update aggregated vibe data
-  const currentVibe = vibeData.get(venueId) || {
-    venueId,
-    music: 0,
-    density: 0,
-    energy: 0,
-    waitTime: 0,
-    totalVotes: 0,
-    lastUpdated: new Date().toISOString(),
-  };
-
-  // Simple weighted average (more recent votes have more weight)
-  const weight = 0.3; // New vote weight
-  const updatedVibe = {
-    venueId,
-    music: Math.round(currentVibe.music * (1 - weight) + music * weight),
-    density: Math.round(currentVibe.density * (1 - weight) + density * weight),
-    energy: Math.round(currentVibe.energy * (1 - weight) + energy * weight),
-    waitTime: Math.round(currentVibe.waitTime * (1 - weight) + waitTime * weight),
-    totalVotes: currentVibe.totalVotes + 1,
-    lastUpdated: new Date().toISOString(),
-  };
-
-  vibeData.set(venueId, updatedVibe);
-
-  console.log(`✅ Vibe check submitted for ${venue.name} by user ${userId}`);
-
-  res.status(201).json({
-    vibeCheck,
-    updatedVibeData: updatedVibe,
-  });
-});
-
-/**
- * GET /api/v1/venues/:venueId/vibe-checks
- * Get recent vibe checks for a venue
- */
-router.get('/venues/:venueId/vibe-checks', [
-  param('venueId').isString().notEmpty(),
-  query('limit').optional().isInt({ min: 1, max: 100 }),
-], (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  const { venueId } = req.params;
-  const limit = req.query.limit ? parseInt(req.query.limit) : 20;
-
-  const venue = venues.get(venueId);
-  if (!venue) {
-    return res.status(404).json({
-      message: 'Venue not found',
-      code: 'VENUE_NOT_FOUND',
-    });
-  }
-
-  // Get all vibe checks for this venue
-  const checks = Array.from(vibeChecks.values())
-    .filter(check => check.venueId === venueId)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, limit);
-
-  res.json({
-    vibeChecks: checks,
-    total: checks.length,
-  });
-});
-
-// Helper: Calculate distance between two coordinates (Haversine formula)
-function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth's radius in km
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRad(degrees) {
-  return degrees * (Math.PI / 180);
-}
+);
 
 module.exports = router;

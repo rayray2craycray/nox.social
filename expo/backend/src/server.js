@@ -57,7 +57,6 @@ const connectDB = require('./config/database');
 // Routes
 const socialRoutes = require('./routes/social.routes');
 const authRoutes = require('./routes/auth.routes');
-const usersRoutes = require('./routes/users.routes');
 const venuesRoutes = require('./routes/venues.routes');
 const growthRoutes = require('./routes/growth.routes');
 const eventsRoutes = require('./routes/events.routes');
@@ -198,9 +197,9 @@ app.get('/health', async (req, res) => {
 });
 
 // API routes
-// Note: users and venues use /v1 prefix for legacy compatibility
-// (route definitions include /users and /venues paths)
-app.use('/api/v1', usersRoutes);
+// Note: venues route definitions include /venues paths under /v1 prefix.
+// users.routes.js was removed in v1.0 launch prep — it duplicated auth.routes.js
+// with in-memory storage that no frontend code referenced.
 app.use('/api/v1', venuesRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/auth', authRoutes);

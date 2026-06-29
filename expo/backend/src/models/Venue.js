@@ -104,6 +104,15 @@ const VenueSchema = new Schema(
       max: 100,
       default: 0,
     },
+    // Aggregated vibe data — rolling weighted average across all submitted vibe checks
+    vibeData: {
+      music: { type: Number, min: 0, max: 100, default: 0 },
+      density: { type: Number, min: 0, max: 100, default: 0 },
+      energy: { type: Number, min: 0, max: 100, default: 0 },
+      waitTime: { type: Number, min: 0, max: 180, default: 0 },
+      totalVotes: { type: Number, default: 0 },
+      lastUpdated: { type: Date },
+    },
     coverCharge: {
       type: Number,
       default: 0,
