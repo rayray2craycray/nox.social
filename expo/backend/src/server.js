@@ -67,6 +67,7 @@ const uploadRoutes = require('./routes/upload.routes');
 const businessRoutes = require('./routes/business.routes');
 const venueManagementRoutes = require('./routes/venue.routes');
 const adminRoutes = require('./routes/admin.routes');
+const paymentsRoutes = require('./routes/payments.routes');
 const posRoutes = require('./routes/pos.routes');
 const moderationRoutes = require('./routes/moderation.routes');
 const chatRoutes = require('./routes/chat.routes');
@@ -102,6 +103,15 @@ app.use(cors(corsOptions));
 
 // Compression
 app.use(compression());
+
+// Stripe webhook MUST receive the raw request body — express.json() rewrites
+// the body and breaks signature verification. Register the webhook BEFORE
+// the global json parser so the raw bytes reach the handler intact.
+app.post(
+  '/webhooks/stripe',
+  express.raw({ type: 'application/json', limit: '1mb' }),
+  paymentsRoutes.stripeWebhook,
+);
 
 // Body parsing with size limits
 // Upload routes can accept larger payloads
@@ -219,6 +229,11 @@ app.use('/api/moderation', moderationRoutes);
 
 // Chat routes (REST API + Socket.io for real-time)
 app.use('/api/chat', chatRoutes);
+
+// Stripe payment intent creation (authenticated). The webhook for
+// payment_intent.succeeded/failed/refunded is registered separately above
+// because it needs the raw body for signature verification.
+app.use('/api/payments', paymentsRoutes);
 
 // Growth feature routes
 app.use('/api/growth', growthRoutes);

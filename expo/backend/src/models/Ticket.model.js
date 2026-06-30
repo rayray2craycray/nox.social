@@ -62,6 +62,19 @@ const TicketSchema = new mongoose.Schema(
       transactionId: {
         type: String,
       },
+      // Stripe-backed payments. stripePaymentIntentId is the webhook's join key:
+      // payment_intent.succeeded → look up by this → mark paymentStatus = 'PAID'.
+      stripePaymentIntentId: {
+        type: String,
+        index: true,
+      },
+      paymentStatus: {
+        type: String,
+        enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+        default: 'PENDING',
+      },
+      paidAt: { type: Date },
+      refundedAt: { type: Date },
     },
   },
   {
