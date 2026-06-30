@@ -142,6 +142,16 @@ module.exports = {
           // Custom small icon/color come later — defaults are fine for v1.0.
         },
       ],
+      [
+        '@stripe/stripe-react-native',
+        {
+          // Apple Pay merchant ID. Must match the merchant ID created in
+          // Apple Developer Console and registered with Stripe Dashboard.
+          // Placeholder until those external steps are done.
+          merchantIdentifier: 'merchant.social.nox',
+          enableGooglePay: false, // Google Pay deferred to v1.1
+        },
+      ],
     ],
 
     experiments: {
@@ -157,6 +167,10 @@ module.exports = {
       sentryDsn: process.env.SENTRY_DSN || process.env.EXPO_PUBLIC_SENTRY_DSN || '',
       googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || '',
       instagramClientId: process.env.INSTAGRAM_CLIENT_ID || '',
+      stripePublishableKey:
+        process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+        process.env.STRIPE_PUBLISHABLE_KEY ||
+        '',
       eas: {
         projectId: EAS_PROJECT_ID || 'e5c57346-e187-4439-897d-085cf29a7456',
       },

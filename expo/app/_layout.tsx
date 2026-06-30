@@ -26,6 +26,8 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
 import { initSentry } from "@/config/sentry";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { StripeProvider } from "@stripe/stripe-react-native";
+import Constants from "expo-constants";
 
 // No SplashScreen.preventAutoHideAsync() — splash is hidden by the native
 // stage-based auto-hide in RCTSurfaceHostingView._updateViews when the surface
@@ -96,8 +98,18 @@ export default function RootLayout() {
     console.error('Global error caught:', error, errorInfo);
   };
 
+  // StripeProvider must wrap any screen that uses Stripe SDK (PaymentSheet,
+  // useStripe, etc.). It does NOT depend on any of the existing contexts, so
+  // it's placed outermost to avoid disturbing the load-bearing provider order.
+  const stripePublishableKey =
+    (Constants.expoConfig?.extra?.stripePublishableKey as string | undefined) || '';
+
   return (
     <ErrorBoundary onError={handleError}>
+      <StripeProvider
+        publishableKey={stripePublishableKey}
+        merchantIdentifier="merchant.social.nox"
+      >
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <AuthProvider>
@@ -141,6 +153,7 @@ export default function RootLayout() {
           </AuthProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>
+      </StripeProvider>
     </ErrorBoundary>
   );
 }

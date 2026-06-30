@@ -23,14 +23,15 @@ import {
   CheckCircle,
 } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventsContext';
+import { useTicketPurchase } from '@/hooks/useTicketPurchase';
 import * as Haptics from 'expo-haptics';
 import { TicketTier, Performer, Venue } from '@/types';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getEventById, getTicketTiersForEvent, purchaseTicket, isLoading } = useEvents();
+  const { getEventById, getTicketTiersForEvent, isLoading } = useEvents();
+  const { purchase: purchaseViaStripe, isPurchasing } = useTicketPurchase();
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
-  const [isPurchasing, setIsPurchasing] = useState(false);
 
   const event = getEventById(id || '');
   const venue = null as Venue | null;
@@ -43,7 +44,7 @@ export default function EventDetailScreen() {
   };
 
   const handlePurchaseTicket = async () => {
-    if (!selectedTierId) {
+    if (!selectedTierId || !event) {
       Alert.alert('No Tier Selected', 'Please select a ticket tier to purchase');
       return;
     }
@@ -51,26 +52,26 @@ export default function EventDetailScreen() {
     const tier = ticketTiers.find(t => t.id === selectedTierId);
     if (!tier) return;
 
-    setIsPurchasing(true);
+    const result = await purchaseViaStripe(event.id, selectedTierId);
 
-    try {
-      await purchaseTicket(selectedTierId, 'user-me');
-
+    if (result.ok) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
       Alert.alert(
         'Purchase Successful!',
-        `You've purchased ${tier.name} for ${event?.title}. Check your tickets to view your QR code.`,
+        `You've purchased ${tier.name} for ${event.title}. Your ticket will appear shortly.`,
         [
           { text: 'View Tickets', onPress: () => router.push('/tickets') },
           { text: 'OK', style: 'cancel' },
         ]
       );
-    } catch (error: any) {
-      Alert.alert('Purchase Failed', error.message || 'Unable to purchase ticket');
-    } finally {
-      setIsPurchasing(false);
+      return;
     }
+
+    // The user dismissing the sheet is not an "error" — don't show an alert
+    // for it, just let them try again.
+    if (result.reason === 'canceled') return;
+
+    Alert.alert('Purchase Failed', result.message || 'Unable to complete purchase');
   };
 
   const isTierAvailable = (tier: TicketTier): boolean => {
