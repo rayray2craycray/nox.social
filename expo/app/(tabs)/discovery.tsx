@@ -9,11 +9,12 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  FlatList,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import { X, MapPin, Users, DollarSign, Navigation, Ghost, ChevronUp, ChevronDown, RefreshCw, Info } from 'lucide-react-native';
+import { X, MapPin, Users, DollarSign, Navigation, Ghost, ChevronUp, ChevronDown, RefreshCw, Info, List, Map as MapIcon, Star } from 'lucide-react-native';
 import { Venue, FriendLocation, GroupPurchase } from '@/types';
 import { useDiscovery, useAppState } from '@/contexts/AppStateContext';
 import { useSocial } from '@/contexts/SocialContext';
@@ -54,6 +55,7 @@ export default function DiscoveryScreen() {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showGroupPurchaseModal, setShowGroupPurchaseModal] = useState(false);
   const [showVenueDetails, setShowVenueDetails] = useState(false);
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const mapRef = useRef<MapView>(null);
 
   // Use Google Places API to fetch real venues within 50-mile radius
@@ -245,6 +247,16 @@ export default function DiscoveryScreen() {
 
   return (
     <View style={styles.container}>
+      {viewMode === 'list' ? (
+        <VenueListView
+          venues={nearbyVenues}
+          friendsByVenue={friendsByVenue}
+          onVenuePress={(venueId) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            setSelectedVenueId(venueId);
+          }}
+        />
+      ) : (
       <MapView
         ref={mapRef}
         provider={PROVIDER_DEFAULT}
@@ -317,6 +329,7 @@ export default function DiscoveryScreen() {
           </Marker>
         ))}
       </MapView>
+      )}
 
       <View style={styles.header}>
         <LinearGradient
@@ -330,6 +343,21 @@ export default function DiscoveryScreen() {
       </View>
 
       <View style={styles.mapControls}>
+        <TouchableOpacity
+          style={styles.controlButton}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            setViewMode(viewMode === 'map' ? 'list' : 'map');
+          }}
+          testID="view-mode-toggle"
+        >
+          {viewMode === 'map' ? (
+            <List size={22} color="#fff" />
+          ) : (
+            <MapIcon size={22} color="#fff" />
+          )}
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.controlButton, locationSettings.ghostMode && styles.controlButtonActive]}
           onPress={() => {
@@ -356,9 +384,11 @@ export default function DiscoveryScreen() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.recenterButton} onPress={recenterMap}>
-          <Navigation size={24} color="#000000" />
-        </TouchableOpacity>
+        {viewMode === 'map' && (
+          <TouchableOpacity style={styles.recenterButton} onPress={recenterMap}>
+            <Navigation size={24} color="#000000" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {!selectedVenue && friendLocations.length > 0 && (
@@ -428,6 +458,76 @@ export default function DiscoveryScreen() {
         onClose={() => setShowVenueDetails(false)}
       />
     </View>
+  );
+}
+
+interface VenueListViewProps {
+  venues: (Venue & { distance?: number })[];
+  friendsByVenue: Record<string, FriendLocation[]>;
+  onVenuePress: (venueId: string) => void;
+}
+
+function VenueListView({ venues, friendsByVenue, onVenuePress }: VenueListViewProps) {
+  const renderVenue = ({ item: venue }: { item: Venue & { distance?: number } }) => {
+    const friendCount = (friendsByVenue[venue.id] || []).length;
+    return (
+      <TouchableOpacity
+        style={styles.listCard}
+        onPress={() => onVenuePress(venue.id)}
+        testID={`venue-list-item-${venue.id}`}
+      >
+        <LinearGradient colors={['#1a1a2e', '#15151f']} style={styles.listCardGradient}>
+          <Image source={{ uri: venue.imageUrl }} style={styles.listCardImage} />
+          <View style={styles.listCardBody}>
+            <View style={styles.listCardTopRow}>
+              <Text style={styles.listCardName} numberOfLines={1}>{venue.name}</Text>
+              {venue.isOpen && (
+                <View style={styles.listOpenBadge}>
+                  <Text style={styles.listOpenBadgeText}>OPEN</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.listCardMeta} numberOfLines={1}>
+              {venue.type}
+              {venue.distance !== undefined ? ` • ${venue.distance.toFixed(1)} mi` : ''}
+              {venue.location.city ? ` • ${venue.location.city}` : ''}
+            </Text>
+            <View style={styles.listCardBottomRow}>
+              {(venue.rating ?? 0) > 0 && (
+                <View style={styles.listRating}>
+                  <Star size={12} color="#fbbf24" fill="#fbbf24" />
+                  <Text style={styles.listRatingText}>{(venue.rating ?? 0).toFixed(1)}</Text>
+                </View>
+              )}
+              <Text style={styles.listPriceLevel}>{'$'.repeat(venue.priceLevel || 2)}</Text>
+              {friendCount > 0 && (
+                <View style={styles.listFriendBadge}>
+                  <Users size={12} color="#00d4ff" />
+                  <Text style={styles.listFriendBadgeText}>{friendCount}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <FlatList
+      data={venues}
+      keyExtractor={(v) => v.id}
+      renderItem={renderVenue}
+      style={styles.listContainer}
+      contentContainerStyle={styles.listContent}
+      showsVerticalScrollIndicator={false}
+      ListEmptyComponent={
+        <View style={styles.listEmpty}>
+          <MapPin size={40} color="#666" />
+          <Text style={styles.listEmptyText}>No venues found nearby</Text>
+        </View>
+      }
+    />
   );
 }
 
@@ -1568,5 +1668,100 @@ const styles = StyleSheet.create({
   strikethrough: {
     textDecorationLine: 'line-through' as const,
     color: '#999',
+  },
+  listContainer: {
+    flex: 1,
+    backgroundColor: '#0a0a0f',
+  },
+  listContent: {
+    paddingTop: 130,
+    paddingHorizontal: 16,
+    paddingBottom: 120,
+    gap: 12,
+  },
+  listCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  listCardGradient: {
+    flexDirection: 'row',
+    padding: 12,
+    gap: 12,
+    alignItems: 'center',
+  },
+  listCardImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: '#26263a',
+  },
+  listCardBody: {
+    flex: 1,
+    gap: 4,
+  },
+  listCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  listCardName: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  listOpenBadge: {
+    backgroundColor: 'rgba(74, 222, 128, 0.15)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  listOpenBadgeText: {
+    color: '#4ade80',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  listCardMeta: {
+    color: '#999',
+    fontSize: 13,
+  },
+  listCardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  listRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  listRatingText: {
+    color: '#fbbf24',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  listPriceLevel: {
+    color: '#4ade80',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  listFriendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  listFriendBadgeText: {
+    color: '#00d4ff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  listEmpty: {
+    alignItems: 'center',
+    paddingTop: 80,
+    gap: 12,
+  },
+  listEmptyText: {
+    color: '#666',
+    fontSize: 15,
   },
 });
