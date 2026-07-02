@@ -120,10 +120,7 @@ describe('AppStateContext', () => {
     expect(typeof result.current.calculateVibePercentage).toBe('function');
     expect(typeof result.current.addBroadcastMessage).toBe('function');
     expect(typeof result.current.getBroadcastMessagesForChannel).toBe('function');
-    expect(typeof result.current.addLinkedCard).toBe('function');
-    expect(typeof result.current.removeLinkedCard).toBe('function');
     expect(Array.isArray(result.current.joinedServers)).toBe(true);
-    expect(Array.isArray(result.current.linkedCards)).toBe(true);
   });
 
   it('should load profile from API', async () => {
@@ -487,69 +484,6 @@ describe('AppStateContext', () => {
 
     const percentage = result.current.calculateVibePercentage('venue-calc');
     expect(percentage).toBe(100); // (5+5)/2 = 5, (5/5)*100 = 100
-  });
-
-  it('should add linked card via setSecureItem', async () => {
-    const { setSecureItem } = require('@/utils/secureStorage');
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useAppState(), { wrapper });
-
-    // Wait for initial queries to settle
-    await waitFor(() => {
-      expect(result.current.profile).toBeDefined();
-    });
-
-    await act(async () => {
-      await result.current.addLinkedCard({
-        last4: '1234',
-        brand: 'Visa',
-        cardholderName: 'Test User',
-        isDefault: false,
-      });
-    });
-
-    // Verify setSecureItem was called with the card data
-    expect(setSecureItem).toHaveBeenCalledWith(
-      'secure_linked_cards',
-      expect.stringContaining('1234')
-    );
-
-    // Verify the card data written includes isDefault=true (first card)
-    const callArgs = setSecureItem.mock.calls.find(
-      (call: any[]) => call[0] === 'secure_linked_cards'
-    );
-    expect(callArgs).toBeDefined();
-    const writtenCards = JSON.parse(callArgs![1]);
-    expect(writtenCards).toHaveLength(1);
-    expect(writtenCards[0].last4).toBe('1234');
-    expect(writtenCards[0].isDefault).toBe(true);
-  });
-
-  it('should remove linked card via setSecureItem', async () => {
-    const { setSecureItem, getSecureItem } = require('@/utils/secureStorage');
-    // Pre-load a linked card
-    getSecureItem.mockResolvedValueOnce(
-      JSON.stringify([{ id: 'card-1', last4: '5678', brand: 'Mastercard', cardholderName: 'Test', isDefault: true }])
-    );
-
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useAppState(), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.linkedCards).toHaveLength(1);
-    });
-
-    await act(async () => {
-      await result.current.removeLinkedCard('card-1');
-    });
-
-    // Verify setSecureItem was called to persist the empty array
-    const removeCalls = setSecureItem.mock.calls.filter(
-      (call: any[]) => call[0] === 'secure_linked_cards'
-    );
-    const lastCall = removeCalls[removeCalls.length - 1];
-    const writtenCards = JSON.parse(lastCall[1]);
-    expect(writtenCards).toHaveLength(0);
   });
 
   it('should add broadcast messages and filter by channel', async () => {

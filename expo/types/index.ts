@@ -558,16 +558,6 @@ export interface CardTokenMapping {
   provider: 'STRIPE' | 'PLAID';
 }
 
-export interface LinkedCard {
-  id: string;
-  last4: string;
-  brand: string;
-  expiryMonth: number;
-  expiryYear: number;
-  isDefault: boolean;
-  cardholderName?: string;
-}
-
 // ===== GROWTH FEATURES: VIRAL LOOP =====
 
 // Group Purchases & Ticket Splitting

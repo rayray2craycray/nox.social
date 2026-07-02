@@ -3,13 +3,6 @@
  * Shared types for settings components
  */
 
-export interface LinkedCard {
-  id: string;
-  last4: string;
-  brand: string;
-  isDefault: boolean;
-}
-
 export interface Transaction {
   id: string;
   venueId: string;

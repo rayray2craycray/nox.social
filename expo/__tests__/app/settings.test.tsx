@@ -106,7 +106,7 @@ jest.mock('lucide-react-native', () => {
   );
 });
 
-import SettingsScreen from '@/app/app/settings';
+import SettingsScreen from '@/app/settings';
 
 // ---- Helpers ----
 
@@ -189,66 +189,6 @@ describe('SettingsScreen', () => {
 
     expect(getByText('Server Incognito')).toBeTruthy();
     expect(getByText('Everyone can see you')).toBeTruthy();
-  });
-
-  it('displays linked card information', () => {
-    const { getByText } = renderScreen();
-
-    expect(getByText(/Visa/)).toBeTruthy();
-    expect(getByText(/4242/)).toBeTruthy();
-    expect(getByText('1 card linked')).toBeTruthy();
-  });
-
-  it('opens add card modal when Linked Cards is pressed', () => {
-    const { getByText } = renderScreen();
-
-    fireEvent.press(getByText('Linked Cards'));
-
-    expect(getByText('Link Payment Card')).toBeTruthy();
-    expect(getByText('Card Number')).toBeTruthy();
-  });
-
-  it('adds a card when valid card number is entered and Link Card is pressed', () => {
-    const { getByText, getByPlaceholderText } = renderScreen();
-
-    // Open modal
-    fireEvent.press(getByText('Linked Cards'));
-
-    // Enter a card number
-    const input = getByPlaceholderText('4242 4242 4242 4242');
-    fireEvent.changeText(input, '4111111111111111');
-
-    // Press Link Card
-    fireEvent.press(getByText('Link Card'));
-
-    expect(mockAddLinkedCard).toHaveBeenCalledWith(
-      expect.objectContaining({
-        last4: '1111',
-        brand: 'Visa',
-      })
-    );
-  });
-
-  it('does not add a card when card number is too short', () => {
-    const { getByText, getByPlaceholderText } = renderScreen();
-
-    fireEvent.press(getByText('Linked Cards'));
-
-    const input = getByPlaceholderText('4242 4242 4242 4242');
-    fireEvent.changeText(input, '123');
-
-    fireEvent.press(getByText('Link Card'));
-
-    expect(mockAddLinkedCard).not.toHaveBeenCalled();
-  });
-
-  it('shows remove card confirmation alert when trash icon is pressed', () => {
-    const { getByText } = renderScreen();
-
-    // The trash icon is next to the card — rendered as a TouchableOpacity.
-    // We can find the "Default" text which confirms the card is rendered,
-    // and the remove handler triggers an Alert.
-    expect(getByText('Default')).toBeTruthy();
   });
 
   it('shows logout confirmation alert', () => {

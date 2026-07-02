@@ -32,14 +32,6 @@ const defaultProfile: UserProfile = {
   transactionHistory: [],
 };
 
-export interface LinkedCard {
-  id: string;
-  last4: string;
-  brand: string;
-  cardholderName: string;
-  isDefault: boolean;
-}
-
 // --------------------------------------------------------------------------
 // Helper: fetch profile from GET /api/auth/me, fall back to AsyncStorage
 // --------------------------------------------------------------------------
@@ -168,7 +160,6 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     timestamp: string;
     venueId: string;
   }>>([]);
-  const [linkedCards, setLinkedCards] = useState<LinkedCard[]>([]);
 
   // --------------------------------------------------------------------------
   // Profile query: API-first, AsyncStorage fallback
@@ -219,17 +210,6 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     },
   });
 
-  const linkedCardsQuery = useQuery({
-    queryKey: ['linked-cards'],
-    queryFn: async () => {
-      const stored = await getSecureItem(SECURE_KEYS.LINKED_CARDS);
-      if (stored) {
-        return JSON.parse(stored) as LinkedCard[];
-      }
-      return [];
-    },
-  });
-
   // Sync profile query data into state
   useEffect(() => {
     const data = profileQuery.data ?? localProfileQuery.data;
@@ -244,12 +224,6 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     }
   }, [cooldownsQuery.data]);
 
-  useEffect(() => {
-    if (linkedCardsQuery.data) {
-      setLinkedCards(linkedCardsQuery.data);
-    }
-  }, [linkedCardsQuery.data]);
-
   // Migrate existing AsyncStorage data to SecureStore on app startup
   useEffect(() => {
     const migrateExistingData = async () => {
@@ -257,8 +231,6 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
         // Migrate credentials
         await migrateToSecureStorage(STORAGE_KEYS.CREDENTIALS, SECURE_KEYS.USER_CREDENTIALS);
 
-        // Migrate linked cards
-        await migrateToSecureStorage(STORAGE_KEYS.LINKED_CARDS, SECURE_KEYS.LINKED_CARDS);
       } catch (error) {
         console.error('Error migrating data to SecureStore:', error);
       }
@@ -607,23 +579,6 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     return broadcastMessages.filter(msg => msg.channelId === channelId);
   }, [broadcastMessages]);
 
-  const addLinkedCard = useCallback(async (card: Omit<LinkedCard, 'id'>) => {
-    const newCard: LinkedCard = {
-      ...card,
-      id: Date.now().toString(),
-      isDefault: linkedCards.length === 0, // First card is default
-    };
-    const updated = [...linkedCards, newCard];
-    await setSecureItem(SECURE_KEYS.LINKED_CARDS, JSON.stringify(updated));
-    setLinkedCards(updated);
-  }, [linkedCards]);
-
-  const removeLinkedCard = useCallback(async (cardId: string) => {
-    const updated = linkedCards.filter(card => card.id !== cardId);
-    await setSecureItem(SECURE_KEYS.LINKED_CARDS, JSON.stringify(updated));
-    setLinkedCards(updated);
-  }, [linkedCards]);
-
   return {
     profile,
     isLoading: profileQuery.isLoading || localProfileQuery.isLoading,
@@ -646,9 +601,6 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     createAccount,
     addBroadcastMessage,
     getBroadcastMessagesForChannel,
-    linkedCards,
-    addLinkedCard,
-    removeLinkedCard,
   };
 });
 

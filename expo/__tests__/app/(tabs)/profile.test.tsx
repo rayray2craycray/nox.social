@@ -186,7 +186,7 @@ jest.mock('@/services/venues.service', () => ({
   },
 }));
 
-import ProfileScreen from '@/app/app/profile';
+import ProfileScreen from '@/app/(tabs)/profile';
 
 // ---- Helpers ----
 
@@ -373,10 +373,9 @@ describe('ProfileScreen', () => {
     expect(router.push).toHaveBeenCalledWith('/tickets');
   });
 
-  it('renders Quick Actions section with Link Payment Card and Account Settings', () => {
+  it('renders Quick Actions section with Account Settings', () => {
     const { getByText } = renderScreen();
     expect(getByText('Quick Actions')).toBeTruthy();
-    expect(getByText('Link Payment Card')).toBeTruthy();
     expect(getByText('Account Settings')).toBeTruthy();
   });
 

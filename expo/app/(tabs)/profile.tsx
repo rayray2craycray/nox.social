@@ -39,7 +39,7 @@ import { CrewCard } from '@/components/CrewCard';
 type SocialTab = 'FOLLOWERS' | 'FOLLOWING';
 
 export default function ProfileScreen() {
-  const { profile, toggleIncognito, updateProfileDetails, addLinkedCard } = useAppState();
+  const { profile, toggleIncognito, updateProfileDetails } = useAppState();
   const { user } = useAuth();
   const {
     following,
@@ -62,7 +62,6 @@ export default function ProfileScreen() {
   const [showBadgesList, setShowBadgesList] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState(profile.displayName);
   const [editBio, setEditBio] = useState(profile.bio || '');
-  const [showWalletModal, setShowWalletModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showRewardsModal, setShowRewardsModal] = useState(false);
@@ -315,13 +314,6 @@ export default function ProfileScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setShowUserProfile(false);
     router.push(`/servers?openDM=${userId}`);
-  };
-
-  const handleSelectCard = async (card: { last4: string; brand: string; cardholderName: string }) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    await addLinkedCard({ ...card, isDefault: false });
-    setShowWalletModal(false);
-    router.push('/settings');
   };
 
   return (
@@ -1050,16 +1042,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setShowWalletModal(true);
-            }}
-          >
-            <CreditCard size={20} color="#fff" />
-            <Text style={styles.actionButtonText}>Link Payment Card</Text>
-          </TouchableOpacity>
           <TouchableOpacity 
             style={styles.actionButton}
             onPress={() => {
@@ -1223,112 +1205,6 @@ export default function ProfileScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <Modal
-        visible={showWalletModal}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowWalletModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={{ flex: 1 }}
-            activeOpacity={1}
-            onPress={() => setShowWalletModal(false)}
-          />
-          <View style={styles.walletModalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Payment Method</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setShowWalletModal(false);
-                }}
-              >
-                <X size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.walletCardsContainer}>
-              <Text style={styles.walletSubtitle}>Cards in your wallet</Text>
-
-              <TouchableOpacity
-                style={styles.walletCard}
-                onPress={() => handleSelectCard({
-                  last4: '4242',
-                  brand: 'Visa',
-                  cardholderName: profile.displayName,
-                })}
-              >
-                <LinearGradient
-                  colors={['#1a1a2e', '#15151f']}
-                  style={styles.walletCardGradient}
-                >
-                  <View style={styles.walletCardLeft}>
-                    <View style={styles.walletCardIcon}>
-                      <Text style={styles.walletCardBrand}>VISA</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.walletCardNumber}>•••• 4242</Text>
-                      <Text style={styles.walletCardName}>{profile.displayName}</Text>
-                    </View>
-                  </View>
-                  <ChevronRight size={20} color="#666" />
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.walletCard}
-                onPress={() => handleSelectCard({
-                  last4: '5555',
-                  brand: 'Mastercard',
-                  cardholderName: profile.displayName,
-                })}
-              >
-                <LinearGradient
-                  colors={['#1a1a2e', '#15151f']}
-                  style={styles.walletCardGradient}
-                >
-                  <View style={styles.walletCardLeft}>
-                    <View style={[styles.walletCardIcon, { backgroundColor: '#ff6b6b' }]}>
-                      <Text style={styles.walletCardBrand}>MC</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.walletCardNumber}>•••• 5555</Text>
-                      <Text style={styles.walletCardName}>{profile.displayName}</Text>
-                    </View>
-                  </View>
-                  <ChevronRight size={20} color="#666" />
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.walletCard}
-                onPress={() => handleSelectCard({
-                  last4: '8888',
-                  brand: 'Amex',
-                  cardholderName: profile.displayName,
-                })}
-              >
-                <LinearGradient
-                  colors={['#1a1a2e', '#15151f']}
-                  style={styles.walletCardGradient}
-                >
-                  <View style={styles.walletCardLeft}>
-                    <View style={[styles.walletCardIcon, { backgroundColor: '#00d4ff' }]}>
-                      <Text style={styles.walletCardBrand}>AMEX</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.walletCardNumber}>•••• 8888</Text>
-                      <Text style={styles.walletCardName}>{profile.displayName}</Text>
-                    </View>
-                  </View>
-                  <ChevronRight size={20} color="#666" />
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       <UserProfileModal
         visible={showUserProfile}

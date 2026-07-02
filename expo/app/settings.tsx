@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import type { LinkedCard } from '@/types';
 import {
   View,
   StyleSheet,
@@ -52,7 +51,7 @@ interface Transaction {
 }
 
 export default function SettingsScreen() {
-  const { profile, toggleIncognito, setUserRole, linkedCards, addLinkedCard, removeLinkedCard } = useAppState();
+  const { profile, toggleIncognito, setUserRole } = useAppState();
   const { locationSettings, updateLocationSettings, toggleGhostMode } = useSocial();
   const { signOut, deleteAccount } = useAuth();
   const [transactions] = useState<Transaction[]>([
@@ -81,44 +80,7 @@ export default function SettingsScreen() {
   const [levelUpPings, setLevelUpPings] = useState(true);
   const [performerDrops, setPerformerDrops] = useState(true);
 
-  const [isAddCardModalVisible, setIsAddCardModalVisible] = useState(false);
   const [isTransactionHistoryVisible, setIsTransactionHistoryVisible] = useState(false);
-  const [cardNumber, setCardNumber] = useState('');
-
-  const handleAddCard = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (cardNumber.length >= 4) {
-      const newCard = {
-        last4: cardNumber.slice(-4),
-        brand: 'Visa',
-        expiryMonth: 12,
-        expiryYear: 2025,
-        cardholderName: profile.displayName,
-        isDefault: false,
-      };
-      addLinkedCard(newCard);
-      setCardNumber('');
-      setIsAddCardModalVisible(false);
-    }
-  };
-
-  const handleRemoveCard = (cardId: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Remove Card',
-      'Are you sure you want to remove this card?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            removeLinkedCard(cardId);
-          },
-        },
-      ]
-    );
-  };
 
   const handleDeleteAccount = () => {
     Alert.alert(
@@ -164,7 +126,6 @@ export default function SettingsScreen() {
   };
 
   const totalPoints = profile.totalSpend;
-  const cardLinkProgress = linkedCards.length > 0 ? 100 : 0;
 
   return (
     <>
@@ -279,34 +240,6 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
-
-          {cardLinkProgress < 100 && (
-            <View style={styles.progressCard}>
-              <LinearGradient
-                colors={['#1a1a2e', '#15151f']}
-                style={styles.progressGradient}
-              >
-                <View style={styles.progressHeader}>
-                  <CreditCard size={20} color="#ff0080" />
-                  <Text style={styles.progressTitle}>Complete Your Setup</Text>
-                </View>
-                <Text style={styles.progressSubtitle}>
-                  Link your card to unlock VIP status and automatic rewards
-                </Text>
-                <View style={styles.progressBarContainer}>
-                  <View style={styles.progressBar}>
-                    <LinearGradient
-                      colors={['#ff0080', '#00d4ff']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={[styles.progressFill, { width: `${cardLinkProgress}%` }]}
-                    />
-                  </View>
-                  <Text style={styles.progressText}>Step 1/2</Text>
-                </View>
-              </LinearGradient>
-            </View>
-          )}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Location Sharing</Text>
@@ -559,50 +492,15 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Wallet & POS</Text>
 
-            <TouchableOpacity
-              style={styles.settingButton}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setIsAddCardModalVisible(true);
-              }}
-            >
+            <View style={styles.settingButton}>
               <CreditCard size={22} color="#fff" />
               <View style={styles.settingButtonInfo}>
-                <Text style={styles.settingTitle}>Linked Cards</Text>
+                <Text style={styles.settingTitle}>Payment Methods</Text>
                 <Text style={styles.settingSubtitle}>
-                  {linkedCards.length} card{linkedCards.length !== 1 ? 's' : ''} linked
+                  Handled securely at checkout via Apple Pay or card
                 </Text>
               </View>
-              <ChevronRight size={20} color="#666" />
-            </TouchableOpacity>
-
-            {linkedCards.map((card) => (
-              <View key={card.id} style={styles.cardItem}>
-                <LinearGradient
-                  colors={['#1a1a2e', '#15151f']}
-                  style={styles.cardGradient}
-                >
-                  <View style={styles.cardLeft}>
-                    <CreditCard size={20} color="#ff0080" />
-                    <View>
-                      <Text style={styles.cardBrand}>
-                        {card.brand} •••• {card.last4}
-                      </Text>
-                      <Text style={styles.cardHolder}>{card.cardholderName}</Text>
-                      {card.isDefault && (
-                        <Text style={styles.cardDefault}>Default</Text>
-                      )}
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => handleRemoveCard(card.id)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Trash2 size={18} color="#ff4444" />
-                  </TouchableOpacity>
-                </LinearGradient>
-              </View>
-            ))}
+            </View>
 
             <TouchableOpacity
               style={styles.settingButton}
@@ -860,86 +758,6 @@ export default function SettingsScreen() {
           <Text style={styles.version}>VibeLink v1.0.0</Text>
         </LinearGradient>
       </ScrollView>
-
-      <Modal
-        visible={isAddCardModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsAddCardModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Link Payment Card</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setIsAddCardModalVisible(false);
-                }}
-              >
-                <X size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalBody}>
-              <View style={styles.infoBox}>
-                <Shield size={20} color="#ff0080" />
-                <Text style={styles.infoText}>
-                  Your card is tokenized via Stripe. We never store your full card
-                  number.
-                </Text>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Card Number</Text>
-                <TextInput
-                  style={styles.input}
-                  value={cardNumber}
-                  onChangeText={setCardNumber}
-                  placeholder="4242 4242 4242 4242"
-                  placeholderTextColor="#666"
-                  keyboardType="numeric"
-                  maxLength={19}
-                />
-              </View>
-
-              <View style={styles.benefitsList}>
-                <Text style={styles.benefitsTitle}>Benefits of Linking:</Text>
-                <View style={styles.benefitItem}>
-                  <Award size={16} color="#ff0080" />
-                  <Text style={styles.benefitText}>
-                    Automatic server unlocks when you hit spend thresholds
-                  </Text>
-                </View>
-                <View style={styles.benefitItem}>
-                  <DollarSign size={16} color="#ff0080" />
-                  <Text style={styles.benefitText}>
-                    Real-time loyalty points and tier upgrades
-                  </Text>
-                </View>
-                <View style={styles.benefitItem}>
-                  <Bell size={16} color="#ff0080" />
-                  <Text style={styles.benefitText}>
-                    Instant notifications when you level up
-                  </Text>
-                </View>
-              </View>
-
-              <TouchableOpacity style={styles.addCardButton} onPress={handleAddCard}>
-                <LinearGradient
-                  colors={['#ff0080', '#00d4ff']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.addCardGradient}
-                >
-                  <Plus size={20} color="#0a0a0f" />
-                  <Text style={styles.addCardText}>Link Card</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       <Modal
         visible={isTransactionHistoryVisible}
