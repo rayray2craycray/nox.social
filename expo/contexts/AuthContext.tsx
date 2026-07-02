@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setSecureItem, getSecureItem, deleteSecureItem, SECURE_KEYS } from '@/utils/secureStorage';
+import { PENDING_SIGNUP_ROLE_KEY } from '@/constants/app';
 import { router } from 'expo-router';
 import { Alert, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
@@ -303,8 +304,20 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Welcome!', 'Your account has been created successfully.');
 
-      // Navigate to main app
-      router.replace('/(tabs)/discovery');
+      // VENUE-role signups (chosen on the welcome screen) go straight into
+      // business registration so they can verify their email and claim their
+      // venue. Everyone else lands on discovery.
+      let pendingRole: string | null = null;
+      try {
+        pendingRole = await AsyncStorage.getItem(PENDING_SIGNUP_ROLE_KEY);
+        await AsyncStorage.removeItem(PENDING_SIGNUP_ROLE_KEY);
+      } catch {}
+
+      if (pendingRole === 'VENUE') {
+        router.replace('/business/register');
+      } else {
+        router.replace('/(tabs)/discovery');
+      }
     },
     onError: (error: any) => {
       console.error('[Auth] Sign up error:', error);

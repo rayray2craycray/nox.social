@@ -10,8 +10,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Building2, Users, Sparkles } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppState } from '@/contexts/AppStateContext';
 import { UserRole } from '@/types';
+import { PENDING_SIGNUP_ROLE_KEY } from '@/constants/app';
 
 
 
@@ -60,10 +62,16 @@ export default function WelcomeScreen() {
     setSelectedRole(role);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selectedRole) return;
-    
+
     setUserRole(selectedRole);
+    // One-shot handoff so AuthContext can route VENUE signups into business
+    // registration after the account is created. Best-effort — if the write
+    // fails the user just lands on discovery and can register from settings.
+    try {
+      await AsyncStorage.setItem(PENDING_SIGNUP_ROLE_KEY, selectedRole);
+    } catch {}
     router.push('/auth/sign-up');
   };
 

@@ -221,6 +221,13 @@ export const API = {
   RETRY_DELAY_MS: 1 * TIME.SECOND,
 } as const;
 
+/**
+ * One-shot AsyncStorage key: welcome.tsx writes the selected role here before
+ * routing to sign-up; AuthContext reads + clears it on signup success to
+ * decide whether to land the new user on discovery or business registration.
+ */
+export const PENDING_SIGNUP_ROLE_KEY = 'nox_pending_signup_role';
+
 // Type exports for TypeScript
 export type UserTier = typeof USER_TIERS[keyof typeof USER_TIERS];
 export type ServerAccessLevel = typeof SERVER_ACCESS_LEVELS[keyof typeof SERVER_ACCESS_LEVELS];
