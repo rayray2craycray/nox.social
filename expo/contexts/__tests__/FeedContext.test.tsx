@@ -110,6 +110,8 @@ describe('FeedContext', () => {
     expect(result.current.uploadVideo).toBeDefined();
   });
 
+  // SKIPPED (verified 2026-07-02): same react-query mutation/renderHook flush issue
+  // as PerformerContext — filter state never propagates in the test harness.
   it.skip('should switch filter to FOLLOWING', async () => {
     const wrapper = createWrapper();
     const { result } = renderHook(() => useFeed(), { wrapper });

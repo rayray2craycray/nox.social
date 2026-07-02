@@ -148,6 +148,10 @@ describe('SocialContext', () => {
     expect(result.current.locationSettings.onlyShowToMutual).toBe(false);
   });
 
+  // SKIPPED (verified 2026-07-02): toggleGhostMode drives updateLocationSettings,
+  // whose persisted state doesn't propagate back through renderHook re-renders in
+  // this harness; un-skipping also pollutes the visibleFriendLocations test that
+  // follows. Needs a harness that flushes context state (or an integration test).
   it.skip('should toggle ghost mode', async () => {
     const wrapper = createWrapper();
     const { result } = renderHook(() => useSocial(), { wrapper });

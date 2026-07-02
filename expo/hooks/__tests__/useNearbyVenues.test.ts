@@ -190,7 +190,7 @@ describe('useNearbyVenues', () => {
     expect(mockFetchNearbyVenues).toHaveBeenCalled();
   });
 
-  it.skip('should search venues by query', async () => {
+  it('should search venues by query', async () => {
     const searchResults = [mockVenues[0]];
     mockSearchVenues.mockResolvedValueOnce(searchResults);
 

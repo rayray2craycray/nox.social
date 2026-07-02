@@ -75,6 +75,10 @@ describe('PerformerContext', () => {
     expect(typeof result.current.bookTalent).toBe('function');
   });
 
+  // SKIPPED (verified 2026-07-02): togglePerformerMode is a react-query useMutation;
+  // its onSuccess state update never lands inside renderHook + act in this setup
+  // (isPerformerMode stays false after 3s). The AsyncStorage read path is covered
+  // by the 'should load performer mode from AsyncStorage' test below.
   it.skip('should toggle performer mode on', async () => {
     const wrapper = createWrapper();
     const { result } = renderHook(() => usePerformer(), { wrapper });
