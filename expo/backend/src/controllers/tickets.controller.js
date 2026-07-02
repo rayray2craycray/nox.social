@@ -392,3 +392,84 @@ exports.cancelTicket = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get Apple Wallet pass for a ticket
+ * GET /api/events/tickets/:ticketId/wallet-pass
+ *
+ * Returns a signed .pkpass for the authenticated owner of a paid/active
+ * ticket. Answers 503 PASS_SIGNING_NOT_CONFIGURED until the Apple Wallet
+ * signing certs are set on the environment (see services/wallet.service.js
+ * for the env contract).
+ */
+exports.getWalletPass = async (req, res) => {
+  try {
+    const walletService = require('../services/wallet.service');
+    const User = require('../models/User');
+
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    if (!walletService.isConfigured()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Apple Wallet passes are not available yet',
+        code: 'PASS_SIGNING_NOT_CONFIGURED',
+      });
+    }
+
+    const ticket = await Ticket.findById(req.params.ticketId)
+      .populate('eventId')
+      .populate('tierId');
+
+    if (!ticket) {
+      return res.status(404).json({ success: false, error: 'Ticket not found' });
+    }
+    if (String(ticket.userId) !== String(userId)) {
+      return res.status(403).json({ success: false, error: 'Not your ticket' });
+    }
+    if (ticket.status !== 'ACTIVE') {
+      return res.status(400).json({
+        success: false,
+        error: `Ticket is ${ticket.status} — only active tickets can be added to Wallet`,
+      });
+    }
+    // Stripe-purchased tickets must be confirmed paid by the webhook first.
+    // Legacy tickets without a paymentStatus are allowed through.
+    const paymentStatus = ticket.purchaseDetails?.paymentStatus;
+    if (paymentStatus && paymentStatus !== 'PAID') {
+      return res.status(400).json({
+        success: false,
+        error: `Payment is ${paymentStatus} — pass available once payment completes`,
+      });
+    }
+
+    const user = await User.findById(userId);
+
+    const passBuffer = await walletService.generateTicketPass({
+      serialNumber: ticket._id.toString(),
+      eventTitle: ticket.eventId?.title || 'Nox Event',
+      venueName: ticket.eventId?.venueName || '',
+      eventDate: ticket.eventId?.date,
+      tierName: ticket.tierId?.name || 'General',
+      attendeeName: user?.displayName || '',
+      qrCode: ticket.qrCode,
+    });
+
+    res.set({
+      'Content-Type': 'application/vnd.apple.pkpass',
+      'Content-Disposition': `attachment; filename="nox-ticket-${ticket._id}.pkpass"`,
+      'Cache-Control': 'no-store',
+    });
+    return res.send(passBuffer);
+  } catch (error) {
+    console.error('Wallet pass error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate Wallet pass',
+      message: error.message,
+    });
+  }
+};

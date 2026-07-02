@@ -32,6 +32,7 @@ router.delete('/:eventId', authMiddleware, eventsController.deleteEvent);
 // Ticket Purchases and Management
 router.post('/tickets/purchase', authMiddleware, ticketsController.purchaseTicket);
 router.get('/tickets/user', authMiddleware, ticketsController.getUserTickets);
+router.get('/tickets/:ticketId/wallet-pass', authMiddleware, ticketsController.getWalletPass);
 router.post('/tickets/:ticketId/transfer', authMiddleware, ticketsController.transferTicket);
 router.post('/tickets/:ticketId/cancel', authMiddleware, ticketsController.cancelTicket);
 

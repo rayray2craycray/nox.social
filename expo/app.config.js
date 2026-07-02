@@ -145,10 +145,15 @@ module.exports = {
       [
         '@stripe/stripe-react-native',
         {
-          // Apple Pay merchant ID. Must match the merchant ID created in
-          // Apple Developer Console and registered with Stripe Dashboard.
-          // Placeholder until those external steps are done.
-          merchantIdentifier: 'merchant.social.nox',
+          // NOTE: merchantIdentifier intentionally omitted for now. Adding it
+          // injects the com.apple.developer.in-app-payments entitlement, which
+          // makes every build fail until the merchant ID exists in Apple
+          // Developer Console AND the provisioning profile is regenerated
+          // (Build 96 failed exactly this way). Re-add
+          //   merchantIdentifier: 'merchant.social.nox'
+          // after creating the merchant ID in the Apple Developer portal and
+          // registering it with Stripe. Card payments in PaymentSheet work
+          // without it — only the Apple Pay button needs it.
           enableGooglePay: false, // Google Pay deferred to v1.1
         },
       ],

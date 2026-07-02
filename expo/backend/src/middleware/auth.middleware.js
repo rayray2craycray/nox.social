@@ -47,9 +47,13 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // Attach user to request
+    // Attach user to request. `userId` is a compat alias: 7 controllers
+    // (tickets, chat, friends, crews, events, challenges, guestlist) read
+    // req.user.userId — without the alias every authed endpoint in them
+    // returned 401 for legitimate users.
     req.user = {
       id: user._id.toString(),
+      userId: user._id.toString(),
       email: user.email,
     };
 
@@ -81,6 +85,7 @@ const optionalAuthMiddleware = async (req, res, next) => {
         if (user) {
           req.user = {
             id: user._id.toString(),
+            userId: user._id.toString(), // compat alias — see authMiddleware above
             email: user.email,
           };
         }
