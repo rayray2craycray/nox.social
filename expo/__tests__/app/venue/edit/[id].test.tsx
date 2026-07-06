@@ -74,7 +74,7 @@ jest.mock('lucide-react-native', () => {
   );
 });
 
-import VenueEditScreen from '@/app/app/venue/[id]';
+import VenueEditScreen from '@/app/venue/edit/[id]';
 
 // ---- Helpers ----
 

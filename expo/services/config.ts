@@ -206,7 +206,10 @@ export const API_ENDPOINTS = {
     performer: (performerId: string) => `/events/performer/${performerId}`,
     tickets: {
       purchase: '/events/tickets/purchase',
-      user: (userId: string) => `/events/tickets/user/${userId}`,
+      // Backend derives the user from the JWT — GET /events/tickets/user takes
+      // no path param. The old `/user/${userId}` form matched no route (404),
+      // which is why the tickets tab always came up empty.
+      user: (_userId: string) => '/events/tickets/user',
       byQr: (qrCode: string) => `/events/tickets/qr/${qrCode}`,
       transfer: (id: string) => `/events/tickets/${id}/transfer`,
       checkin: '/events/tickets/checkin',

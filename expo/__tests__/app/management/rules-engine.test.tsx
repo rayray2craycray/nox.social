@@ -37,7 +37,7 @@ jest.mock('lucide-react-native', () => {
   return new Proxy({}, { get: () => icon });
 });
 
-import RulesEngineScreen from '@/app/app/rules-engine';
+import RulesEngineScreen from '@/app/management/rules-engine';
 
 function createQueryClient() {
   return new QueryClient({

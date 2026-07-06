@@ -6,6 +6,27 @@ import { Alert } from 'react-native';
 import { AuthProvider, useAuth } from '../AuthContext';
 
 // Mock dependencies
+// In-memory SecureStore mock. AuthContext reads tokens via utils/secureStorage
+// since the May migration; tests seed legacy AsyncStorage keys and the
+// context's migrateLegacyTokens() moves them into this store on init —
+// which exercises the real migration path.
+const secureStore: Record<string, string> = {};
+jest.mock('@/utils/secureStorage', () => ({
+  setSecureItem: jest.fn(async (k: string, v: string) => { secureStore[k] = v; }),
+  getSecureItem: jest.fn(async (k: string) => secureStore[k] ?? null),
+  deleteSecureItem: jest.fn(async (k: string) => { delete secureStore[k]; }),
+  SECURE_KEYS: {
+    AUTH_TOKEN: 'vibelink_auth_token',
+    REFRESH_TOKEN: 'vibelink_refresh_token',
+    USER_PASSWORD: 'vibelink_user_password',
+    TOAST_ACCESS_TOKEN: 'vibelink_toast_access_token',
+    TOAST_REFRESH_TOKEN: 'vibelink_toast_refresh_token',
+    INSTAGRAM_TOKEN: 'vibelink_instagram_token',
+    USER_CREDENTIALS: 'vibelink_credentials',
+    LINKED_CARDS: 'vibelink_linked_cards',
+  },
+}));
+
 jest.mock('expo-router', () => ({
   router: { replace: jest.fn() },
 }));
@@ -57,6 +78,7 @@ function createWrapper() {
 
 describe('AuthContext', () => {
   beforeEach(() => {
+    Object.keys(secureStore).forEach((k) => delete secureStore[k]);
     jest.clearAllMocks();
     AsyncStorage.clear();
     mockFetch.mockReset();

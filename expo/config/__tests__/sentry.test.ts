@@ -60,7 +60,7 @@ describe('Sentry Configuration', () => {
         expect.objectContaining({
           dsn: expect.any(String),
           tracesSampleRate: 0.2,
-          autoSessionTracking: false,
+          environment: expect.any(String),
         })
       );
     });

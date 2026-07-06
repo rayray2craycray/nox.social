@@ -221,7 +221,7 @@ jest.mock('@/components/AgeVerificationGate', () => {
   };
 });
 
-import RootLayout from '@/app/app/_layout';
+import RootLayout from '@/app/_layout';
 
 // ---- Tests ----
 
@@ -245,18 +245,20 @@ describe('RootLayout', () => {
     });
   });
 
-  it('calls SplashScreen.hideAsync on mount', async () => {
+  it('does NOT call SplashScreen.hideAsync from JS (native stage-based auto-hide)', () => {
+    // Splash hiding is handled natively in RCTSurfaceHostingView since the
+    // black-screen fixes — an explicit JS call would reintroduce the race.
     const SplashScreen = require('expo-splash-screen');
     render(<RootLayout />);
-    await waitFor(() => {
-      expect(SplashScreen.hideAsync).toHaveBeenCalled();
-    });
+    expect(SplashScreen.hideAsync).not.toHaveBeenCalled();
   });
 
-  it('calls initSentry on mount', async () => {
-    const { initSentry } = require('@/config/sentry');
-    render(<RootLayout />);
-    await waitFor(() => {
+  it('initializes Sentry at module load', () => {
+    // initSentry fires at import time (top of app/_layout.tsx), not on mount,
+    // so observe it with a fresh module registry.
+    jest.isolateModules(() => {
+      const { initSentry } = require('@/config/sentry');
+      require('@/app/_layout');
       expect(initSentry).toHaveBeenCalled();
     });
   });

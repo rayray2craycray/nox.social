@@ -148,7 +148,7 @@ jest.mock('@/components/UserProfileModal', () => {
   };
 });
 
-import ServersScreen from '@/app/app/servers';
+import ServersScreen from '@/app/(tabs)/servers';
 
 // ---- Helpers ----
 
@@ -241,45 +241,13 @@ describe('ServersScreen', () => {
     expect(getByText('End-to-end encrypted')).toBeTruthy();
   });
 
-  it('shows mock conversations in the messages tab', () => {
+  // NOTE: the DM-conversation screen tests that lived here asserted the
+  // hardcoded Alex Chen / Sarah Martinez / Marcus Wright mock data that
+  // Build 93 removed. Real-DM screen tests need seeded ChatContext data.
+  it('shows the empty state in the messages tab (mock DMs removed in Build 93)', () => {
     const { getByText } = renderScreen();
     fireEvent.press(getByText('Messages'));
-    expect(getByText('Alex Chen')).toBeTruthy();
-    expect(getByText('Sarah Martinez')).toBeTruthy();
-    expect(getByText('Marcus Wright')).toBeTruthy();
-  });
-
-  it('opens a DM conversation when a conversation is pressed', () => {
-    const { getByText } = renderScreen();
-    fireEvent.press(getByText('Messages'));
-    fireEvent.press(getByText('Alex Chen'));
-    // Should now show the DM chat with back button
-    expect(getByText('← Back')).toBeTruthy();
-    expect(getByText('Encrypted')).toBeTruthy();
-  });
-
-  it('shows the message input in a DM conversation', () => {
-    const { getByText, getByPlaceholderText } = renderScreen();
-    fireEvent.press(getByText('Messages'));
-    fireEvent.press(getByText('Alex Chen'));
-    expect(getByPlaceholderText('Type an encrypted message...')).toBeTruthy();
-  });
-
-  it('navigates back from DM chat to conversations list', () => {
-    const { getByText } = renderScreen();
-    fireEvent.press(getByText('Messages'));
-    fireEvent.press(getByText('Alex Chen'));
-    fireEvent.press(getByText('← Back'));
-    // Should be back to the conversations list
-    expect(getByText('Direct Messages')).toBeTruthy();
-  });
-
-  it('shows unread badge for conversations with unread messages', () => {
-    const { getByText } = renderScreen();
-    fireEvent.press(getByText('Messages'));
-    // Alex Chen has 2 unread, Marcus Wright has 1
-    expect(getByText('2')).toBeTruthy();
-    expect(getByText('1')).toBeTruthy();
+    expect(getByText('No messages yet')).toBeTruthy();
   });
 
   it('displays channel unread count after selecting a server', () => {
@@ -328,36 +296,6 @@ describe('ServersScreen', () => {
     fireEvent.press(getByText('The Midnight Lounge'));
     fireEvent.press(getByText('general'));
     expect(getByPlaceholderText('Type a message...')).toBeTruthy();
-  });
-
-  it('shows DM last message preview in conversations list', () => {
-    const { getByText } = renderScreen();
-    fireEvent.press(getByText('Messages'));
-    expect(getByText('See you tonight at The Midnight Lounge!')).toBeTruthy();
-    expect(getByText(/That venue was amazing/)).toBeTruthy();
-  });
-
-  it('shows online status indicator for online users in DM list', () => {
-    const { getByText } = renderScreen();
-    fireEvent.press(getByText('Messages'));
-    // Alex Chen and Marcus Wright are online
-    expect(getByText('Alex Chen')).toBeTruthy();
-    expect(getByText('Marcus Wright')).toBeTruthy();
-  });
-
-  it('shows encrypted badge in DM chat header', () => {
-    const { getByText } = renderScreen();
-    fireEvent.press(getByText('Messages'));
-    fireEvent.press(getByText('Alex Chen'));
-    expect(getByText('Encrypted')).toBeTruthy();
-  });
-
-  it('shows pre-existing messages in Alex Chen DM conversation', () => {
-    const { getByText } = renderScreen();
-    fireEvent.press(getByText('Messages'));
-    fireEvent.press(getByText('Alex Chen'));
-    expect(getByText('Hey! Are you going to The Midnight Lounge tonight?')).toBeTruthy();
-    expect(getByText('Yeah! What time are you heading there?')).toBeTruthy();
   });
 
   it('navigates to second server channels correctly', () => {

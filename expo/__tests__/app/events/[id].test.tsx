@@ -29,6 +29,14 @@ jest.mock('@/contexts/EventsContext', () => ({
 const mockRouterBack = jest.fn();
 const mockRouterPush = jest.fn();
 
+const mockStripePurchase = jest.fn();
+jest.mock('@/hooks/useTicketPurchase', () => ({
+  useTicketPurchase: () => ({
+    purchase: mockStripePurchase,
+    isPurchasing: false,
+  }),
+}));
+
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ id: 'event-1' }),
   router: {
@@ -62,7 +70,7 @@ jest.mock('lucide-react-native', () => {
   );
 });
 
-import EventDetailScreen from '@/app/app/[id]';
+import EventDetailScreen from '@/app/events/[id]';
 
 // ---- Helpers ----
 
@@ -133,6 +141,7 @@ describe('EventDetailScreen', () => {
     mockGetEventById.mockReturnValue(mockEvent);
     mockGetTicketTiersForEvent.mockReturnValue(mockTiers);
     mockPurchaseTicket.mockResolvedValue(undefined);
+    mockStripePurchase.mockResolvedValue({ ok: true, ticketId: 'ticket-1' });
   });
 
   afterEach(() => {
@@ -221,7 +230,7 @@ describe('EventDetailScreen', () => {
     fireEvent.press(getByText('Purchase Ticket'));
 
     await waitFor(() => {
-      expect(mockPurchaseTicket).toHaveBeenCalledWith('tier-1', 'user-me');
+      expect(mockStripePurchase).toHaveBeenCalledWith('event-1', 'tier-1');
     });
 
     await waitFor(() => {
@@ -234,7 +243,7 @@ describe('EventDetailScreen', () => {
   });
 
   it('shows error alert when purchase fails', async () => {
-    mockPurchaseTicket.mockRejectedValue(new Error('Payment declined'));
+    mockStripePurchase.mockResolvedValue({ ok: false, reason: 'failed', message: 'Payment declined' });
 
     const { getByText } = renderScreen();
 

@@ -154,7 +154,7 @@ jest.mock('lucide-react-native', () => {
 });
 
 // Mock studio-components
-jest.mock('../studio-components/StatsCard', () => ({
+jest.mock('@/components/studio-components/StatsCard', () => ({
   StatsCard: ({ label, value, subtitle }: any) => {
     const { View, Text } = require('react-native');
     return (
@@ -167,7 +167,7 @@ jest.mock('../studio-components/StatsCard', () => ({
   },
 }));
 
-jest.mock('../studio-components/GigCard', () => ({
+jest.mock('@/components/studio-components/GigCard', () => ({
   GigCard: ({ gig, onPress, formatDate, formatCurrency }: any) => {
     const { View, Text, TouchableOpacity } = require('react-native');
     return (
@@ -180,28 +180,28 @@ jest.mock('../studio-components/GigCard', () => ({
   },
 }));
 
-jest.mock('../studio-components/FilterSelector', () => ({
+jest.mock('@/components/studio-components/FilterSelector', () => ({
   FilterSelector: () => {
     const { View, Text } = require('react-native');
     return <View><Text>FilterSelector</Text></View>;
   },
 }));
 
-jest.mock('../studio-components/StickerSelector', () => ({
+jest.mock('@/components/studio-components/StickerSelector', () => ({
   StickerSelector: () => {
     const { View, Text } = require('react-native');
     return <View><Text>StickerSelector</Text></View>;
   },
 }));
 
-jest.mock('../studio-components/VideoTrimmer', () => ({
+jest.mock('@/components/studio-components/VideoTrimmer', () => ({
   VideoTrimmer: () => {
     const { View, Text } = require('react-native');
     return <View><Text>VideoTrimmer</Text></View>;
   },
 }));
 
-import StudioScreen from '@/app/app/studio';
+import StudioScreen from '@/app/(tabs)/studio';
 
 // ---- Helpers ----
 

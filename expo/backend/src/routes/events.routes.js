@@ -14,6 +14,10 @@ const guestlistController = require('../controllers/guestlist.controller');
 
 // Events - Public routes for browsing
 router.get('/', eventsController.getEvents);
+// Alias used by the app's event list. Must be declared before /:eventId or
+// Express matches 'upcoming' as an eventId and getEventById throws a
+// CastError. getEvents already defaults to upcoming PUBLISHED events.
+router.get('/upcoming', eventsController.getEvents);
 router.get('/:eventId', eventsController.getEventById);
 router.get('/venue/:venueId', eventsController.getVenueEvents);
 

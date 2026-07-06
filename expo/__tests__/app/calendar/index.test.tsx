@@ -116,7 +116,7 @@ jest.mock('@/components/EventCard', () => ({
   },
 }));
 
-import CalendarScreen from '@/app/app/index';
+import CalendarScreen from '@/app/calendar/index';
 
 // ---- Helpers ----
 

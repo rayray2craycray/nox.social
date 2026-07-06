@@ -50,10 +50,26 @@ function createWrapper() {
 
 describe('NetworkContext', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     // Reset listeners
     (NetInfo as any)._listeners.length = 0;
   });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  // NetworkContext defers all NetInfo calls by 1s to dodge the TurboModule
+  // init window (iOS New Arch crash fix) — advance past it after mounting.
+  async function mountNetwork() {
+    const wrapper = createWrapper();
+    const rendered = renderHook(() => useNetwork(), { wrapper });
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    return rendered;
+  }
 
   it('should throw when used outside provider', () => {
     // Suppress console.error for the expected error
@@ -64,31 +80,25 @@ describe('NetworkContext', () => {
     spy.mockRestore();
   });
 
-  it('should have default online state', () => {
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useNetwork(), { wrapper });
+  it('should have default online state', async () => {
+    const { result } = await mountNetwork();
 
     expect(result.current.isConnected).toBe(true);
     expect(result.current.isOffline).toBe(false);
   });
 
-  it('should fetch initial network state on mount', () => {
-    const wrapper = createWrapper();
-    renderHook(() => useNetwork(), { wrapper });
-
+  it('should fetch initial network state after the deferral window', async () => {
+    await mountNetwork();
     expect(NetInfo.fetch).toHaveBeenCalled();
   });
 
-  it('should subscribe to network state changes', () => {
-    const wrapper = createWrapper();
-    renderHook(() => useNetwork(), { wrapper });
-
+  it('should subscribe to network state changes after the deferral window', async () => {
+    await mountNetwork();
     expect(NetInfo.addEventListener).toHaveBeenCalled();
   });
 
   it('should update state when network goes offline', async () => {
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useNetwork(), { wrapper });
+    const { result } = await mountNetwork();
 
     act(() => {
       (NetInfo as any)._simulateChange({
@@ -104,8 +114,7 @@ describe('NetworkContext', () => {
   });
 
   it('should update state when network comes back online', async () => {
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useNetwork(), { wrapper });
+    const { result } = await mountNetwork();
 
     // Go offline first
     act(() => {
@@ -133,8 +142,7 @@ describe('NetworkContext', () => {
   });
 
   it('should show warning toast when going offline', async () => {
-    const wrapper = createWrapper();
-    renderHook(() => useNetwork(), { wrapper });
+    await mountNetwork();
 
     act(() => {
       (NetInfo as any)._simulateChange({
@@ -151,8 +159,7 @@ describe('NetworkContext', () => {
   });
 
   it('should show info toast when coming back online after being offline', async () => {
-    const wrapper = createWrapper();
-    renderHook(() => useNetwork(), { wrapper });
+    await mountNetwork();
 
     // Go offline
     act(() => {
@@ -179,8 +186,7 @@ describe('NetworkContext', () => {
   });
 
   it('should handle connection type changes (wifi to cellular)', async () => {
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useNetwork(), { wrapper });
+    const { result } = await mountNetwork();
 
     act(() => {
       (NetInfo as any)._simulateChange({
@@ -195,8 +201,7 @@ describe('NetworkContext', () => {
   });
 
   it('should treat isInternetReachable=false as offline even when connected', async () => {
-    const wrapper = createWrapper();
-    const { result } = renderHook(() => useNetwork(), { wrapper });
+    const { result } = await mountNetwork();
 
     act(() => {
       (NetInfo as any)._simulateChange({

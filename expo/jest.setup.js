@@ -115,6 +115,28 @@ jest.mock('react-native-gesture-handler', () => {
   };
 });
 
+// Mock @stripe/stripe-react-native (native module absent in jest)
+jest.mock('@stripe/stripe-react-native', () => {
+  const React = require('react');
+  return {
+    StripeProvider: ({ children }) => React.createElement(React.Fragment, null, children),
+    useStripe: () => ({
+      initPaymentSheet: jest.fn(() => Promise.resolve({})),
+      presentPaymentSheet: jest.fn(() => Promise.resolve({})),
+    }),
+  };
+});
+
+// Mock expo-notifications + expo-device (push registration in usePushNotifications)
+jest.mock('expo-notifications', () => ({
+  getPermissionsAsync: jest.fn(() => Promise.resolve({ granted: false })),
+  requestPermissionsAsync: jest.fn(() => Promise.resolve({ granted: false })),
+  getExpoPushTokenAsync: jest.fn(() => Promise.resolve({ data: 'ExponentPushToken[test]' })),
+}));
+jest.mock('expo-device', () => ({
+  isDevice: false,
+}));
+
 // Silence the warning: Animated: `useNativeDriver` is not supported
 // In RN 0.81+ the NativeAnimatedHelper module was moved/removed.
 // Use jest.config.js moduleNameMapper as a safe fallback instead.

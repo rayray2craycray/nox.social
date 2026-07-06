@@ -20,9 +20,17 @@ jest.mock('../config', () => ({
   GOOGLE_MAPS_API_KEY: 'test-api-key',
 }));
 
-// Mock global fetch
+// Mock global fetch (still used by getVenueDetails / searchVenues)
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
+
+// fetchNearbyVenues goes through the backend proxy via apiClient (axios)
+// since the April places refactor — mock it separately.
+const mockApiGet = jest.fn();
+jest.mock('../api/config', () => ({
+  __esModule: true,
+  default: { get: (...args: any[]) => mockApiGet(...args) },
+}));
 
 import {
   calculateDistance,
@@ -179,23 +187,21 @@ describe('places.service', () => {
       ],
     };
 
-    it('should fetch venues from Google Places API', async () => {
-      mockFetch.mockResolvedValue({
-        json: () => Promise.resolve(mockPlacesResponse),
-      });
+    it('should fetch venues via the backend places proxy', async () => {
+      mockApiGet.mockResolvedValue({ data: mockPlacesResponse });
 
       const venues = await fetchNearbyVenues(37.78825, -122.4324, 50, 100);
 
-      expect(mockFetch).toHaveBeenCalled();
+      expect(mockApiGet).toHaveBeenCalledWith(
+        '/v1/venues/nearby',
+        expect.objectContaining({ params: expect.any(Object) })
+      );
       expect(venues.length).toBeGreaterThanOrEqual(0);
     });
 
     it('should throw when API returns REQUEST_DENIED', async () => {
-      mockFetch.mockResolvedValue({
-        json: () => Promise.resolve({
-          status: 'REQUEST_DENIED',
-          error_message: 'API key invalid',
-        }),
+      mockApiGet.mockResolvedValue({
+        data: { status: 'REQUEST_DENIED', error_message: 'API key invalid' },
       });
 
       await expect(
@@ -204,8 +210,8 @@ describe('places.service', () => {
     });
 
     it('should handle empty results', async () => {
-      mockFetch.mockResolvedValue({
-        json: () => Promise.resolve({ status: 'ZERO_RESULTS', results: [] }),
+      mockApiGet.mockResolvedValue({
+        data: { status: 'ZERO_RESULTS', results: [] },
       });
 
       const venues = await fetchNearbyVenues(37.78825, -122.4324);
@@ -213,10 +219,7 @@ describe('places.service', () => {
     });
 
     it('should deduplicate venues', async () => {
-      // Same place returned for different keywords
-      mockFetch.mockResolvedValue({
-        json: () => Promise.resolve(mockPlacesResponse),
-      });
+      mockApiGet.mockResolvedValue({ data: mockPlacesResponse });
 
       const venues = await fetchNearbyVenues(37.78825, -122.4324);
       const ids = venues.map(v => v.id);

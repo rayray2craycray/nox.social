@@ -511,18 +511,25 @@ describe('SocialContext', () => {
     expect(results!).toEqual([]);
   });
 
-  it('should get friend profile via API', async () => {
+  it('should get friend profile via cache-then-background-fetch', async () => {
     const { getUserById } = require('@/services/api/users.service');
     getUserById.mockResolvedValueOnce({ id: 'u1', displayName: 'Bob' });
     const wrapper = createWrapper();
     const { result } = renderHook(() => useSocial(), { wrapper });
 
-    let profile: any;
+    // First call is a cache miss by design — returns undefined and kicks off
+    // a background fetch that populates the cache.
+    let first: any;
     await act(async () => {
-      profile = await result.current.getFriendProfile('u1');
+      first = result.current.getFriendProfile('u1');
     });
-    expect(profile).toBeDefined();
-    expect(profile.displayName).toBe('Bob');
+    expect(first).toBeUndefined();
+    expect(getUserById).toHaveBeenCalledWith('u1');
+
+    // Second call reads the now-populated cache.
+    const second = result.current.getFriendProfile('u1');
+    expect(second).toBeDefined();
+    expect(second?.displayName).toBe('Bob');
   });
 
   it('should return undefined when getFriendProfile fails', async () => {

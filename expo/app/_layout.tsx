@@ -25,7 +25,6 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import AgeVerificationGate from "@/components/AgeVerificationGate";
 import { initSentry } from "@/config/sentry";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { StripeProvider } from "@stripe/stripe-react-native";
 import Constants from "expo-constants";
 
@@ -42,8 +41,10 @@ function RootLayoutNav() {
   const [showAgeGate, setShowAgeGate] = useState(false);
   const [isAgeVerified, setIsAgeVerified] = useState(false);
 
-  // Register Expo push token with backend once authenticated. No-op until then.
-  usePushNotifications();
+  // NOTE: push notification registration lives in app/(tabs)/_layout.tsx, not
+  // here — expo-notifications calls native module methods, and native calls
+  // during root-layout startup are the TurboModule crash pattern that killed
+  // builds 55/57/75. The tabs layout only mounts after navigation.
 
   useEffect(() => {
     const timeout = setTimeout(() => {

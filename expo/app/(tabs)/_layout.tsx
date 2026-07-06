@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import { Flame, MapPin, MessageCircle, User, Sparkles } from "lucide-react-native";
 import React from "react";
 import { Platform } from "react-native";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const COLORS = {
   background: '#000000',
@@ -11,6 +12,12 @@ const COLORS = {
 };
 
 export default function TabLayout() {
+  // Register the Expo push token once authenticated. Lives here (not in the
+  // root layout) so the expo-notifications native calls fire only after
+  // navigation into the main app — native calls during root startup are the
+  // TurboModule crash pattern from builds 55/57/75.
+  usePushNotifications();
+
   return (
     <Tabs
       screenOptions={{

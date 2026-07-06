@@ -159,7 +159,7 @@ jest.mock('@/hooks/useNearbyVenues', () => ({
   useNearbyVenues: () => mockNearbyVenuesReturn,
 }));
 
-import DiscoveryScreen from '@/app/app/discovery';
+import DiscoveryScreen from '@/app/(tabs)/discovery';
 
 // ---- Helpers ----
 
@@ -231,16 +231,22 @@ describe('DiscoveryScreen', () => {
     alertSpy.mockRestore();
   });
 
-  it('renders loading state when venues are loading', () => {
+  it('renders the map immediately once location is known, even while venues load', () => {
+    mockNearbyVenuesReturn = {
+      venues: [],
+      isLoading: true,
+      error: null,
+      userLocation: { latitude: 40.75, longitude: -73.97 },
+      refreshVenues: mockRefreshVenues,
+    };
     const { getByText } = renderScreen();
-    expect(getByText('Finding nearby venues...')).toBeTruthy();
-    expect(getByText('Searching within 50 miles')).toBeTruthy();
+    expect(getByText('Discover Venues')).toBeTruthy();
   });
 
   it('renders loading state when waiting for location', () => {
     mockNearbyVenuesReturn = {
       venues: [],
-      isLoading: false,
+      isLoading: true,
       error: null,
       userLocation: null,
       refreshVenues: mockRefreshVenues,
@@ -363,17 +369,15 @@ describe('DiscoveryScreen', () => {
     mockNearbyVenuesReturn = {
       venues: [],
       isLoading: false,
-      error: new Error('Network error'),
+      error: 'Network error',
       userLocation: { latitude: 40.75, longitude: -73.97 },
       refreshVenues: mockRefreshVenues,
     };
 
-    renderScreen();
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Unable to Load Venues',
-      expect.stringContaining('Could not fetch nearby venues'),
-      expect.any(Array)
-    );
+    const { getByText } = renderScreen();
+    // Inline error view (Alert.alert was moved out of render in the build-93 fix)
+    expect(getByText('Unable to load venues')).toBeTruthy();
+    expect(getByText('Try again')).toBeTruthy();
   });
 
   it('renders venue markers on the map for loaded venues', () => {
@@ -583,17 +587,14 @@ describe('DiscoveryScreen', () => {
     mockNearbyVenuesReturn = {
       venues: [],
       isLoading: false,
-      error: new Error('Connection timeout'),
+      error: 'Connection timeout',
       userLocation: { latitude: 40.75, longitude: -73.97 },
       refreshVenues: mockRefreshVenues,
     };
 
-    renderScreen();
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Unable to Load Venues',
-      expect.any(String),
-      expect.any(Array)
-    );
+    const { getByText } = renderScreen();
+    expect(getByText('Unable to load venues')).toBeTruthy();
+    expect(getByText('Try again')).toBeTruthy();
   });
 
   it('shows friend location status text in drawer', () => {
