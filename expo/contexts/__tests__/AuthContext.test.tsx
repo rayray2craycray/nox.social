@@ -284,6 +284,43 @@ describe('AuthContext', () => {
     expect(result.current.user?.displayName).toBe('New User');
   });
 
+  it('should route VENUE-role signups to business registration', async () => {
+    await AsyncStorage.setItem('nox_pending_signup_role', 'VENUE');
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          user: { id: 'venue-user', email: 'venue@test.com', displayName: 'Venue Owner', createdAt: '2024-01-01' },
+          accessToken: 'signup-token',
+          refreshToken: 'signup-refresh',
+          expiresIn: 3600,
+        },
+      }),
+    });
+
+    const wrapper = createWrapper();
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      result.current.signUp({
+        email: 'venue@test.com',
+        password: 'password123',
+        displayName: 'Venue Owner',
+      });
+    });
+
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
+
+    const { router } = require('expo-router');
+    await waitFor(() => {
+      expect(router.replace).toHaveBeenCalledWith('/business/register');
+    });
+    // one-shot key consumed
+    expect(await AsyncStorage.getItem('nox_pending_signup_role')).toBeNull();
+  });
+
   it('should sign out and clear all stored data', async () => {
     // First set up authenticated state
     const futureExpiry = (Date.now() + 3600 * 1000).toString();

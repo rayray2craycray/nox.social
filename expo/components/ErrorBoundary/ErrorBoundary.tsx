@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { captureException } from '@/config/sentry';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -58,9 +59,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       this.props.onError(error, errorInfo);
     }
 
-    // TODO: Send error to tracking service (Sentry, Bugsnag, etc.)
-    // Example:
-    // Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
+    // Report to Sentry with the component stack — this boundary is the LAST
+    // stop for render crashes in production; without this call they vanish.
+    try {
+      captureException(error, {
+        componentStack: errorInfo.componentStack ?? 'unavailable',
+        boundary: 'root',
+      });
+    } catch {
+      // Never let error reporting crash the error UI.
+    }
   }
 
   handleReset = (): void => {
@@ -88,11 +96,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               We&apos;re sorry for the inconvenience. The app encountered an unexpected error.
             </Text>
 
-            {__DEV__ && this.state.error && (
+            {this.state.error && (
               <View style={styles.errorDetails}>
-                <Text style={styles.errorTitle}>Error Details (Dev Only):</Text>
+                <Text style={styles.errorTitle}>
+                  {__DEV__ ? 'Error Details (Dev Only):' : 'Error code (include this when reporting):'}
+                </Text>
                 <Text style={styles.errorMessage}>{this.state.error.toString()}</Text>
-                {this.state.errorInfo && (
+                {__DEV__ && this.state.errorInfo && (
                   <Text style={styles.errorStack} numberOfLines={10}>
                     {this.state.errorInfo.componentStack}
                   </Text>
