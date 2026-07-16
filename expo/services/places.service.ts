@@ -147,9 +147,30 @@ export const getCurrentLocation = async (): Promise<{
       return null;
     }
 
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
+    // getCurrentPositionAsync with High accuracy can hang indefinitely on a
+    // real device (weak GPS, first launch, indoors) — it has no built-in
+    // timeout. Race it against an 8s deadline. Balanced accuracy is plenty for
+    // a 50-mile venue search and resolves much faster than High.
+    const freshFix = Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
     });
+    const timeout = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 8000),
+    );
+
+    let location = await Promise.race([freshFix, timeout]);
+
+    // If the fresh fix timed out, fall back to the last cached fix so the map
+    // can still render venues rather than spinning on "Getting your location".
+    if (!location) {
+      console.warn('[Location] fresh fix timed out, trying last known position');
+      location = await Location.getLastKnownPositionAsync();
+    }
+
+    if (!location) {
+      console.error('[Location] no position available (fresh + last-known both failed)');
+      return null;
+    }
 
     return {
       latitude: location.coords.latitude,

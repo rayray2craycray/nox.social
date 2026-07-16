@@ -11,8 +11,17 @@ jest.mock('expo-location', () => ({
       },
     })
   ),
+  getLastKnownPositionAsync: jest.fn(() =>
+    Promise.resolve({
+      coords: {
+        latitude: 37.78825,
+        longitude: -122.4324,
+      },
+    })
+  ),
   Accuracy: {
     High: 4,
+    Balanced: 3,
   },
 }));
 
