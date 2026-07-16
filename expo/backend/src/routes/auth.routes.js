@@ -17,6 +17,8 @@ const {
   forgotPassword,
   resetPassword,
   deleteMyAccount,
+  awardBadge,
+  removeBadge,
 } = require('../controllers/auth.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validation');
@@ -52,6 +54,10 @@ router.get('/me', authMiddleware, getMe);
 
 // DELETE /auth/me - Permanently delete current user's account (App Store requirement)
 router.delete('/me', authMiddleware, deleteMyAccount);
+
+// Venue badges (server-persisted; earned by check-in / spend thresholds)
+router.post('/me/badges', authMiddleware, awardBadge);
+router.delete('/me/badges/:venueId', authMiddleware, removeBadge);
 
 // POST /auth/push-token - Register an Expo push token for the current user.
 // Called from the app whenever expo-notifications hands us a token.

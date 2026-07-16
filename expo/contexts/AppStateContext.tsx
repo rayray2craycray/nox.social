@@ -60,13 +60,16 @@ async function fetchProfileFromApi(accessToken: string | null): Promise<UserProf
     // ignore parse errors
   }
 
-  // Merge: backend-authoritative fields overwrite, local-only fields preserved
+  // Merge: backend-authoritative fields overwrite, local-only fields preserved.
+  // Badges are now server-persisted — prefer the backend list, but fall back to
+  // the local cache when the backend omits them (older server / offline).
   const merged: UserProfile = {
     ...localProfile,
     id: apiUser.id || apiUser._id || localProfile.id,
     displayName: apiUser.displayName ?? localProfile.displayName,
     profileImageUrl: apiUser.profileImageUrl,
     bio: apiUser.bio ?? localProfile.bio,
+    badges: Array.isArray(apiUser.badges) ? apiUser.badges : localProfile.badges,
     isAuthenticated: true,
   };
 
@@ -326,14 +329,63 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     updateProfile({ displayName, bio });
   }, [updateProfile]);
 
+  // Award a venue badge. Persists to the backend (source of truth), then
+  // updates local state + cache from the authoritative list the server
+  // returns. Falls back to a local-only add if the network call fails so the
+  // UX isn't blocked offline (it'll reconcile on next profile fetch).
+  const awardBadge = useCallback(async (badge: {
+    venueId: string;
+    venueName: string;
+    badgeType: 'GUEST' | 'REGULAR' | 'PLATINUM' | 'WHALE';
+  }) => {
+    try {
+      const resp = await apiClient.post<{ success: boolean; data: { badges: any[] } }>(
+        '/auth/me/badges',
+        badge,
+      );
+      const serverBadges = resp?.data?.badges;
+      if (Array.isArray(serverBadges)) {
+        await updateProfileAsync({ badges: serverBadges as any });
+        return;
+      }
+    } catch (err) {
+      if (__DEV__) console.log('[AppState] awardBadge API failed, using local fallback:', err);
+    }
+    // Offline / error fallback: add locally, dedup by venueId.
+    const current = profile.badges.filter(b => b.venueId !== badge.venueId);
+    const local = {
+      id: `badge-${Date.now()}`,
+      unlockedAt: new Date().toISOString(),
+      ...badge,
+    };
+    await updateProfileAsync({ badges: [...current, local] as any });
+  }, [profile.badges, updateProfileAsync]);
+
+  const removeBadge = useCallback(async (venueId: string) => {
+    try {
+      const resp = await apiClient.delete<{ success: boolean; data: { badges: any[] } }>(
+        `/auth/me/badges/${venueId}`,
+      );
+      const serverBadges = resp?.data?.badges;
+      if (Array.isArray(serverBadges)) {
+        await updateProfileAsync({ badges: serverBadges as any });
+        return;
+      }
+    } catch (err) {
+      if (__DEV__) console.log('[AppState] removeBadge API failed, using local fallback:', err);
+    }
+    const remaining = profile.badges.filter(b => b.venueId !== venueId);
+    await updateProfileAsync({ badges: remaining as any });
+  }, [profile.badges, updateProfileAsync]);
+
   const leaveServer = useMutation({
     mutationFn: async (venueId: string) => {
+      // Remove the venue badge server-side (best-effort), then update local
+      // state + cache. removeBadge already handles the offline fallback.
+      await removeBadge(venueId);
       const currentProfile = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
       const profileData = currentProfile ? JSON.parse(currentProfile) : defaultProfile;
-      const newBadges = profileData.badges.filter((badge: any) => badge.venueId !== venueId);
-      const updated = { ...profileData, badges: newBadges };
-      await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(updated));
-      return updated;
+      return profileData;
     },
     onSuccess: (data) => {
       setProfile(data);
@@ -589,6 +641,8 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     setUserRole,
     updateProfileDetails,
     updateProfile,
+    awardBadge,
+    removeBadge,
     updateProfileAsync,
     leaveServer,
     canRejoinVenue,

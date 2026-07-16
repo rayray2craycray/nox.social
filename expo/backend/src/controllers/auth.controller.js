@@ -321,6 +321,20 @@ const signOut = async (req, res) => {
 };
 
 /**
+ * Serialize badge subdocuments to the frontend UserBadge shape
+ * ({ id, venueId, venueName, badgeType, unlockedAt:ISO }).
+ */
+function serializeBadges(badges) {
+  return (badges || []).map((b) => ({
+    id: b._id ? b._id.toString() : `${b.venueId}`,
+    venueId: b.venueId,
+    venueName: b.venueName,
+    badgeType: b.badgeType,
+    unlockedAt: b.unlockedAt ? new Date(b.unlockedAt).toISOString() : new Date().toISOString(),
+  }));
+}
+
+/**
  * Get Current User - Get authenticated user's profile
  * GET /api/auth/me
  */
@@ -355,6 +369,7 @@ const getMe = async (req, res) => {
         dateOfBirth: user.dateOfBirth,
         createdAt: user.createdAt,
         lastLoginAt: user.lastLoginAt,
+        badges: serializeBadges(user.badges),
       },
     });
   } catch (error) {
@@ -617,6 +632,89 @@ const deleteMyAccount = async (req, res) => {
   }
 };
 
+/**
+ * Award a venue badge to the current user.
+ * POST /api/auth/me/badges  body: { venueId, venueName, badgeType }
+ *
+ * Upsert by venueId: if the user already has a badge for the venue, its type
+ * is upgraded (never downgraded) rather than duplicated. Returns the full
+ * badge list so the client can replace local state authoritatively.
+ */
+const BADGE_RANK = { GUEST: 0, REGULAR: 1, PLATINUM: 2, WHALE: 3 };
+
+const awardBadge = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    const { venueId, venueName, badgeType } = req.body || {};
+    if (!venueId) {
+      return res.status(400).json({ success: false, error: 'venueId is required' });
+    }
+    const type = ['GUEST', 'REGULAR', 'PLATINUM', 'WHALE'].includes(badgeType)
+      ? badgeType
+      : 'GUEST';
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const existing = user.badges.find((b) => b.venueId === venueId);
+    if (existing) {
+      // Only upgrade — never overwrite a higher tier with a lower one.
+      if (BADGE_RANK[type] > BADGE_RANK[existing.badgeType]) {
+        existing.badgeType = type;
+        existing.unlockedAt = new Date();
+      }
+      if (venueName) existing.venueName = venueName;
+    } else {
+      user.badges.push({
+        venueId,
+        venueName: venueName || 'Venue',
+        badgeType: type,
+        unlockedAt: new Date(),
+      });
+    }
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      data: { badges: serializeBadges(user.badges) },
+    });
+  } catch (error) {
+    console.error('Award badge error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to award badge' });
+  }
+};
+
+/**
+ * Remove a venue badge from the current user.
+ * DELETE /api/auth/me/badges/:venueId
+ */
+const removeBadge = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    const { venueId } = req.params;
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    user.badges = user.badges.filter((b) => b.venueId !== venueId);
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      data: { badges: serializeBadges(user.badges) },
+    });
+  } catch (error) {
+    console.error('Remove badge error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to remove badge' });
+  }
+};
+
 module.exports = {
   signUp,
   signIn,
@@ -627,4 +725,6 @@ module.exports = {
   forgotPassword,
   resetPassword,
   deleteMyAccount,
+  awardBadge,
+  removeBadge,
 };

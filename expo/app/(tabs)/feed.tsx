@@ -287,7 +287,7 @@ interface VideoCardProps {
 
 function VideoCard({ video, venue, performer, isActive, isLiked, onLike, isFocused }: VideoCardProps) {
   const likeScale = useRef(new RNAnimated.Value(1)).current;
-  const { profile, updateProfile } = useAppState();
+  const { profile, updateProfile, awardBadge } = useAppState();
   const { shareToInstagram, generateStoryTemplate } = useGrowth();
   const [videoError, setVideoError] = useState(false);
   const [showReportMenu, setShowReportMenu] = useState(false);
@@ -335,16 +335,10 @@ function VideoCard({ video, venue, performer, isActive, isLiked, onLike, isFocus
           {
             text: 'Join',
             onPress: () => {
-              const newBadge = {
-                id: `badge-${Date.now()}`,
+              awardBadge({
                 venueId: venue.id,
                 venueName: venue.name,
-                badgeType: 'GUEST' as const,
-                unlockedAt: new Date().toISOString(),
-              };
-
-              updateProfile({
-                badges: [...profile.badges, newBadge],
+                badgeType: 'GUEST',
               });
 
               Alert.alert(
@@ -359,7 +353,7 @@ function VideoCard({ video, venue, performer, isActive, isLiked, onLike, isFocus
         ]
       );
     }
-  }, [venue, profile.badges, updateProfile]);
+  }, [venue, profile.badges, awardBadge]);
 
   const handleJoinLobby = useCallback(() => {
     if (!venue) return;
@@ -371,16 +365,10 @@ function VideoCard({ video, venue, performer, isActive, isLiked, onLike, isFocus
     if (alreadyJoined) {
       router.push('/(tabs)/servers');
     } else {
-      const newBadge = {
-        id: `badge-${Date.now()}`,
+      awardBadge({
         venueId: venue.id,
         venueName: venue.name,
-        badgeType: 'GUEST' as const,
-        unlockedAt: new Date().toISOString(),
-      };
-
-      updateProfile({
-        badges: [...profile.badges, newBadge],
+        badgeType: 'GUEST',
       });
 
       Alert.alert(
@@ -391,7 +379,7 @@ function VideoCard({ video, venue, performer, isActive, isLiked, onLike, isFocus
         ]
       );
     }
-  }, [venue, profile.badges, updateProfile]);
+  }, [venue, profile.badges, awardBadge]);
 
   const handleShareToStory = useCallback(async () => {
     if (!venue) return;

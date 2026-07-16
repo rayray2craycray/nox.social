@@ -614,7 +614,7 @@ interface VenueBottomSheetProps {
 }
 
 function VenueBottomSheet({ venue, friendsAtVenue, groupPurchases, onClose, onCreateGroupPurchase, onJoinGroupPurchase, onViewDetails }: VenueBottomSheetProps) {
-  const { profile, updateProfile, updateProfileAsync, canRejoinVenue, calculateVibePercentage } = useAppState();
+  const { profile, updateProfile, updateProfileAsync, awardBadge, canRejoinVenue, calculateVibePercentage } = useAppState();
   const { triggerGlow } = useGlow();
   const { getDynamicPricing } = useMonetization();
 
@@ -695,16 +695,10 @@ function VenueBottomSheet({ venue, friendsAtVenue, groupPurchases, onClose, onCr
           {
             text: 'Join',
             onPress: async () => {
-              const newBadge = {
-                id: `badge-${Date.now()}`,
+              await awardBadge({
                 venueId: venue.id,
                 venueName: venue.name,
-                badgeType: 'GUEST' as const,
-                unlockedAt: new Date().toISOString(),
-              };
-
-              await updateProfileAsync({
-                badges: [...profile.badges, newBadge],
+                badgeType: 'GUEST',
               });
 
               triggerGlow({ color: 'purple', intensity: 0.6, duration: 1000 });
@@ -715,14 +709,6 @@ function VenueBottomSheet({ venue, friendsAtVenue, groupPurchases, onClose, onCr
         ]
       );
     } else {
-      const newBadge = {
-        id: `badge-${Date.now()}`,
-        venueId: venue.id,
-        venueName: venue.name,
-        badgeType: 'GUEST' as const,
-        unlockedAt: new Date().toISOString(),
-      };
-
       const newTransaction = {
         id: `tx-${Date.now()}`,
         venueId: venue.id,
@@ -730,15 +716,16 @@ function VenueBottomSheet({ venue, friendsAtVenue, groupPurchases, onClose, onCr
         timestamp: new Date().toISOString(),
       };
 
-      if (__DEV__) {
-        console.log('[Discovery] Adding new badge:', newBadge);
-        console.log('[Discovery] Current badges before update:', profile.badges.length);
-      }
-
       // Wait for profile update to complete before navigating
       try {
+        // awardBadge persists server-side and updates state+cache; the
+        // transaction is a separate local-only profile field.
+        await awardBadge({
+          venueId: venue.id,
+          venueName: venue.name,
+          badgeType: 'GUEST',
+        });
         await updateProfileAsync({
-          badges: [...profile.badges, newBadge],
           transactionHistory: [...profile.transactionHistory, newTransaction],
         });
 
