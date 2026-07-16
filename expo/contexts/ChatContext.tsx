@@ -10,7 +10,11 @@ import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+// EXPO_PUBLIC_API_URL carries a trailing /api for REST calls, but the Socket.io
+// server is mounted at the root namespace. Passing the /api-suffixed URL makes
+// Socket.io treat "/api" as a namespace and fail with "Invalid namespace", so
+// strip it for the socket connection (same as AuthContext does for its fetches).
+const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/api\/?$/, '');
 
 export interface ChatMessage {
   id: string;
