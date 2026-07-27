@@ -2,6 +2,47 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const Message = require('../models/Message.model');
 
+// Server-side test bot for the "Nox Test Lounge" channel. Lets a solo user
+// verify real-time chat without a second human. TEST_BOT_USER_ID is synthetic
+// (not a real User doc) — messages carry it just so the client can tell the
+// bot's replies apart. Set NOX_TEST_BOT=off to disable.
+const TEST_BOT_CHANNEL = 'nox-test-lounge-general';
+const TEST_BOT_USER_ID = 'nox-test-bot';
+const TEST_BOT_NAME = 'NoxBot';
+const TEST_BOT_ENABLED = process.env.NOX_TEST_BOT !== 'off';
+
+async function maybeBotReply(io, channelId, userText) {
+  if (!TEST_BOT_ENABLED) return;
+  try {
+    const reply = `Got it — you said "${userText}". Real-time delivery works ✅`;
+    const botMsg = await Message.create({
+      channelId,
+      userId: TEST_BOT_USER_ID,
+      userName: TEST_BOT_NAME,
+      userBadge: 'PLATINUM',
+      content: reply,
+      timestamp: new Date(),
+    });
+    // Small delay so it feels like a reply, not an echo.
+    setTimeout(() => {
+      io.to(channelId).emit('message:new', {
+        id: botMsg._id.toString(),
+        channelId,
+        userId: TEST_BOT_USER_ID,
+        userName: TEST_BOT_NAME,
+        userBadge: 'PLATINUM',
+        content: reply,
+        timestamp: botMsg.timestamp.toISOString(),
+        edited: false,
+        deleted: false,
+        isOwn: false,
+      });
+    }, 600);
+  } catch (err) {
+    console.error('[Socket] test bot reply failed:', err.message);
+  }
+}
+
 /**
  * Initialize Socket.io server for real-time chat
  * @param {import('http').Server} httpServer
@@ -125,6 +166,14 @@ function initializeSocket(httpServer) {
         });
 
         console.log(`[Socket] Message sent in ${channelId} by ${socket.userName}`);
+
+        // Server-side test bot: in the "Nox Test Lounge" channel, auto-reply so
+        // a solo user can verify real-time chat end-to-end without a second
+        // human. Always on (runs wherever the backend runs), unlike a local
+        // companion process. Skips the bot's own messages to avoid a loop.
+        if (channelId === TEST_BOT_CHANNEL && socket.userId !== TEST_BOT_USER_ID) {
+          maybeBotReply(io, channelId, content.trim());
+        }
       } catch (error) {
         console.error('[Socket] Error sending message:', error);
         socket.emit('error', { message: 'Failed to send message' });
