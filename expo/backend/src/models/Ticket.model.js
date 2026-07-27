@@ -87,8 +87,10 @@ TicketSchema.index({ eventId: 1, userId: 1 });
 TicketSchema.index({ qrCode: 1 });
 TicketSchema.index({ status: 1 });
 
-// Generate unique QR code before saving
-TicketSchema.pre('save', function (next) {
+// Generate unique QR code before validation. Must be pre('validate') not
+// pre('save') — Mongoose runs validation BEFORE save hooks, so setting a
+// required field in pre('save') fails validation first ("qrCode is required").
+TicketSchema.pre('validate', function (next) {
   if (this.isNew && !this.qrCode) {
     this.qrCode = generateQRCode();
   }
