@@ -145,15 +145,12 @@ module.exports = {
       [
         '@stripe/stripe-react-native',
         {
-          // NOTE: merchantIdentifier intentionally omitted for now. Adding it
-          // injects the com.apple.developer.in-app-payments entitlement, which
-          // makes every build fail until the merchant ID exists in Apple
-          // Developer Console AND the provisioning profile is regenerated
-          // (Build 96 failed exactly this way). Re-add
-          //   merchantIdentifier: 'merchant.social.nox'
-          // after creating the merchant ID in the Apple Developer portal and
-          // registering it with Stripe. Card payments in PaymentSheet work
-          // without it — only the Apple Pay button needs it.
+          // Apple Pay merchant ID — created in Apple Developer Console
+          // 2026-07-27. This injects the com.apple.developer.in-app-payments
+          // entitlement, so the next build MUST be interactive (`eas build`
+          // answering the capability-sync prompts) to regenerate the
+          // provisioning profile — a non-interactive build can't add it.
+          merchantIdentifier: 'merchant.social.nox',
           enableGooglePay: false, // Google Pay deferred to v1.1
         },
       ],
