@@ -802,10 +802,12 @@ function VenueBottomSheet({ venue, friendsAtVenue, groupPurchases, onClose, onCr
               <Text style={styles.statText}>
                 {dynamicPricing ? (
                   <>
-                    <Text style={styles.strikethrough}>${venue.coverCharge}</Text> ${dynamicPricing.currentPrice}
+                    <Text style={styles.strikethrough}>${venue.coverCharge ?? 0}</Text> ${dynamicPricing.currentPrice}
                   </>
-                ) : (
+                ) : venue.coverCharge ? (
                   `$${venue.coverCharge} cover`
+                ) : (
+                  'Free entry'
                 )}
               </Text>
             </View>
@@ -1082,7 +1084,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    maxHeight: '70%',
+    // Definite height (not maxHeight): the inner ScrollView uses flex:1, which
+    // only produces a bounded, scrollable height when its parent chain has a
+    // definite height. With maxHeight alone the sheet sized to content, so the
+    // ScrollView grew to full content height and never scrolled — the action
+    // buttons at the bottom were clipped off-screen by overflow:hidden.
+    height: '70%',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
