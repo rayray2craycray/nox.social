@@ -813,7 +813,11 @@ function VenueBottomSheet({ venue, friendsAtVenue, groupPurchases, onClose, onCr
             </View>
             <View style={styles.statItem}>
               <Users size={18} color="#ff0080" />
-              <Text style={styles.statText}>342 members</Text>
+              <Text style={styles.statText}>
+                {friendsAtVenue.length > 0
+                  ? `${friendsAtVenue.length} ${friendsAtVenue.length === 1 ? 'friend here' : 'friends here'}`
+                  : 'Be the first here'}
+              </Text>
             </View>
           </View>
 
