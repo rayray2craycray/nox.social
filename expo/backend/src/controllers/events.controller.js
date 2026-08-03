@@ -22,10 +22,26 @@ exports.getEvents = async (req, res) => {
       .sort({ date: 1 })
       .limit(parseInt(limit));
 
+    // Attach ticket tiers. Tiers are a separate collection (TicketTier) keyed
+    // by eventId, but the app expects them embedded as event.ticketTiers —
+    // without this the event screen shows no tiers and no buy button, making
+    // ticket purchase (and Apple Pay) unreachable through the UI.
+    const eventIds = events.map((e) => e._id);
+    const tiers = await TicketTier.find({ eventId: { $in: eventIds } });
+    const tiersByEvent = tiers.reduce((acc, t) => {
+      const k = t.eventId.toString();
+      (acc[k] = acc[k] || []).push(t);
+      return acc;
+    }, {});
+    const data = events.map((e) => ({
+      ...e.toObject(),
+      ticketTiers: tiersByEvent[e._id.toString()] || [],
+    }));
+
     res.json({
       success: true,
-      data: events,
-      count: events.length,
+      data,
+      count: data.length,
     });
   } catch (error) {
     console.error('Get events error:', error);
