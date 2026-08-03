@@ -21,6 +21,12 @@ import UserProfileModal from '@/components/UserProfileModal';
 import { useLocalSearchParams } from 'expo-router';
 import { Calendar, Clock, DollarSign } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useVenueMemberCounts } from '@/hooks/useVenueMemberCounts';
+
+/** "1 member" / "N members" with correct pluralization. */
+function memberLabel(n: number): string {
+  return `${n} ${n === 1 ? 'member' : 'members'}`;
+}
 
 type TabType = 'servers' | 'messages';
 
@@ -601,6 +607,7 @@ interface ServerListProps {
 
 function ServerList({ onSelectServer }: ServerListProps) {
   const { joinedServers, profile } = useAppState();
+  const getMemberCount = useVenueMemberCounts(joinedServers.map((s) => s.venueId));
 
   // Debug logging
   React.useEffect(() => {
@@ -639,7 +646,7 @@ function ServerList({ onSelectServer }: ServerListProps) {
               >
                 <View style={styles.serverInfo}>
                   <Text style={styles.serverName}>{server.venueName}</Text>
-                  <Text style={styles.memberCount}>{server.memberCount} members</Text>
+                  <Text style={styles.memberCount}>{memberLabel(getMemberCount(server.venueId))}</Text>
                 </View>
                 <View style={styles.serverMeta}>
                   <Text style={styles.lastActivity}>
@@ -674,6 +681,7 @@ interface ChannelListProps {
 }
 
 function ChannelList({ server, onSelectChannel, onBack, onOpenSettings }: ChannelListProps) {
+  const getMemberCount = useVenueMemberCounts([server.venueId]);
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -690,7 +698,7 @@ function ChannelList({ server, onSelectChannel, onBack, onOpenSettings }: Channe
             </TouchableOpacity>
           </View>
           <Text style={styles.headerTitle}>{server.venueName}</Text>
-          <Text style={styles.headerSubtitle}>{server.memberCount} members online</Text>
+          <Text style={styles.headerSubtitle}>{memberLabel(getMemberCount(server.venueId))}</Text>
         </View>
 
         <ScrollView style={styles.channelList} showsVerticalScrollIndicator={false}>
@@ -999,6 +1007,7 @@ interface ServerSettingsModalProps {
 
 function ServerSettingsModal({ visible, server, onClose, onLeave }: ServerSettingsModalProps) {
   const { leaveServer, profile } = useAppState();
+  const getMemberCount = useVenueMemberCounts(server ? [server.venueId] : []);
   const [showLeaveConfirmation, setShowLeaveConfirmation] = useState<boolean>(false);
 
   const userBadge = profile.badges.find(b => b.venueId === server.venueId);
@@ -1059,7 +1068,7 @@ function ServerSettingsModal({ visible, server, onClose, onLeave }: ServerSettin
                 <Users size={20} color="#ff0080" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.settingsItemText}>{server.venueName}</Text>
-                  <Text style={styles.settingsItemSubtext}>{server.memberCount} members</Text>
+                  <Text style={styles.settingsItemSubtext}>{memberLabel(getMemberCount(server.venueId))}</Text>
                 </View>
               </View>
               {userBadge && (

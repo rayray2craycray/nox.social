@@ -99,13 +99,32 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       try {
         // Use userId from auth context
         const response = await eventsApi.getUserTickets(userId);
-        // Map MongoDB _id to id for frontend compatibility
-        const tickets = (response.data || []).map((ticket: any) => ({
-          ...ticket,
-          id: ticket._id || ticket.id,
-          eventId: ticket.eventId?._id || ticket.eventId,
-          userId: ticket.userId?._id || ticket.userId,
-        }));
+        // Map MongoDB _id to id for frontend compatibility. The backend
+        // populates eventId + tierId with the FULL documents — keep those as
+        // `event`/`tier` so a ticket is self-contained and renders even when
+        // its event isn't in the current "upcoming" list (past events, or
+        // events beyond the list limit). Without this the tickets tab silently
+        // hid such tickets.
+        const tickets = (response.data || []).map((ticket: any) => {
+          const populatedEvent =
+            ticket.eventId && typeof ticket.eventId === 'object' ? ticket.eventId : null;
+          const populatedTier =
+            ticket.tierId && typeof ticket.tierId === 'object' ? ticket.tierId : null;
+          return {
+            ...ticket,
+            id: ticket._id || ticket.id,
+            eventId: populatedEvent?._id || ticket.eventId,
+            tierId: populatedTier?._id || ticket.tierId,
+            userId: ticket.userId?._id || ticket.userId,
+            // Self-contained fallbacks (normalize _id → id for the UI)
+            event: populatedEvent
+              ? { ...populatedEvent, id: populatedEvent._id || populatedEvent.id }
+              : undefined,
+            tier: populatedTier
+              ? { ...populatedTier, id: populatedTier._id || populatedTier.id }
+              : undefined,
+          };
+        });
         return tickets;
       } catch (error) {
         // Silently handle missing endpoint

@@ -12,8 +12,38 @@ const { query, body, param, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const Venue = require('../models/Venue');
+const User = require('../models/User');
 
 const router = express.Router();
+
+/**
+ * POST /api/v1/venues/member-counts
+ * Body: { venueIds: string[] }  →  { counts: { [venueId]: number } }
+ *
+ * Real member count = number of users who hold a badge for the venue. Replaces
+ * the frontend's hardcoded "1 member" placeholder on the servers screen.
+ */
+router.post('/venues/member-counts', async (req, res) => {
+  const { venueIds } = req.body || {};
+  if (!Array.isArray(venueIds) || venueIds.length === 0) {
+    return res.json({ success: true, counts: {} });
+  }
+  try {
+    const agg = await User.aggregate([
+      { $unwind: '$badges' },
+      { $match: { 'badges.venueId': { $in: venueIds } } },
+      { $group: { _id: '$badges.venueId', count: { $sum: 1 } } },
+    ]);
+    const counts = {};
+    for (const row of agg) counts[row._id] = row.count;
+    // venues with zero badge holders won't appear in agg; default them to 0
+    for (const id of venueIds) if (!(id in counts)) counts[id] = 0;
+    return res.json({ success: true, counts });
+  } catch (err) {
+    console.error('[venues/member-counts] error:', err);
+    return res.status(500).json({ success: false, error: 'Failed to count members' });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Helpers

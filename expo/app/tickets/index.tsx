@@ -212,9 +212,13 @@ function TicketCard({
   getTicketStatusText,
   isPast,
 }: TicketCardProps) {
-  const event = getEventById(ticket.eventId);
+  // Prefer the ticket's self-contained event/tier (populated by the backend);
+  // fall back to the upcoming-events lookup for older cached tickets. This is
+  // what lets tickets for past events still render instead of silently
+  // disappearing.
+  const event = (ticket as any).event || getEventById(ticket.eventId);
   const tiers = getTicketTiersForEvent(ticket.eventId);
-  const tier = tiers.find(t => t.id === ticket.tierId);
+  const tier = (ticket as any).tier || tiers.find(t => t.id === ticket.tierId);
   const venue = null as Venue | null;
 
   if (!event || !tier) return null;
