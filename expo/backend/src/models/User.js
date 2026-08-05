@@ -131,10 +131,10 @@ const userSchema = new mongoose.Schema({
     },
   ],
 
-  // Venue badges — earned by checking in / hitting spend thresholds at venues.
-  // At most one badge per venue (upserted by venueId). Previously these lived
-  // only in device AsyncStorage; persisting server-side lets them sync across
-  // devices and survive reinstall.
+  // Venue badges. Tier is driven by ATTENDANCE: visitCount is the number of
+  // location-verified check-ins at the venue, and badgeType is derived from it
+  // (GUEST 1-4 / REGULAR 5-14 / PLATINUM 15-29 / WHALE 30+). One badge per
+  // venue. Server-persisted so tiers sync across devices and survive reinstall.
   badges: [
     {
       venueId: { type: String, required: true },
@@ -144,6 +144,8 @@ const userSchema = new mongoose.Schema({
         enum: ['GUEST', 'REGULAR', 'PLATINUM', 'WHALE'],
         default: 'GUEST',
       },
+      visitCount: { type: Number, default: 0 },
+      lastVisitAt: { type: Date },
       unlockedAt: { type: Date, default: Date.now },
     },
   ],

@@ -321,8 +321,7 @@ const signOut = async (req, res) => {
 };
 
 /**
- * Serialize badge subdocuments to the frontend UserBadge shape
- * ({ id, venueId, venueName, badgeType, unlockedAt:ISO }).
+ * Serialize badge subdocuments to the frontend UserBadge shape.
  */
 function serializeBadges(badges) {
   return (badges || []).map((b) => ({
@@ -330,8 +329,39 @@ function serializeBadges(badges) {
     venueId: b.venueId,
     venueName: b.venueName,
     badgeType: b.badgeType,
+    visitCount: b.visitCount || 0,
+    lastVisitAt: b.lastVisitAt ? new Date(b.lastVisitAt).toISOString() : null,
     unlockedAt: b.unlockedAt ? new Date(b.unlockedAt).toISOString() : new Date().toISOString(),
   }));
+}
+
+// Attendance-based tier thresholds. Tunable — this is the single source of
+// truth for how visit count maps to badge tier.
+const TIER_THRESHOLDS = [
+  { tier: 'WHALE', min: 30 },
+  { tier: 'PLATINUM', min: 15 },
+  { tier: 'REGULAR', min: 5 },
+  { tier: 'GUEST', min: 0 },
+];
+function tierForVisits(visitCount) {
+  return (TIER_THRESHOLDS.find((t) => visitCount >= t.min) || { tier: 'GUEST' }).tier;
+}
+/** Visits needed for the next tier, or null at max. For "N more to REGULAR" UI. */
+function nextTierInfo(visitCount) {
+  const higher = [...TIER_THRESHOLDS].reverse().find((t) => t.min > visitCount);
+  return higher ? { tier: higher.tier, visitsNeeded: higher.min - visitCount } : null;
+}
+
+// Haversine distance in meters between two lat/lng points.
+function distanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /**
@@ -689,6 +719,105 @@ const awardBadge = async (req, res) => {
 };
 
 /**
+ * Location-verified check-in — the attendance action that drives tiers.
+ * POST /api/auth/me/checkin
+ *   body: { venueId, venueName, latitude, longitude, venueLat, venueLng }
+ *
+ * Rules:
+ *  - Must be within CHECKIN_RADIUS_M of the venue (server re-verifies).
+ *  - At most one check-in per venue per calendar day.
+ *  - First check-in creates the badge (also unlocks the venue's chat) and
+ *    counts as visit #1. Each subsequent qualifying check-in increments
+ *    visitCount; badgeType is recomputed from visitCount.
+ * Returns the badge list plus { newVisit, tierUp, previousTier, nextTier }.
+ */
+const CHECKIN_RADIUS_M = 150;
+
+const checkIn = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    const { venueId, venueName, latitude, longitude, venueLat, venueLng } = req.body || {};
+    if (!venueId) {
+      return res.status(400).json({ success: false, error: 'venueId is required' });
+    }
+
+    // Proximity check (server-side re-verification of the client's gate).
+    if ([latitude, longitude, venueLat, venueLng].every((n) => typeof n === 'number')) {
+      const dist = distanceMeters(latitude, longitude, venueLat, venueLng);
+      if (dist > CHECKIN_RADIUS_M) {
+        return res.status(403).json({
+          success: false,
+          error: 'TOO_FAR',
+          message: `You need to be at the venue to check in (${Math.round(dist)}m away).`,
+        });
+      }
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    let badge = user.badges.find((b) => b.venueId === venueId);
+    const isSameDay = (a, b) =>
+      a && b &&
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    const now = new Date();
+    let newVisit = true;
+    let previousTier = null;
+
+    if (badge) {
+      previousTier = badge.badgeType;
+      if (badge.lastVisitAt && isSameDay(new Date(badge.lastVisitAt), now)) {
+        // Already checked in tonight — no double counting.
+        newVisit = false;
+      } else {
+        badge.visitCount = (badge.visitCount || 0) + 1;
+        badge.lastVisitAt = now;
+        badge.badgeType = tierForVisits(badge.visitCount);
+      }
+      if (venueName) badge.venueName = venueName;
+    } else {
+      badge = {
+        venueId,
+        venueName: venueName || 'Venue',
+        visitCount: 1,
+        lastVisitAt: now,
+        badgeType: tierForVisits(1),
+        unlockedAt: now,
+      };
+      user.badges.push(badge);
+      previousTier = null;
+    }
+    await user.save();
+
+    const saved = user.badges.find((b) => b.venueId === venueId);
+    const tierUp = previousTier !== null && saved.badgeType !== previousTier;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        badges: serializeBadges(user.badges),
+        newVisit,
+        tierUp,
+        previousTier,
+        currentTier: saved.badgeType,
+        visitCount: saved.visitCount,
+        nextTier: nextTierInfo(saved.visitCount),
+      },
+    });
+  } catch (error) {
+    console.error('Check-in error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to check in' });
+  }
+};
+
+/**
  * Remove a venue badge from the current user.
  * DELETE /api/auth/me/badges/:venueId
  */
@@ -727,4 +856,5 @@ module.exports = {
   deleteMyAccount,
   awardBadge,
   removeBadge,
+  checkIn,
 };

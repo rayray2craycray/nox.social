@@ -19,6 +19,7 @@ const {
   deleteMyAccount,
   awardBadge,
   removeBadge,
+  checkIn,
 } = require('../controllers/auth.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validation');
@@ -55,8 +56,11 @@ router.get('/me', authMiddleware, getMe);
 // DELETE /auth/me - Permanently delete current user's account (App Store requirement)
 router.delete('/me', authMiddleware, deleteMyAccount);
 
-// Venue badges (server-persisted; earned by check-in / spend thresholds)
+// Venue badges (server-persisted). Tier is driven by attendance:
+//  - POST /me/badges  → join a venue's community (creates a GUEST badge)
+//  - POST /me/checkin → location-verified attendance; increments visits + tier
 router.post('/me/badges', authMiddleware, awardBadge);
+router.post('/me/checkin', authMiddleware, checkIn);
 router.delete('/me/badges/:venueId', authMiddleware, removeBadge);
 
 // POST /auth/push-token - Register an Expo push token for the current user.
