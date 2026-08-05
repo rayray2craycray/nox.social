@@ -361,6 +361,46 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     await updateProfileAsync({ badges: [...current, local] as any });
   }, [profile.badges, updateProfileAsync]);
 
+  // Location-verified attendance check-in. Drives the badge tier by visit
+  // count. Returns the server result (tierUp / progress) or an error reason
+  // ('too_far' | 'failed') so the UI can respond. On success the profile
+  // badges are refreshed from the authoritative server list.
+  const checkIn = useCallback(async (params: {
+    venueId: string;
+    venueName: string;
+    latitude: number;
+    longitude: number;
+    venueLat: number;
+    venueLng: number;
+  }): Promise<
+    | { ok: true; newVisit: boolean; tierUp: boolean; currentTier: string; previousTier: string | null; visitCount: number; nextTier: { tier: string; visitsNeeded: number } | null }
+    | { ok: false; reason: 'too_far' | 'failed'; message?: string }
+  > => {
+    try {
+      const resp = await apiClient.post<{ success: boolean; data: any }>('/auth/me/checkin', params);
+      const d = resp?.data?.data ?? resp?.data;
+      if (d && Array.isArray(d.badges)) {
+        await updateProfileAsync({ badges: d.badges as any });
+        return {
+          ok: true,
+          newVisit: d.newVisit,
+          tierUp: d.tierUp,
+          currentTier: d.currentTier,
+          previousTier: d.previousTier,
+          visitCount: d.visitCount,
+          nextTier: d.nextTier,
+        };
+      }
+      return { ok: false, reason: 'failed' };
+    } catch (err: any) {
+      const code = err?.response?.data?.error;
+      const message = err?.response?.data?.message;
+      if (code === 'TOO_FAR') return { ok: false, reason: 'too_far', message };
+      if (__DEV__) console.log('[AppState] checkIn failed:', err?.message);
+      return { ok: false, reason: 'failed', message };
+    }
+  }, [updateProfileAsync]);
+
   const removeBadge = useCallback(async (venueId: string) => {
     try {
       const resp = await apiClient.delete<{ success: boolean; data: { badges: any[] } }>(
@@ -642,6 +682,7 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     updateProfileDetails,
     updateProfile,
     awardBadge,
+    checkIn,
     removeBadge,
     updateProfileAsync,
     leaveServer,

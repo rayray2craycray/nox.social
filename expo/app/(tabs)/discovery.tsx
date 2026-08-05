@@ -424,6 +424,7 @@ export default function DiscoveryScreen() {
       {selectedVenue && (
         <VenueBottomSheet
           venue={selectedVenue}
+          userLocation={userLocation}
           friendsAtVenue={friendsByVenue[selectedVenue.id] || []}
           groupPurchases={venueGroupPurchases}
           onClose={() => setSelectedVenueId(null)}
@@ -605,6 +606,7 @@ function FriendListDrawer({ friendLocations, onClose, onFriendPress }: FriendLis
 
 interface VenueBottomSheetProps {
   venue: Venue;
+  userLocation: { latitude: number; longitude: number } | null;
   friendsAtVenue: FriendLocation[];
   groupPurchases: GroupPurchase[];
   onClose: () => void;
@@ -613,10 +615,86 @@ interface VenueBottomSheetProps {
   onViewDetails: () => void;
 }
 
-function VenueBottomSheet({ venue, friendsAtVenue, groupPurchases, onClose, onCreateGroupPurchase, onJoinGroupPurchase, onViewDetails }: VenueBottomSheetProps) {
-  const { profile, updateProfile, updateProfileAsync, awardBadge, canRejoinVenue, calculateVibePercentage } = useAppState();
+function VenueBottomSheet({ venue, userLocation, friendsAtVenue, groupPurchases, onClose, onCreateGroupPurchase, onJoinGroupPurchase, onViewDetails }: VenueBottomSheetProps) {
+  const { profile, updateProfile, updateProfileAsync, awardBadge, checkIn, canRejoinVenue, calculateVibePercentage } = useAppState();
   const { triggerGlow } = useGlow();
   const { getDynamicPricing } = useMonetization();
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+
+  const myBadge = profile.badges.find(b => b.venueId === venue.id);
+  const checkedInToday = !!(myBadge as any)?.lastVisitAt &&
+    new Date((myBadge as any).lastVisitAt).toDateString() === new Date().toDateString();
+
+  const handleCheckIn = async () => {
+    if (isCheckingIn) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (!userLocation) {
+      Alert.alert('Location needed', 'Enable location to check in at venues.');
+      return;
+    }
+    // Client-side proximity gate (server re-verifies): 150m ≈ 0.0932 miles.
+    const miles = calculateDistance(
+      userLocation.latitude, userLocation.longitude,
+      venue.location.latitude, venue.location.longitude,
+    );
+    if (miles > 0.0932) {
+      Alert.alert(
+        'Get closer to check in',
+        `You need to be at ${venue.name} to check in. Check-ins are how you climb tiers — actually showing up is the whole point.`,
+      );
+      return;
+    }
+
+    setIsCheckingIn(true);
+    try {
+      const res = await checkIn({
+        venueId: venue.id,
+        venueName: venue.name,
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        venueLat: venue.location.latitude,
+        venueLng: venue.location.longitude,
+      });
+
+      if (!res.ok) {
+        if (res.reason === 'too_far') {
+          Alert.alert('Get closer to check in', res.message || `You need to be at ${venue.name}.`);
+        } else {
+          Alert.alert('Check-in failed', res.message || 'Please try again.');
+        }
+        return;
+      }
+
+      if (!res.newVisit) {
+        Alert.alert('Already checked in tonight', `Come back another night to keep climbing ${venue.name}'s tiers.`, [
+          { text: 'Go to Server', onPress: () => router.push('/(tabs)/servers') },
+          { text: 'OK', style: 'cancel' },
+        ]);
+        return;
+      }
+
+      triggerGlow({ color: 'purple', intensity: 0.6, duration: 1000 });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      if (res.tierUp) {
+        Alert.alert(`${res.currentTier} at ${venue.name}! 🎉`, `Visit #${res.visitCount}. You just leveled up from ${res.previousTier}.`, [
+          { text: 'Go to Server', onPress: () => router.push('/(tabs)/servers') },
+          { text: 'Nice', style: 'cancel' },
+        ]);
+      } else {
+        const next = res.nextTier;
+        Alert.alert(`Checked in! Visit #${res.visitCount}`, next
+          ? `${next.visitsNeeded} more ${next.visitsNeeded === 1 ? 'visit' : 'visits'} to ${next.tier}.`
+          : `You're a ${venue.name} legend.`, [
+          { text: 'Go to Server', onPress: () => router.push('/(tabs)/servers') },
+          { text: 'OK', style: 'cancel' },
+        ]);
+      }
+    } finally {
+      setIsCheckingIn(false);
+    }
+  };
 
   // Get calculated vibe from user feedback, fallback to static value
   const calculatedVibe = calculateVibePercentage(venue.id);
@@ -917,9 +995,20 @@ function VenueBottomSheet({ venue, friendsAtVenue, groupPurchases, onClose, onCr
             <Text style={styles.createGroupPurchaseButtonText}>Create Group Purchase</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.joinButton} onPress={handleJoinLobby}>
+          {myBadge && (
+            <View style={styles.tierRow}>
+              <Text style={styles.tierBadgeText}>{(myBadge as any).badgeType} · {(myBadge as any).visitCount ?? 0} {((myBadge as any).visitCount ?? 0) === 1 ? 'visit' : 'visits'}</Text>
+              {checkedInToday && <Text style={styles.tierCheckedText}>Checked in tonight ✓</Text>}
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.joinButton}
+            onPress={checkedInToday ? () => router.push('/(tabs)/servers') : handleCheckIn}
+            disabled={isCheckingIn}
+          >
             <Text style={styles.joinButtonText}>
-              {profile.badges.some(b => b.venueId === venue.id) ? 'Go to Server' : 'Join Public Lobby'}
+              {isCheckingIn ? 'Checking in…' : checkedInToday ? 'Go to Server' : myBadge ? 'Check In' : 'Check In to Join'}
             </Text>
           </TouchableOpacity>
 
@@ -1235,6 +1324,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700' as const,
     color: '#000000',
+  },
+  tierRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  tierBadgeText: {
+    fontSize: 13,
+    fontWeight: '700' as const,
+    color: '#a855f7',
+    letterSpacing: 0.5,
+  },
+  tierCheckedText: {
+    fontSize: 12,
+    color: '#4ade80',
+    fontWeight: '600' as const,
   },
   detailsButton: {
     flexDirection: 'row' as const,

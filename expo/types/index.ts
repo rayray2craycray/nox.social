@@ -70,6 +70,10 @@ export interface UserBadge {
   venueId: string;
   venueName: string;
   badgeType: 'GUEST' | 'REGULAR' | 'PLATINUM' | 'WHALE';
+  /** Number of location-verified check-ins — drives badgeType. */
+  visitCount?: number;
+  /** ISO timestamp of the last check-in (for once-per-night gating). */
+  lastVisitAt?: string | null;
   unlockedAt: string;
 }
 
