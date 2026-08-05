@@ -91,6 +91,25 @@ exports.getEventById = async (req, res) => {
 };
 
 /**
+ * Log a "Get Tickets" tap for attribution.
+ * POST /api/events/:eventId/ticket-tap
+ *
+ * Fire-and-forget from the client right before it opens the external ticket
+ * URL. Increments a per-event counter that the venue dashboard surfaces as
+ * click-through attribution. No auth required — a tap is a tap.
+ */
+exports.logTicketTap = async (req, res) => {
+  try {
+    await Event.updateOne({ _id: req.params.eventId }, { $inc: { ticketTaps: 1 } });
+    return res.json({ success: true });
+  } catch (error) {
+    // Never let attribution logging block the user's redirect.
+    console.error('logTicketTap error:', error.message);
+    return res.json({ success: false });
+  }
+};
+
+/**
  * Create event
  * POST /api/events
  */

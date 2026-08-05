@@ -21,6 +21,9 @@ router.get('/upcoming', eventsController.getEvents);
 router.get('/:eventId', eventsController.getEventById);
 router.get('/venue/:venueId', eventsController.getVenueEvents);
 
+// Ticket-tap attribution (public — fired when a user opens the external seller)
+router.post('/:eventId/ticket-tap', eventsController.logTicketTap);
+
 // Tickets - Public route for QR code lookup
 router.get('/tickets/qr/:qrCode', ticketsController.getTicketByQRCode);
 

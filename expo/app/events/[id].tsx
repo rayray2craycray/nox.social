@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,7 @@ import {
   Tag,
   Sparkles,
   CheckCircle,
+  ExternalLink,
 } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventsContext';
 import { useTicketPurchase } from '@/hooks/useTicketPurchase';
@@ -43,6 +45,35 @@ export default function EventDetailScreen() {
     router.back();
   };
 
+  // Resolve where "Get Tickets" sends the user. Nox does not sell tickets
+  // in-app for v1 — the venue owns the transaction. Prefer an explicit
+  // event.ticketUrl (set once venues onboard); otherwise fall back to a search
+  // for the venue + event, which reliably surfaces the venue's own ticketing.
+  const resolveTicketUrl = (): string => {
+    const explicit = (event as any)?.ticketUrl as string | undefined;
+    if (explicit) return explicit;
+    const q = encodeURIComponent(`${event?.venueName ?? ''} ${event?.title ?? ''} tickets`.trim());
+    return `https://www.google.com/search?q=${q}`;
+  };
+
+  const handleGetTickets = async () => {
+    if (!event) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Fire-and-forget attribution — never block the redirect on it.
+    const apiBase = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+    fetch(`${apiBase}/events/${event.id}/ticket-tap`, { method: 'POST' }).catch(() => {});
+
+    const url = resolveTicketUrl();
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Could not open link', 'Try searching for the venue to buy tickets.');
+    }
+  };
+
+  // Legacy in-app Stripe purchase — shelved for v1 (kept for a future version
+  // when Nox is a registered business selling tickets directly).
   const handlePurchaseTicket = async () => {
     if (!selectedTierId || !event) {
       Alert.alert('No Tier Selected', 'Please select a ticket tier to purchase');
@@ -315,32 +346,24 @@ export default function EventDetailScreen() {
       </ScrollView>
 
       {/* Purchase Button */}
-      {selectedTierId && (
-        <View style={styles.purchaseContainer}>
-          <TouchableOpacity
-            style={styles.purchaseButton}
-            onPress={handlePurchaseTicket}
-            disabled={isPurchasing}
-            activeOpacity={0.8}
+      <View style={styles.purchaseContainer}>
+        <TouchableOpacity
+          style={styles.purchaseButton}
+          onPress={handleGetTickets}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={['#ff0080', '#a855f7']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.purchaseButtonGradient}
           >
-            <LinearGradient
-              colors={['#ff0080', '#a855f7']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.purchaseButtonGradient}
-            >
-              {isPurchasing ? (
-                <ActivityIndicator size="small" color="#000" />
-              ) : (
-                <>
-                  <DollarSign size={22} color="#000" />
-                  <Text style={styles.purchaseButtonText}>Purchase Ticket</Text>
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      )}
+            <ExternalLink size={20} color="#000" />
+            <Text style={styles.purchaseButtonText}>Get Tickets</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+        <Text style={styles.purchaseHint}>Opens the venue&apos;s ticket page</Text>
+      </View>
     </View>
   );
 }
@@ -641,5 +664,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: '#000',
+  },
+  purchaseHint: {
+    fontSize: 12,
+    color: '#8a8a9a',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

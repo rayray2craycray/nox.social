@@ -64,6 +64,18 @@ const EventSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // External ticketing link. Nox does not sell tickets in-app for v1 — the
+    // "Get Tickets" CTA sends the user to the venue's own seller. When unset,
+    // the app falls back to a search for the venue + event.
+    ticketUrl: {
+      type: String,
+    },
+    // Attribution: how many times users tapped "Get Tickets" for this event.
+    // Feeds the venue analytics ("Nox drove N ticket click-throughs").
+    ticketTaps: {
+      type: Number,
+      default: 0,
+    },
     tags: {
       type: [String],
       default: [],
