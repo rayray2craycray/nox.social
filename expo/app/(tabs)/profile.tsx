@@ -1042,7 +1042,27 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
 
-          <TouchableOpacity 
+          {/* Venue Analytics — shown when the user manages at least one venue */}
+          {hasBusinessProfile && managedVenues.length > 0 && (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: '#1a1a2e' }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push('/venue/analytics');
+              }}
+            >
+              <BarChart3 size={20} color="#00d4ff" />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.actionButtonText}>Venue Analytics</Text>
+                <Text style={{ fontSize: 12, color: '#999', marginTop: 2 }}>
+                  Attendance, loyalty & ticket demand
+                </Text>
+              </View>
+              <ChevronRight size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
             style={styles.actionButton}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

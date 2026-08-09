@@ -65,6 +65,37 @@ export interface VibeVideo {
   stickerPosition?: { x: number; y: number }; // Position as percentage (0-100)
 }
 
+/**
+ * Attendance/loyalty analytics from GET /v1/venues/:id/analytics (see
+ * analytics.service). Named VenueInsights to avoid colliding with the legacy
+ * POS-revenue `VenueAnalytics` type used by the old /management dashboard.
+ */
+export interface VenueInsights {
+  venueId: string;
+  venueName?: string;
+  timezone: string;
+  generatedAt: string;
+  hasData: boolean;
+  checkIns: {
+    today: number;
+    last7d: number;
+    last30d: number;
+    allTime: number;
+    change30dPct: number | null;
+    uniqueVisitors7d: number;
+    uniqueVisitors30d: number;
+    newVisitors30d: number;
+    returningVisitors30d: number;
+  };
+  peak: { hour: number; byHour: number[] };
+  dailyTrend: { date: string; count: number }[];
+  community: {
+    size: number;
+    tiers: { GUEST: number; REGULAR: number; PLATINUM: number; WHALE: number };
+  };
+  tickets: { taps: number; totalEvents: number; upcomingEvents: number };
+}
+
 export interface UserBadge {
   id: string;
   venueId: string;

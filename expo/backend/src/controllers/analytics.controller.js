@@ -67,16 +67,16 @@ exports.getVenueAnalytics = async (req, res) => {
 
 /**
  * POST /api/v1/venues/:venueId/analytics-link
- * Admin-only. Mints a signed, expiring magic link to the venue's live web
- * dashboard — the thing you text a club owner to pitch them.
+ * Allowed for platform admins (to pitch prospects) and for a venue's own
+ * VIEW_ANALYTICS role holders (to share a read-only snapshot of their numbers).
  * body: { days?: number (default 30), tz?: string }
  */
 exports.createAnalyticsLink = async (req, res) => {
   const { venueId } = req.params;
   try {
-    const user = await User.findById(req.user.id).select('role');
-    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
-      return res.status(403).json({ success: false, error: 'Admin only' });
+    const auth = await authorizeVenueViewer(req.user.id, venueId);
+    if (!auth.ok) {
+      return res.status(403).json({ success: false, error: 'Not authorized for this venue' });
     }
     const days = Math.min(Math.max(parseInt(req.body?.days, 10) || 30, 1), 365);
     const tz = typeof req.body?.tz === 'string' && req.body.tz ? req.body.tz : 'America/New_York';

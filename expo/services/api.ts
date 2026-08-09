@@ -22,6 +22,7 @@ import type {
   PriceAlert,
   Streak,
   Memory,
+  VenueInsights,
 } from '../types';
 
 // ============================================================================
@@ -1369,6 +1370,41 @@ export const venueManagementApi = {
   },
 };
 
+/**
+ * Venue analytics — the in-app venue dashboard data source. Mirrors the
+ * backend analytics.service; see also the magic-link web dashboard.
+ */
+export const analyticsApi = {
+  /**
+   * Live analytics for a venue the caller can view (admin or VIEW_ANALYTICS).
+   * tz defaults to the device timezone so day/hour buckets match the owner.
+   */
+  getVenueInsights: async (
+    venueId: string,
+    tz?: string
+  ): Promise<ApiResponse<VenueInsights>> => {
+    const zone =
+      tz || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+    return apiClient.get<ApiResponse<VenueInsights>>(
+      `/v1/venues/${encodeURIComponent(venueId)}/analytics?tz=${encodeURIComponent(zone)}`
+    );
+  },
+
+  /**
+   * Mint a shareable read-only magic link to this venue's web dashboard.
+   */
+  createShareLink: async (
+    venueId: string,
+    days = 30
+  ): Promise<ApiResponse<{ url: string; expiresInDays: number }>> => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York';
+    return apiClient.post<ApiResponse<{ url: string; expiresInDays: number }>>(
+      `/v1/venues/${encodeURIComponent(venueId)}/analytics-link`,
+      { days, tz }
+    );
+  },
+};
+
 // Export all APIs as a unified object
 export const fullApi = {
   growth: growthApi,
@@ -1380,4 +1416,5 @@ export const fullApi = {
   auth: authApi,
   business: businessApi,
   venueManagement: venueManagementApi,
+  analytics: analyticsApi,
 };

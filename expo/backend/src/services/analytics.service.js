@@ -26,18 +26,32 @@ function tzDateString(date, tz) {
   }
 }
 
-// Resolve a display name for a venue keyed by Mongo _id or googlePlaceId.
-async function resolveVenueName(venueId) {
+/**
+ * A venue can be referenced two ways: the app keys check-ins / badges / events
+ * by the id it has on hand (usually a Google Place ID), while VenueRole and the
+ * Venue collection key by Mongo _id. To make analytics work no matter which id
+ * the caller passes, resolve the venue and return EVERY identifier it's known
+ * by, so we can match records with { venueId: { $in: aliases } }.
+ * @returns {Promise<{ aliases: string[], venueName: string|null }>}
+ */
+async function resolveVenueAliases(venueId) {
+  const aliases = new Set([venueId]);
+  let venue = null;
   try {
     if (/^[0-9a-fA-F]{24}$/.test(venueId)) {
-      const v = await Venue.findById(venueId).select('name');
-      if (v) return v.name;
+      venue = await Venue.findById(venueId).select('name googlePlaceId');
     }
-    const v = await Venue.findOne({ googlePlaceId: venueId }).select('name');
-    return v ? v.name : null;
+    if (!venue) {
+      venue = await Venue.findOne({ googlePlaceId: venueId }).select('name googlePlaceId');
+    }
+    if (venue) {
+      aliases.add(venue._id.toString());
+      if (venue.googlePlaceId) aliases.add(venue.googlePlaceId);
+    }
   } catch {
-    return null;
+    /* fall through with whatever we have */
   }
+  return { aliases: Array.from(aliases), venueName: venue ? venue.name : null };
 }
 
 /**
@@ -52,8 +66,12 @@ async function computeVenueAnalytics(venueId, tz = 'America/New_York') {
   const d60 = new Date(now.getTime() - 60 * DAY_MS);
   const d14 = new Date(now.getTime() - 13 * DAY_MS); // 14 buckets incl. today
 
+  // Match every identifier this venue is known by (Place ID + Mongo _id).
+  const { aliases, venueName: resolvedName } = await resolveVenueAliases(venueId);
+  const venueMatch = { $in: aliases };
+
   const [facet] = await CheckIn.aggregate([
-    { $match: { venueId } },
+    { $match: { venueId: venueMatch } },
     {
       $facet: {
         counts: [
@@ -137,7 +155,7 @@ async function computeVenueAnalytics(venueId, tz = 'America/New_York') {
   // Community + tier distribution from badges.
   const tierAgg = await User.aggregate([
     { $unwind: '$badges' },
-    { $match: { 'badges.venueId': venueId } },
+    { $match: { 'badges.venueId': venueMatch } },
     { $group: { _id: '$badges.badgeType', count: { $sum: 1 } } },
   ]);
   const tierDistribution = { GUEST: 0, REGULAR: 0, PLATINUM: 0, WHALE: 0 };
@@ -149,7 +167,7 @@ async function computeVenueAnalytics(venueId, tz = 'America/New_York') {
 
   // Ticket click-throughs + events.
   const [eventAgg] = await Event.aggregate([
-    { $match: { venueId } },
+    { $match: { venueId: venueMatch } },
     {
       $group: {
         _id: null,
@@ -161,11 +179,9 @@ async function computeVenueAnalytics(venueId, tz = 'America/New_York') {
   ]);
   const events = eventAgg || { ticketTaps: 0, totalEvents: 0, upcomingEvents: 0 };
 
-  const venueName = await resolveVenueName(venueId);
-
   return {
     venueId,
-    venueName: venueName || undefined,
+    venueName: resolvedName || undefined,
     timezone: tz,
     generatedAt: now.toISOString(),
     hasData: counts.allTime > 0,
