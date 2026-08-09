@@ -8,6 +8,7 @@ const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const Friendship = require('../models/Friendship.model');
 const BlockedUser = require('../models/BlockedUser');
+const CheckIn = require('../models/CheckIn');
 const emailService = require('../services/email.service');
 const {
   generateAccessToken,
@@ -798,6 +799,22 @@ const checkIn = async (req, res) => {
 
     const saved = user.badges.find((b) => b.venueId === venueId);
     const tierUp = previousTier !== null && saved.badgeType !== previousTier;
+
+    // Append to the analytics log — only for a genuine new visit, so
+    // same-night re-taps don't inflate a venue's numbers. Non-fatal: a logging
+    // failure must never break the user's check-in.
+    if (newVisit) {
+      CheckIn.create({
+        venueId,
+        venueName: saved.venueName,
+        userId: user._id,
+        tier: saved.badgeType,
+        visitNumber: saved.visitCount,
+        isFirstVisit: previousTier === null,
+        lat: typeof latitude === 'number' ? latitude : undefined,
+        lng: typeof longitude === 'number' ? longitude : undefined,
+      }).catch((err) => console.error('[checkIn] analytics log failed:', err.message));
+    }
 
     return res.status(200).json({
       success: true,

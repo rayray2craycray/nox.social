@@ -13,6 +13,8 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const Venue = require('../models/Venue');
 const User = require('../models/User');
+const { authMiddleware } = require('../middleware/auth.middleware');
+const { getVenueAnalytics } = require('../controllers/analytics.controller');
 
 const router = express.Router();
 
@@ -252,6 +254,19 @@ router.get(
       });
     }
   }
+);
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/venues/:venueId/analytics
+// Venue-facing dashboard data (attendance, community, ticket taps). Protected:
+// caller must be a platform admin or hold a VIEW_ANALYTICS role for the venue.
+// Registered before /:venueId is fine — the extra path segment disambiguates.
+// ---------------------------------------------------------------------------
+router.get(
+  '/venues/:venueId/analytics',
+  authMiddleware,
+  [param('venueId').isString().notEmpty()],
+  getVenueAnalytics
 );
 
 // ---------------------------------------------------------------------------
