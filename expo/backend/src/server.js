@@ -214,6 +214,11 @@ app.use('/api/v1', venuesRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/auth', authRoutes);
 
+// Public venue analytics dashboard (magic-link web page). Mounted outside /api
+// so the shareable URL reads /venue/<token>. Auth is the signed token itself.
+const venueDashboardRoutes = require('./routes/venue-dashboard.routes');
+app.use('/', venueDashboardRoutes);
+
 // Admin routes (requires authentication + admin role)
 app.use('/api/admin', adminRoutes);
 

@@ -14,7 +14,7 @@ const axios = require('axios');
 const Venue = require('../models/Venue');
 const User = require('../models/User');
 const { authMiddleware } = require('../middleware/auth.middleware');
-const { getVenueAnalytics } = require('../controllers/analytics.controller');
+const { getVenueAnalytics, createAnalyticsLink } = require('../controllers/analytics.controller');
 
 const router = express.Router();
 
@@ -267,6 +267,15 @@ router.get(
   authMiddleware,
   [param('venueId').isString().notEmpty()],
   getVenueAnalytics
+);
+
+// POST /api/v1/venues/:venueId/analytics-link
+// Admin-only: mint a shareable magic link to the venue's live web dashboard.
+router.post(
+  '/venues/:venueId/analytics-link',
+  authMiddleware,
+  [param('venueId').isString().notEmpty()],
+  createAnalyticsLink
 );
 
 // ---------------------------------------------------------------------------

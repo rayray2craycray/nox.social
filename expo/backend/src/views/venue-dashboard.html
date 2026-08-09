@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Nox · Venue Report</title>
+<style>
+  :root{
+    --bg:#08080c;
+    --bg-2:#0d0d15;
+    --card:#12121c;
+    --card-2:#16161f;
+    --line:rgba(255,255,255,.08);
+    --line-strong:rgba(255,255,255,.14);
+    --ink:#ececf5;
+    --ink-dim:#9a9aab;
+    --ink-faint:#63636f;
+    --pink:#ff2d78;
+    --pink-soft:#ff6aa2;
+    --violet:#a855f7;
+    --blue:#5b8cff;
+    --gold:#f5c451;
+    --up:#4ade80;
+    --down:#fb7185;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 620px at 78% -8%, rgba(255,45,120,.16), transparent 60%),
+      radial-gradient(900px 560px at 8% 4%, rgba(168,85,247,.13), transparent 58%),
+      var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    font-feature-settings:"tnum" 1,"ss01" 1;
+    line-height:1.5;
+    min-height:100vh;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:26px 22px 72px}
+  .num{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .eyebrow{
+    text-transform:uppercase;letter-spacing:.22em;font-size:11px;font-weight:700;
+    color:var(--ink-faint);
+  }
+
+  /* Top bar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:40px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .logo{
+    width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(140deg,var(--pink),var(--violet));
+    font-weight:800;color:#fff;font-size:15px;box-shadow:0 6px 22px rgba(255,45,120,.4);
+  }
+  .brand b{font-size:15px;letter-spacing:.02em}
+  .brand span{color:var(--ink-faint);font-size:13px;margin-left:2px}
+  .live{display:flex;align-items:center;gap:8px;color:var(--ink-dim);font-size:12.5px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--up);box-shadow:0 0 0 0 rgba(74,222,128,.6);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.55)}70%{box-shadow:0 0 0 9px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+
+  /* Hero */
+  .hero{margin-bottom:30px}
+  .hero h1{
+    font-size:clamp(30px,6vw,52px);font-weight:800;letter-spacing:-.03em;margin:12px 0 6px;
+    text-wrap:balance;line-height:1.03;
+  }
+  .hero .sub{color:var(--ink-dim);font-size:15px}
+
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:26px}
+  .kpi{
+    background:linear-gradient(180deg,var(--card),var(--card-2));
+    border:1px solid var(--line);border-radius:18px;padding:22px 22px 20px;position:relative;overflow:hidden;
+  }
+  .kpi.accent{border-color:rgba(255,45,120,.34)}
+  .kpi.accent::before{content:"";position:absolute;inset:0;background:radial-gradient(340px 150px at 100% 0,rgba(255,45,120,.16),transparent 70%);pointer-events:none}
+  .kpi .label{color:var(--ink-dim);font-size:13px;font-weight:600;margin-bottom:12px}
+  .kpi .big{font-size:clamp(34px,7vw,56px);font-weight:800;line-height:1}
+  .kpi .foot{margin-top:12px;color:var(--ink-faint);font-size:13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .delta{display:inline-flex;align-items:center;gap:4px;font-weight:700;font-size:12.5px;padding:3px 9px;border-radius:999px}
+  .delta.up{color:var(--up);background:rgba(74,222,128,.12)}
+  .delta.down{color:var(--down);background:rgba(251,113,133,.12)}
+  .delta.flat{color:var(--ink-dim);background:rgba(255,255,255,.06)}
+
+  /* Stat grid */
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:17px 17px 15px}
+  .stat .v{font-size:26px;font-weight:800;line-height:1.1}
+  .stat .k{color:var(--ink-dim);font-size:12.5px;margin-top:5px}
+  .stat .k small{display:block;color:var(--ink-faint);font-size:11.5px;margin-top:2px}
+
+  /* Panels */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:16px}
+  .panel h2{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em}
+  .panel .phead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:18px}
+  .panel .phead .note{color:var(--ink-faint);font-size:12.5px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  canvas{display:block;width:100%}
+
+  /* Tier legend */
+  .tierbar{height:16px;border-radius:8px;overflow:hidden;display:flex;background:rgba(255,255,255,.05)}
+  .tierbar i{display:block;height:100%}
+  .legend{display:flex;flex-wrap:wrap;gap:16px 22px;margin-top:16px}
+  .legend .li{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink-dim)}
+  .legend .sw{width:11px;height:11px;border-radius:3px;flex:none}
+  .legend b{color:var(--ink);font-weight:700}
+
+  /* Nox effect band */
+  .band{
+    margin-top:16px;border-radius:18px;padding:24px;
+    background:linear-gradient(120deg,rgba(255,45,120,.14),rgba(168,85,247,.12));
+    border:1px solid rgba(255,45,120,.28);
+  }
+  .band .eyebrow{color:var(--pink-soft)}
+  .band .row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:14px}
+  .band .v{font-size:30px;font-weight:800;line-height:1}
+  .band .k{color:var(--ink-dim);font-size:12.5px;margin-top:6px}
+
+  .empty{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:44px 26px;text-align:center;margin-top:24px}
+  .empty h3{margin:0 0 8px;font-size:19px}
+  .empty p{color:var(--ink-dim);margin:0 auto;max-width:460px}
+
+  footer{margin-top:34px;color:var(--ink-faint);font-size:12px;text-align:center;line-height:1.7}
+  footer b{color:var(--ink-dim)}
+
+  @media(max-width:720px){
+    .kpis,.grid4,.two,.band .row{grid-template-columns:1fr}
+    .grid4{grid-template-columns:1fr 1fr}
+  }
+  @media(prefers-reduced-motion:reduce){.dot{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">N</div>
+      <div><b>Nox</b><span>· Venue Report</span></div>
+    </div>
+    <div class="live"><span class="dot"></span><span id="updated">live</span></div>
+  </div>
+
+  <div class="hero">
+    <div class="eyebrow">What Nox drove · last 30 days</div>
+    <h1 id="venueName">Your Venue</h1>
+    <div class="sub" id="heroSub">Real attendance, loyalty, and ticket demand — measured, not guessed.</div>
+  </div>
+
+  <div id="content"></div>
+
+  <footer>
+    <div>Generated <b id="genAt">—</b> · timezone <b id="tzLabel">—</b></div>
+    <div>Powered by <b>Nox</b> · numbers update live — refresh anytime.</div>
+  </footer>
+</div>
+
+<script>
+  const DATA = "__NOX_DATA__";
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fmt = (n) => (n || 0).toLocaleString("en-US");
+  const hourLabel = (h) => { const ap = h < 12 ? "AM" : "PM"; let x = h % 12; if (x === 0) x = 12; return x + " " + ap; };
+
+  document.getElementById("venueName").textContent = DATA.venueName || "Your Venue";
+  document.getElementById("tzLabel").textContent = DATA.timezone || "—";
+  (function(){
+    try{
+      const d = new Date(DATA.generatedAt);
+      document.getElementById("genAt").textContent = d.toLocaleString("en-US",{dateStyle:"medium",timeStyle:"short"});
+      const mins = Math.round((Date.now()-d.getTime())/60000);
+      document.getElementById("updated").textContent = mins <= 1 ? "updated just now" : "updated " + mins + " min ago";
+    }catch(e){}
+  })();
+
+  function el(tag, cls, html){ const e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e; }
+
+  const content = document.getElementById("content");
+
+  if(!DATA.hasData){
+    document.getElementById("heroSub").textContent = "No check-ins logged here yet.";
+    const e = el("div","empty");
+    e.innerHTML = '<h3>Your report is ready — it just needs a crowd.</h3>'+
+      '<p>As soon as people check in at your door through Nox, this page fills with live attendance, '+
+      'peak hours, returning-guest rates, and the ticket clicks Nox sends to your box office.</p>';
+    content.appendChild(e);
+  } else {
+    render();
+  }
+
+  function delta(pct){
+    if(pct === null || pct === undefined) return '<span class="delta flat">new</span>';
+    if(pct > 0) return '<span class="delta up">▲ '+pct+'%</span>';
+    if(pct < 0) return '<span class="delta down">▼ '+Math.abs(pct)+'%</span>';
+    return '<span class="delta flat">0%</span>';
+  }
+
+  function render(){
+    const c = DATA.checkIns, t = DATA.tickets, cm = DATA.community;
+    const totalRN = c.newVisitors30d + c.returningVisitors30d;
+    const returnRate = totalRN > 0 ? Math.round((c.returningVisitors30d/totalRN)*100) : 0;
+
+    // Hero KPIs
+    const kpis = el("div","kpis");
+    kpis.appendChild(el("div","kpi accent",
+      '<div class="label">Check-ins · last 30 days</div>'+
+      '<div class="big num" data-count="'+c.last30d+'">0</div>'+
+      '<div class="foot">'+delta(c.change30dPct)+'<span>vs previous 30 days · '+fmt(c.allTime)+' all-time</span></div>'));
+    kpis.appendChild(el("div","kpi",
+      '<div class="label">Ticket click-throughs</div>'+
+      '<div class="big num" data-count="'+t.taps+'">0</div>'+
+      '<div class="foot"><span>sent from Nox to your box office · '+fmt(t.upcomingEvents)+' upcoming event'+(t.upcomingEvents===1?'':'s')+'</span></div>'));
+    content.appendChild(kpis);
+
+    // Stat grid
+    const g = el("div","grid4");
+    const stats = [
+      ['<span class="num">'+fmt(c.uniqueVisitors30d)+'</span>','Unique guests','last 30 days'],
+      ['<span class="num">'+returnRate+'%</span>','Returning guests',''+fmt(c.returningVisitors30d)+' of '+fmt(totalRN)+' came back'],
+      [hourLabel(DATA.peak.hour),'Peak hour','when your crowd arrives'],
+      ['<span class="num">'+fmt(cm.size)+'</span>','Community','following you on Nox'],
+    ];
+    stats.forEach(s=>{ g.appendChild(el("div","stat",'<div class="v">'+s[0]+'</div><div class="k">'+s[1]+'<small>'+s[2]+'</small></div>')); });
+    content.appendChild(g);
+
+    // Trend
+    const trendP = el("div","panel");
+    trendP.innerHTML = '<div class="phead"><h2>Check-ins, last 14 nights</h2><div class="note">'+fmt(c.today)+' today · '+fmt(c.last7d)+' this week</div></div>';
+    const tc = el("canvas"); tc.id="trend"; trendP.appendChild(tc); content.appendChild(trendP);
+
+    // Peak + tiers (two-up)
+    const two = el("div","two");
+    const peakP = el("div","panel");
+    peakP.innerHTML = '<div class="phead"><h2>When your crowd shows up</h2><div class="note">peak '+hourLabel(DATA.peak.hour)+'</div></div>';
+    const pc = el("canvas"); pc.id="peak"; peakP.appendChild(pc);
+
+    const tierP = el("div","panel");
+    tierP.innerHTML = '<div class="phead"><h2>Your regulars</h2><div class="note">loyalty tiers</div></div>';
+    const tiers = cm.tiers, tot = Math.max(cm.size,1);
+    const defs = [['GUEST','Guest','var(--ink-faint)','#3a3a44'],['REGULAR','Regular','var(--blue)','#5b8cff'],['PLATINUM','Platinum','var(--violet)','#a855f7'],['WHALE','Whale','var(--pink)','#ff2d78']];
+    let bar='<div class="tierbar">', leg='<div class="legend">';
+    defs.forEach(d=>{
+      const val=tiers[d[0]]||0, w=(val/tot)*100;
+      if(val>0) bar+='<i style="width:'+w+'%;background:'+d[3]+'"></i>';
+      leg+='<div class="li"><span class="sw" style="background:'+d[3]+'"></span><b>'+fmt(val)+'</b> '+d[1]+'</div>';
+    });
+    bar+='</div>'; leg+='</div>';
+    tierP.innerHTML += bar + leg +
+      '<div class="note" style="margin-top:14px;color:var(--ink-faint);font-size:12.5px">Guests climb tiers by showing up. Higher tiers = the regulars who keep coming back.</div>';
+    two.appendChild(peakP); two.appendChild(tierP); content.appendChild(two);
+
+    // Nox effect band
+    const band = el("div","band");
+    band.innerHTML = '<div class="eyebrow">The Nox effect</div>'+
+      '<div class="row">'+
+      '<div><div class="v num">'+fmt(c.allTime)+'</div><div class="k">verified door check-ins</div></div>'+
+      '<div><div class="v num">'+fmt(t.taps)+'</div><div class="k">ticket clicks driven to you</div></div>'+
+      '<div><div class="v num">'+fmt(cm.size)+'</div><div class="k">guests in your Nox community</div></div>'+
+      '</div>';
+    content.appendChild(band);
+
+    // Charts
+    requestAnimationFrame(()=>{ drawTrend(tc, DATA.dailyTrend); drawPeak(pc, DATA.peak.byHour, DATA.peak.hour); countUp(); });
+    window.addEventListener("resize", ()=>{ drawTrend(tc, DATA.dailyTrend); drawPeak(pc, DATA.peak.byHour, DATA.peak.hour); });
+  }
+
+  function setup(canvas, h){
+    const dpr = Math.min(window.devicePixelRatio||1, 2);
+    const w = canvas.clientWidth || canvas.parentElement.clientWidth;
+    canvas.width = w*dpr; canvas.height = h*dpr; canvas.style.height = h+"px";
+    const ctx = canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx,w,h};
+  }
+
+  function drawTrend(canvas, series){
+    const {ctx,w,h} = setup(canvas, 180);
+    ctx.clearRect(0,0,w,h);
+    const padL=8,padR=8,padT=14,padB=26;
+    const max = Math.max(1, ...series.map(d=>d.count));
+    const n = series.length;
+    const x = i => padL + (i*(w-padL-padR))/(n-1);
+    const y = v => padT + (1 - v/max)*(h-padT-padB);
+    // gridlines
+    ctx.strokeStyle="rgba(255,255,255,.06)"; ctx.lineWidth=1;
+    for(let g=0; g<=2; g++){ const gy=padT+(g/2)*(h-padT-padB); ctx.beginPath(); ctx.moveTo(padL,gy); ctx.lineTo(w-padR,gy); ctx.stroke(); }
+    // area
+    const grad = ctx.createLinearGradient(0,padT,0,h-padB);
+    grad.addColorStop(0,"rgba(255,45,120,.34)"); grad.addColorStop(1,"rgba(255,45,120,0)");
+    ctx.beginPath(); ctx.moveTo(x(0), h-padB);
+    series.forEach((d,i)=>ctx.lineTo(x(i), y(d.count)));
+    ctx.lineTo(x(n-1), h-padB); ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+    // line
+    ctx.beginPath(); series.forEach((d,i)=>{ const px=x(i),py=y(d.count); i?ctx.lineTo(px,py):ctx.moveTo(px,py); });
+    ctx.strokeStyle="#ff2d78"; ctx.lineWidth=2.4; ctx.lineJoin="round"; ctx.stroke();
+    // endpoint
+    const lx=x(n-1), ly=y(series[n-1].count);
+    ctx.beginPath(); ctx.arc(lx,ly,4.5,0,7); ctx.fillStyle="#ff2d78"; ctx.fill();
+    ctx.beginPath(); ctx.arc(lx,ly,4.5,0,7); ctx.strokeStyle="#fff"; ctx.lineWidth=1.6; ctx.stroke();
+    // x labels: first + last date
+    ctx.fillStyle="rgba(255,255,255,.4)"; ctx.font="11px -apple-system,sans-serif";
+    const lab = s => { const p=s.split("-"); return (+p[1])+"/"+(+p[2]); };
+    ctx.textAlign="left"; ctx.fillText(lab(series[0].date), padL, h-8);
+    ctx.textAlign="right"; ctx.fillText("today", w-padR, h-8);
+  }
+
+  function drawPeak(canvas, byHour, peak){
+    const {ctx,w,h} = setup(canvas, 180);
+    ctx.clearRect(0,0,w,h);
+    const padT=14,padB=24,gap=3;
+    const max = Math.max(1, ...byHour);
+    const bw = (w - gap*23)/24;
+    byHour.forEach((v,i)=>{
+      const bh = (v/max)*(h-padT-padB);
+      const bx = i*(bw+gap), by = h-padB-bh;
+      ctx.fillStyle = i===peak ? "#ff2d78" : "rgba(168,85,247,.42)";
+      const r = Math.min(3, bw/2);
+      ctx.beginPath();
+      ctx.moveTo(bx, by+r); ctx.arcTo(bx,by,bx+r,by,r); ctx.lineTo(bx+bw-r,by);
+      ctx.arcTo(bx+bw,by,bx+bw,by+r,r); ctx.lineTo(bx+bw, h-padB); ctx.lineTo(bx, h-padB); ctx.closePath(); ctx.fill();
+    });
+    ctx.fillStyle="rgba(255,255,255,.4)"; ctx.font="11px -apple-system,sans-serif"; ctx.textAlign="center";
+    [[0,"12a"],[6,"6a"],[12,"12p"],[18,"6p"]].forEach(([hh,txt])=>{ const bx=hh*(bw+gap)+bw/2; ctx.fillText(txt,bx,h-7); });
+  }
+
+  function countUp(){
+    document.querySelectorAll("[data-count]").forEach(node=>{
+      const target = +node.getAttribute("data-count");
+      if(reduce || target===0){ node.textContent = fmt(target); return; }
+      const dur=900, t0=performance.now();
+      const step=(t)=>{ const p=Math.min(1,(t-t0)/dur); const e=1-Math.pow(1-p,3); node.textContent=fmt(Math.round(target*e)); if(p<1)requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
+  }
+</script>
+</body>
+</html>
