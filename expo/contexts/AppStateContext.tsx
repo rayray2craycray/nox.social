@@ -21,6 +21,7 @@ const defaultProfile: UserProfile = {
   bio: '',
   totalSpend: 0,
   badges: [],
+  savedEvents: [],
   isIncognito: false,
   followedPerformers: [],
   isVenueManager: true,
@@ -70,6 +71,7 @@ async function fetchProfileFromApi(accessToken: string | null): Promise<UserProf
     profileImageUrl: apiUser.profileImageUrl,
     bio: apiUser.bio ?? localProfile.bio,
     badges: Array.isArray(apiUser.badges) ? apiUser.badges : localProfile.badges,
+    savedEvents: Array.isArray(apiUser.savedEvents) ? apiUser.savedEvents : localProfile.savedEvents,
     isAuthenticated: true,
   };
 
@@ -418,6 +420,57 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     await updateProfileAsync({ badges: remaining as any });
   }, [profile.badges, updateProfileAsync]);
 
+  // --- "My Night" saved events ---------------------------------------------
+  const isEventSaved = useCallback((eventId: string) => {
+    return (profile.savedEvents || []).some((s) => s.eventId === eventId);
+  }, [profile.savedEvents]);
+
+  const saveEvent = useCallback(async (eventId: string) => {
+    // Optimistic add (dedup) so the bookmark toggles instantly.
+    const current = profile.savedEvents || [];
+    if (!current.some((s) => s.eventId === eventId)) {
+      await updateProfileAsync({
+        savedEvents: [...current, { eventId, savedAt: new Date().toISOString() }] as any,
+      });
+    }
+    try {
+      const resp = await apiClient.post<{ success: boolean; data: { savedEvents: any[] } }>(
+        `/auth/me/saved-events/${eventId}`,
+      );
+      const serverSaved = resp?.data?.savedEvents;
+      if (Array.isArray(serverSaved)) {
+        await updateProfileAsync({ savedEvents: serverSaved as any });
+      }
+    } catch (err) {
+      if (__DEV__) console.log('[AppState] saveEvent API failed, keeping local:', err);
+    }
+  }, [profile.savedEvents, updateProfileAsync]);
+
+  const unsaveEvent = useCallback(async (eventId: string) => {
+    const remaining = (profile.savedEvents || []).filter((s) => s.eventId !== eventId);
+    await updateProfileAsync({ savedEvents: remaining as any });
+    try {
+      const resp = await apiClient.delete<{ success: boolean; data: { savedEvents: any[] } }>(
+        `/auth/me/saved-events/${eventId}`,
+      );
+      const serverSaved = resp?.data?.savedEvents;
+      if (Array.isArray(serverSaved)) {
+        await updateProfileAsync({ savedEvents: serverSaved as any });
+      }
+    } catch (err) {
+      if (__DEV__) console.log('[AppState] unsaveEvent API failed, keeping local:', err);
+    }
+  }, [profile.savedEvents, updateProfileAsync]);
+
+  const toggleSaveEvent = useCallback(async (eventId: string) => {
+    if (isEventSaved(eventId)) {
+      await unsaveEvent(eventId);
+      return false;
+    }
+    await saveEvent(eventId);
+    return true;
+  }, [isEventSaved, saveEvent, unsaveEvent]);
+
   const leaveServer = useMutation({
     mutationFn: async (venueId: string) => {
       // Remove the venue badge server-side (best-effort), then update local
@@ -684,6 +737,10 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     awardBadge,
     checkIn,
     removeBadge,
+    isEventSaved,
+    saveEvent,
+    unsaveEvent,
+    toggleSaveEvent,
     updateProfileAsync,
     leaveServer,
     canRejoinVenue,

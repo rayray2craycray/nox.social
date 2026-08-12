@@ -20,6 +20,8 @@ const {
   awardBadge,
   removeBadge,
   checkIn,
+  saveEvent,
+  unsaveEvent,
 } = require('../controllers/auth.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { validate } = require('../middleware/validation');
@@ -62,6 +64,10 @@ router.delete('/me', authMiddleware, deleteMyAccount);
 router.post('/me/badges', authMiddleware, awardBadge);
 router.post('/me/checkin', authMiddleware, checkIn);
 router.delete('/me/badges/:venueId', authMiddleware, removeBadge);
+
+// Saved events ("My Night" list) — server-persisted, idempotent save.
+router.post('/me/saved-events/:eventId', authMiddleware, saveEvent);
+router.delete('/me/saved-events/:eventId', authMiddleware, unsaveEvent);
 
 // POST /auth/push-token - Register an Expo push token for the current user.
 // Called from the app whenever expo-notifications hands us a token.

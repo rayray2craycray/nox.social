@@ -17,19 +17,38 @@ import {
   Ticket,
   Calendar,
   MapPin,
-  ChevronRight,
   QrCode,
   Share2,
   CheckCircle2,
   Clock,
+  Bookmark,
+  Sparkles,
+  Compass,
 } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventsContext';
+import { useAppState } from '@/contexts/AppStateContext';
 import * as Haptics from 'expo-haptics';
 import QRCode from 'react-native-qrcode-svg';
-import type { Ticket as TicketType, Venue } from '@/types';
+import type { Ticket as TicketType, Event as EventType, Venue } from '@/types';
 
-export default function TicketsScreen() {
-  const { userTickets, getEventById, getTicketTiersForEvent, generateTicketQR, isLoading } = useEvents();
+/**
+ * "My Night" — the clubber's personal plan. Under the ticketing-redirect model
+ * there are no in-app purchases, so this replaces the old "My Tickets" screen:
+ *   1. Saved  — events you bookmarked (upcoming first)
+ *   2. At your venues — upcoming events at spots you've checked into
+ *   3. Tickets — legacy in-app tickets, shown only if you actually have any
+ */
+export default function MyNightScreen() {
+  const {
+    events,
+    upcomingEvents,
+    getEventById,
+    userTickets,
+    getTicketTiersForEvent,
+    generateTicketQR,
+    isLoading,
+  } = useEvents();
+  const { profile, unsaveEvent } = useAppState();
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
 
@@ -38,76 +57,84 @@ export default function TicketsScreen() {
     router.back();
   };
 
+  const now = Date.now();
+
+  // Resolve saved event refs → full events, split upcoming vs past.
+  const savedRefs = profile.savedEvents || [];
+  const savedIds = new Set(savedRefs.map((s) => s.eventId));
+  const savedEvents = savedRefs
+    .map((s) => getEventById(s.eventId))
+    .filter((e): e is EventType => !!e);
+  const savedUpcoming = savedEvents
+    .filter((e) => new Date(e.date).getTime() >= now)
+    .sort((a, b) => +new Date(a.date) - +new Date(b.date));
+  const savedPast = savedEvents
+    .filter((e) => new Date(e.date).getTime() < now)
+    .sort((a, b) => +new Date(b.date) - +new Date(a.date));
+
+  // "At your venues" — upcoming events at spots the user has a badge for and
+  // hasn't already saved.
+  const badgeVenueIds = new Set((profile.badges || []).map((b) => b.venueId));
+  const venueEvents = upcomingEvents
+    .filter((e) => badgeVenueIds.has(e.venueId) && !savedIds.has(e.id))
+    .sort((a, b) => +new Date(a.date) - +new Date(b.date));
+
+  // Legacy in-app tickets (deprecated under the redirect model, kept for anyone
+  // who bought one before the pivot).
+  const activeTickets = userTickets.filter((t) => t.status === 'ACTIVE');
+  const pastTickets = userTickets.filter((t) => t.status !== 'ACTIVE');
+  const hasTickets = userTickets.length > 0;
+
+  const savedCount = savedUpcoming.length;
+  const isEmpty = savedEvents.length === 0 && venueEvents.length === 0 && !hasTickets;
+
   const handleTicketPress = (ticket: TicketType) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedTicket(ticket);
     setShowQRModal(true);
   };
 
-  const handleShareTicket = (ticket: TicketType) => {
+  const handleShareTicket = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Share Ticket',
-      'Ticket transfer functionality coming soon!',
-      [{ text: 'OK' }]
-    );
+    Alert.alert('Share Ticket', 'Ticket transfer functionality coming soon!', [{ text: 'OK' }]);
   };
 
-  const getTicketStatusColor = (status: TicketType['status']) => {
-    switch (status) {
-      case 'ACTIVE':
-        return '#00ff80';
-      case 'USED':
-        return '#666';
-      case 'TRANSFERRED':
-        return '#00d4ff';
-      case 'CANCELLED':
-        return '#ff0000';
-      default:
-        return '#999';
-    }
+  const openEvent = (eventId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/events/${eventId}`);
   };
 
-  const getTicketStatusText = (status: TicketType['status']) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'Active';
-      case 'USED':
-        return 'Used';
-      case 'TRANSFERRED':
-        return 'Transferred';
-      case 'CANCELLED':
-        return 'Cancelled';
-      default:
-        return status;
-    }
+  const handleUnsave = (eventId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    unsaveEvent(eventId);
+  };
+
+  const goExplore = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push('/(tabs)/discovery');
   };
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#ff0080" />
-        <Text style={styles.loadingText}>Loading tickets...</Text>
+        <Text style={styles.loadingText}>Loading your night...</Text>
       </View>
     );
   }
-
-  const activeTickets = userTickets.filter(t => t.status === 'ACTIVE');
-  const pastTickets = userTickets.filter(t => t.status !== 'ACTIVE');
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <LinearGradient
-          colors={['rgba(10,10,15,0.95)', 'transparent']}
-          style={styles.headerGradient}
-        />
+        <LinearGradient colors={['rgba(10,10,15,0.95)', 'transparent']} style={styles.headerGradient} />
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.headerTitle}>My Tickets</Text>
+            <Text style={styles.headerTitle}>My Night</Text>
             <Text style={styles.headerSubtitle}>
-              {activeTickets.length} active {activeTickets.length === 1 ? 'ticket' : 'tickets'}
+              {savedCount > 0
+                ? `${savedCount} saved ${savedCount === 1 ? 'event' : 'events'} coming up`
+                : 'Plan where you’re going out'}
             </Text>
           </View>
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
@@ -117,53 +144,100 @@ export default function TicketsScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {userTickets.length === 0 ? (
+        {isEmpty ? (
           <View style={styles.emptyState}>
-            <Ticket size={64} color="#333" />
-            <Text style={styles.emptyTitle}>No Tickets Yet</Text>
+            <Bookmark size={64} color="#333" />
+            <Text style={styles.emptyTitle}>Your night starts here</Text>
             <Text style={styles.emptyText}>
-              Browse events and purchase tickets to see them here
+              Save events you’re into and they’ll show up here — your plan for the weekend, all in one place.
             </Text>
+            <TouchableOpacity style={styles.exploreButton} onPress={goExplore}>
+              <Compass size={18} color="#000" />
+              <Text style={styles.exploreButtonText}>Explore events</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <>
-            {/* Active Tickets */}
-            {activeTickets.length > 0 && (
+            {/* Saved — upcoming */}
+            {savedUpcoming.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Active Tickets</Text>
-                {activeTickets.map(ticket => (
-                  <TicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    onPress={() => handleTicketPress(ticket)}
-                    onShare={() => handleShareTicket(ticket)}
-                    getEventById={getEventById}
-                    getTicketTiersForEvent={getTicketTiersForEvent}
-                    getTicketStatusColor={getTicketStatusColor}
-                    getTicketStatusText={getTicketStatusText}
+                <Text style={styles.sectionTitle}>Saved</Text>
+                {savedUpcoming.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onPress={() => openEvent(event.id)}
+                    onUnsave={() => handleUnsave(event.id)}
                   />
                 ))}
               </View>
             )}
 
-            {/* Past Tickets */}
-            {pastTickets.length > 0 && (
+            {/* At your venues */}
+            {venueEvents.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Past Tickets</Text>
-                {pastTickets.map(ticket => (
-                  <TicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    onPress={() => handleTicketPress(ticket)}
-                    onShare={() => handleShareTicket(ticket)}
-                    getEventById={getEventById}
-                    getTicketTiersForEvent={getTicketTiersForEvent}
-                    getTicketStatusColor={getTicketStatusColor}
-                    getTicketStatusText={getTicketStatusText}
+                <View style={styles.sectionHeaderRow}>
+                  <Sparkles size={16} color="#00d4ff" />
+                  <Text style={styles.sectionTitle}>At your venues</Text>
+                </View>
+                <Text style={styles.sectionCaption}>Upcoming nights at spots you’ve checked into</Text>
+                {venueEvents.slice(0, 6).map((event) => (
+                  <EventCard key={event.id} event={event} onPress={() => openEvent(event.id)} />
+                ))}
+              </View>
+            )}
+
+            {/* Saved — past */}
+            {savedPast.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Past</Text>
+                {savedPast.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    onPress={() => openEvent(event.id)}
+                    onUnsave={() => handleUnsave(event.id)}
                     isPast
                   />
                 ))}
               </View>
+            )}
+
+            {/* Legacy tickets — only if the user has any */}
+            {hasTickets && (
+              <>
+                {activeTickets.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Your Tickets</Text>
+                    {activeTickets.map((ticket) => (
+                      <TicketCard
+                        key={ticket.id}
+                        ticket={ticket}
+                        onPress={() => handleTicketPress(ticket)}
+                        onShare={handleShareTicket}
+                        getEventById={getEventById}
+                        getTicketTiersForEvent={getTicketTiersForEvent}
+                      />
+                    ))}
+                  </View>
+                )}
+                {pastTickets.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Past Tickets</Text>
+                    {pastTickets.map((ticket) => (
+                      <TicketCard
+                        key={ticket.id}
+                        ticket={ticket}
+                        onPress={() => handleTicketPress(ticket)}
+                        onShare={handleShareTicket}
+                        getEventById={getEventById}
+                        getTicketTiersForEvent={getTicketTiersForEvent}
+                        isPast
+                      />
+                    ))}
+                  </View>
+                )}
+              </>
             )}
           </>
         )}
@@ -171,7 +245,7 @@ export default function TicketsScreen() {
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* QR Code Modal */}
+      {/* QR Code Modal (legacy tickets) */}
       {selectedTicket && (
         <QRCodeModal
           visible={showQRModal}
@@ -189,7 +263,75 @@ export default function TicketsScreen() {
   );
 }
 
-// ===== TICKET CARD COMPONENT =====
+// ===== EVENT CARD (My Night) =====
+
+function EventCard({
+  event,
+  onPress,
+  onUnsave,
+  isPast,
+}: {
+  event: EventType;
+  onPress: () => void;
+  onUnsave?: () => void;
+  isPast?: boolean;
+}) {
+  const eventDate = new Date(event.date);
+  const formattedDate = eventDate.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+
+  return (
+    <TouchableOpacity
+      style={[styles.eventCard, isPast && styles.ticketCardPast]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      {event.imageUrl ? (
+        <Image source={{ uri: event.imageUrl }} style={styles.eventImage} contentFit="cover" />
+      ) : (
+        <View style={[styles.eventImage, styles.eventImagePlaceholder]}>
+          <Calendar size={22} color="#444" />
+        </View>
+      )}
+      <View style={styles.eventBody}>
+        <Text style={styles.eventTitle} numberOfLines={1}>
+          {event.title}
+        </Text>
+        {event.venueName ? (
+          <View style={styles.eventRow}>
+            <MapPin size={13} color="#999" />
+            <Text style={styles.eventMeta} numberOfLines={1}>
+              {event.venueName}
+            </Text>
+          </View>
+        ) : null}
+        <View style={styles.eventRow}>
+          <Calendar size={13} color="#999" />
+          <Text style={styles.eventMeta}>
+            {formattedDate} • {event.startTime}
+          </Text>
+        </View>
+      </View>
+      {onUnsave && (
+        <TouchableOpacity
+          style={styles.unsaveButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            onUnsave();
+          }}
+          accessibilityLabel="Remove from My Night"
+        >
+          <Bookmark size={20} color="#ff0080" fill="#ff0080" />
+        </TouchableOpacity>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// ===== TICKET CARD COMPONENT (legacy) =====
 
 interface TicketCardProps {
   ticket: TicketType;
@@ -197,8 +339,6 @@ interface TicketCardProps {
   onShare: () => void;
   getEventById: (id: string) => any;
   getTicketTiersForEvent: (id: string) => any[];
-  getTicketStatusColor: (status: TicketType['status']) => string;
-  getTicketStatusText: (status: TicketType['status']) => string;
   isPast?: boolean;
 }
 
@@ -208,18 +348,11 @@ function TicketCard({
   onShare,
   getEventById,
   getTicketTiersForEvent,
-  getTicketStatusColor,
-  getTicketStatusText,
   isPast,
 }: TicketCardProps) {
-  // Prefer the ticket's self-contained event/tier (populated by the backend);
-  // fall back to the upcoming-events lookup for older cached tickets. This is
-  // what lets tickets for past events still render instead of silently
-  // disappearing.
   const event = (ticket as any).event || getEventById(ticket.eventId);
   const tiers = getTicketTiersForEvent(ticket.eventId);
-  const tier = (ticket as any).tier || tiers.find(t => t.id === ticket.tierId);
-  const venue = null as Venue | null;
+  const tier = (ticket as any).tier || tiers.find((t) => t.id === ticket.tierId);
 
   if (!event || !tier) return null;
 
@@ -242,17 +375,11 @@ function TicketCard({
         end={{ x: 1, y: 1 }}
         style={styles.ticketGradient}
       >
-        {/* Ticket Header */}
         <View style={styles.ticketHeader}>
           <View style={styles.ticketHeaderLeft}>
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: getTicketStatusColor(ticket.status) },
-              ]}
-            />
+            <View style={[styles.statusDot, { backgroundColor: isPast ? '#666' : '#00ff80' }]} />
             <Text style={[styles.statusText, isPast && styles.statusTextPast]}>
-              {getTicketStatusText(ticket.status)}
+              {isPast ? 'Past' : 'Active'}
             </Text>
           </View>
           <TouchableOpacity
@@ -266,28 +393,13 @@ function TicketCard({
           </TouchableOpacity>
         </View>
 
-        {/* Event Image */}
         {event.imageUrl && (
-          <Image
-            source={{ uri: event.imageUrl }}
-            style={styles.ticketImage}
-            contentFit="cover"
-          />
+          <Image source={{ uri: event.imageUrl }} style={styles.ticketImage} contentFit="cover" />
         )}
 
-        {/* Event Info */}
         <Text style={[styles.ticketEventTitle, isPast && styles.ticketEventTitlePast]}>
           {event.title}
         </Text>
-
-        {venue && (
-          <View style={styles.ticketInfoRow}>
-            <MapPin size={14} color={isPast ? '#555' : '#999'} />
-            <Text style={[styles.ticketInfoText, isPast && styles.ticketInfoTextPast]}>
-              {venue.name}
-            </Text>
-          </View>
-        )}
 
         <View style={styles.ticketInfoRow}>
           <Calendar size={14} color={isPast ? '#555' : '#999'} />
@@ -296,19 +408,15 @@ function TicketCard({
           </Text>
         </View>
 
-        {/* Tier Info */}
         <View style={styles.ticketTierContainer}>
           <View style={styles.ticketTierBadge}>
             <Text style={[styles.ticketTierText, isPast && styles.ticketTierTextPast]}>
               {tier.name}
             </Text>
           </View>
-          <Text style={[styles.ticketPrice, isPast && styles.ticketPricePast]}>
-            ${tier.price}
-          </Text>
+          <Text style={[styles.ticketPrice, isPast && styles.ticketPricePast]}>${tier.price}</Text>
         </View>
 
-        {/* QR Code Indicator */}
         {!isPast && ticket.status === 'ACTIVE' && (
           <View style={styles.qrIndicator}>
             <QrCode size={16} color="#00d4ff" />
@@ -320,7 +428,7 @@ function TicketCard({
   );
 }
 
-// ===== QR CODE MODAL COMPONENT =====
+// ===== QR CODE MODAL COMPONENT (legacy) =====
 
 interface QRCodeModalProps {
   visible: boolean;
@@ -341,7 +449,7 @@ function QRCodeModal({
 }: QRCodeModalProps) {
   const event = getEventById(ticket.eventId);
   const tiers = getTicketTiersForEvent(ticket.eventId);
-  const tier = tiers.find(t => t.id === ticket.tierId);
+  const tier = tiers.find((t) => t.id === ticket.tierId);
   const venue = null as Venue | null;
   const qrCode = generateTicketQR(ticket.id);
 
@@ -356,19 +464,10 @@ function QRCodeModal({
   });
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          <LinearGradient
-            colors={['#1a1a1a', '#0a0a0a']}
-            style={styles.modalContent}
-          >
-            {/* Header */}
+          <LinearGradient colors={['#1a1a1a', '#0a0a0a']} style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Your Ticket</Text>
               <TouchableOpacity onPress={onClose} style={styles.modalCloseButton}>
@@ -377,19 +476,10 @@ function QRCodeModal({
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* QR Code */}
               <View style={styles.qrContainer}>
                 <View style={styles.qrCodeBox}>
                   {ticket.status === 'ACTIVE' ? (
-                    <QRCode
-                      value={qrCode}
-                      size={240}
-                      color="#000"
-                      backgroundColor="#fff"
-                      logoSize={40}
-                      logoMargin={4}
-                      logoBackgroundColor="#fff"
-                    />
+                    <QRCode value={qrCode} size={240} color="#000" backgroundColor="#fff" />
                   ) : (
                     <View style={styles.qrInactive}>
                       {ticket.status === 'USED' ? (
@@ -405,13 +495,12 @@ function QRCodeModal({
                 </View>
               </View>
 
-              {/* Event Details */}
               <View style={styles.modalEventInfo}>
                 <Text style={styles.modalEventTitle}>{event.title}</Text>
                 {venue && (
                   <View style={styles.modalInfoRow}>
                     <MapPin size={16} color="#ff0080" />
-                    <Text style={styles.modalInfoText}>{venue.name}</Text>
+                    <Text style={styles.modalInfoText}>{(venue as any).name}</Text>
                   </View>
                 )}
                 <View style={styles.modalInfoRow}>
@@ -426,19 +515,16 @@ function QRCodeModal({
                 </View>
               </View>
 
-              {/* Tier Info */}
               <View style={styles.modalTierInfo}>
                 <Text style={styles.modalTierLabel}>Ticket Type</Text>
                 <Text style={styles.modalTierValue}>{tier.name}</Text>
               </View>
 
-              {/* Ticket ID */}
               <View style={styles.modalTicketId}>
                 <Text style={styles.modalTicketIdLabel}>Ticket ID</Text>
                 <Text style={styles.modalTicketIdValue}>{ticket.id}</Text>
               </View>
 
-              {/* Instructions */}
               {ticket.status === 'ACTIVE' && (
                 <View style={styles.instructions}>
                   <Text style={styles.instructionsTitle}>Check-In Instructions</Text>
@@ -459,153 +545,73 @@ function QRCodeModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#999',
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    position: 'relative',
-  },
-  headerGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 150,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 15,
-    color: '#ff0080',
-    fontWeight: '600',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: '#999',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 16,
-  },
-  ticketCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  ticketCardPast: {
-    opacity: 0.6,
-  },
-  ticketGradient: {
-    padding: 16,
-  },
-  ticketHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  ticketHeaderLeft: {
+  container: { flex: 1, backgroundColor: '#000' },
+  loadingContainer: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 16, fontSize: 16, color: '#999' },
+  header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 20, position: 'relative' },
+  headerGradient: { position: 'absolute', top: 0, left: 0, right: 0, height: 150 },
+  headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerTitle: { fontSize: 32, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  headerSubtitle: { fontSize: 15, color: '#ff0080', fontWeight: '600' },
+  closeButton: { padding: 8 },
+  scrollView: { flex: 1 },
+
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 70, paddingHorizontal: 40 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#fff', marginTop: 20, marginBottom: 8 },
+  emptyText: { fontSize: 15, color: '#999', textAlign: 'center', lineHeight: 22 },
+  exploreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    backgroundColor: '#ff0080',
+    paddingHorizontal: 22,
+    paddingVertical: 13,
+    borderRadius: 24,
+    marginTop: 24,
   },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#00ff80',
-    textTransform: 'uppercase',
-  },
-  statusTextPast: {
-    color: '#666',
-  },
-  shareButton: {
-    padding: 8,
-  },
-  ticketImage: {
-    width: '100%',
-    height: 120,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  ticketEventTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  ticketEventTitlePast: {
-    color: '#999',
-  },
-  ticketInfoRow: {
+  exploreButtonText: { color: '#000', fontSize: 15, fontWeight: '700' },
+
+  section: { paddingHorizontal: 20, marginBottom: 28 },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  sectionCaption: { fontSize: 13, color: '#777', marginBottom: 14 },
+
+  // Event card (My Night)
+  eventCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    backgroundColor: '#12121c',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#20202e',
+    padding: 10,
+    marginBottom: 12,
+    marginTop: 6,
   },
-  ticketInfoText: {
-    fontSize: 13,
-    color: '#999',
-    fontWeight: '500',
-  },
-  ticketInfoTextPast: {
-    color: '#555',
-  },
+  eventImage: { width: 64, height: 64, borderRadius: 10, backgroundColor: '#1a1a2e' },
+  eventImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  eventBody: { flex: 1, marginLeft: 12, marginRight: 8 },
+  eventTitle: { fontSize: 16, fontWeight: '700', color: '#fff', marginBottom: 5 },
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  eventMeta: { fontSize: 13, color: '#999', flexShrink: 1 },
+  unsaveButton: { padding: 8 },
+
+  // Ticket card (legacy)
+  ticketCard: { borderRadius: 16, overflow: 'hidden', marginBottom: 16 },
+  ticketCardPast: { opacity: 0.6 },
+  ticketGradient: { padding: 16 },
+  ticketHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  ticketHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: { fontSize: 12, fontWeight: '700', color: '#00ff80', textTransform: 'uppercase' },
+  statusTextPast: { color: '#666' },
+  shareButton: { padding: 8 },
+  ticketImage: { width: '100%', height: 120, borderRadius: 12, marginBottom: 12 },
+  ticketEventTitle: { fontSize: 18, fontWeight: '800', color: '#fff', marginBottom: 8 },
+  ticketEventTitlePast: { color: '#999' },
+  ticketInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  ticketInfoText: { fontSize: 13, color: '#999', fontWeight: '500' },
+  ticketInfoTextPast: { color: '#555' },
   ticketTierContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -615,28 +621,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#1f1f2e',
   },
-  ticketTierBadge: {
-    backgroundColor: 'rgba(0, 212, 255, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  ticketTierText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#00d4ff',
-  },
-  ticketTierTextPast: {
-    color: '#555',
-  },
-  ticketPrice: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  ticketPricePast: {
-    color: '#666',
-  },
+  ticketTierBadge: { backgroundColor: 'rgba(0, 212, 255, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  ticketTierText: { fontSize: 12, fontWeight: '700', color: '#00d4ff' },
+  ticketTierTextPast: { color: '#555' },
+  ticketPrice: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  ticketPricePast: { color: '#666' },
   qrIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -647,136 +636,31 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#1f1f2e',
   },
-  qrIndicatorText: {
-    fontSize: 12,
-    color: '#00d4ff',
-    fontWeight: '600',
-  },
-  bottomPadding: {
-    height: 40,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    flex: 1,
-    marginTop: 60,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  modalCloseButton: {
-    padding: 4,
-  },
-  qrContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  qrCodeBox: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-  },
-  qrInactive: {
-    width: 240,
-    height: 240,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1a1a1a',
-  },
-  qrInactiveText: {
-    marginTop: 16,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#666',
-  },
-  modalEventInfo: {
-    marginBottom: 24,
-  },
-  modalEventTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 12,
-  },
-  modalInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  modalInfoText: {
-    fontSize: 15,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  modalTierInfo: {
-    backgroundColor: '#1a1a2e',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  modalTierLabel: {
-    fontSize: 12,
-    color: '#999',
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  modalTierValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#00d4ff',
-  },
-  modalTicketId: {
-    backgroundColor: '#1a1a2e',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 24,
-  },
-  modalTicketIdLabel: {
-    fontSize: 12,
-    color: '#999',
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  modalTicketIdValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#fff',
-    fontFamily: 'monospace',
-  },
-  instructions: {
-    backgroundColor: 'rgba(0, 212, 255, 0.1)',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  instructionsTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#00d4ff',
-    marginBottom: 8,
-  },
-  instructionsText: {
-    fontSize: 13,
-    color: '#ccc',
-    lineHeight: 20,
-  },
+  qrIndicatorText: { fontSize: 12, color: '#00d4ff', fontWeight: '600' },
+  bottomPadding: { height: 40 },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.9)', justifyContent: 'flex-end' },
+  modalContainer: { flex: 1, marginTop: 60, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
+  modalContent: { flex: 1, padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  modalTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
+  modalCloseButton: { padding: 4 },
+  qrContainer: { alignItems: 'center', marginBottom: 32 },
+  qrCodeBox: { padding: 20, backgroundColor: '#fff', borderRadius: 16 },
+  qrInactive: { width: 240, height: 240, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1a1a1a' },
+  qrInactiveText: { marginTop: 16, fontSize: 16, fontWeight: '700', color: '#666' },
+  modalEventInfo: { marginBottom: 24 },
+  modalEventTitle: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 12 },
+  modalInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
+  modalInfoText: { fontSize: 15, color: '#fff', fontWeight: '600' },
+  modalTierInfo: { backgroundColor: '#1a1a2e', padding: 16, borderRadius: 12, marginBottom: 16 },
+  modalTierLabel: { fontSize: 12, color: '#999', fontWeight: '600', marginBottom: 6 },
+  modalTierValue: { fontSize: 18, fontWeight: '800', color: '#00d4ff' },
+  modalTicketId: { backgroundColor: '#1a1a2e', padding: 16, borderRadius: 12, marginBottom: 24 },
+  modalTicketIdLabel: { fontSize: 12, color: '#999', fontWeight: '600', marginBottom: 6 },
+  modalTicketIdValue: { fontSize: 13, fontWeight: '600', color: '#fff', fontFamily: 'monospace' },
+  instructions: { backgroundColor: 'rgba(0, 212, 255, 0.1)', padding: 16, borderRadius: 12, marginBottom: 20 },
+  instructionsTitle: { fontSize: 14, fontWeight: '700', color: '#00d4ff', marginBottom: 8 },
+  instructionsText: { fontSize: 13, color: '#ccc', lineHeight: 20 },
 });

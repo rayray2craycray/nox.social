@@ -150,6 +150,17 @@ const userSchema = new mongoose.Schema({
     },
   ],
 
+  // Saved events — the user's "My Night" list. Under the ticketing-redirect
+  // model there are no in-app tickets, so this is how a clubber plans a night:
+  // bookmark events they want to go to. Server-persisted so it syncs across
+  // devices, same as badges.
+  savedEvents: [
+    {
+      eventId: { type: String, required: true },
+      savedAt: { type: Date, default: Date.now },
+    },
+  ],
+
   // Role and permissions
   role: {
     type: String,

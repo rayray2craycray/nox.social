@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import { Award, Eye, EyeOff, Settings, CreditCard, Users, BarChart3, Edit, X, CheckCircle2, Shield, UserPlus, UserMinus, Share2, ChevronRight, DollarSign, Camera, Image as ImageIcon, Plus, MapPin, Building2, MoreVertical } from 'lucide-react-native';
+import { Award, Eye, EyeOff, Settings, CreditCard, Users, BarChart3, Edit, X, CheckCircle2, Shield, UserPlus, UserMinus, Share2, ChevronRight, DollarSign, Camera, Image as ImageIcon, Plus, MapPin, Building2, MoreVertical, Bookmark } from 'lucide-react-native';
 import { useAppState } from '@/contexts/AppStateContext';
 import UserActionMenu from '@/components/UserActionMenu';
 import { useSocial } from '@/contexts/SocialContext';
@@ -976,8 +976,8 @@ export default function ProfileScreen() {
               router.push('/tickets');
             }}
           >
-            <CreditCard size={20} color="#00d4ff" />
-            <Text style={styles.quickLinkText}>My Tickets</Text>
+            <Bookmark size={20} color="#00d4ff" />
+            <Text style={styles.quickLinkText}>My Night</Text>
             <ChevronRight size={20} color="#999" />
           </TouchableOpacity>
         </View>

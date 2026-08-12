@@ -23,8 +23,10 @@ import {
   Sparkles,
   CheckCircle,
   ExternalLink,
+  Bookmark,
 } from 'lucide-react-native';
 import { useEvents } from '@/contexts/EventsContext';
+import { useAppState } from '@/contexts/AppStateContext';
 import { useTicketPurchase } from '@/hooks/useTicketPurchase';
 import * as Haptics from 'expo-haptics';
 import { TicketTier, Performer, Venue } from '@/types';
@@ -32,6 +34,7 @@ import { TicketTier, Performer, Venue } from '@/types';
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getEventById, getTicketTiersForEvent, isLoading } = useEvents();
+  const { isEventSaved, toggleSaveEvent } = useAppState();
   const { purchase: purchaseViaStripe, isPurchasing } = useTicketPurchase();
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
 
@@ -39,6 +42,13 @@ export default function EventDetailScreen() {
   const venue = null as Venue | null;
   const performers: Performer[] = [];
   const ticketTiers = event ? getTicketTiersForEvent(event.id) : [];
+
+  const saved = event ? isEventSaved(event.id) : false;
+  const handleToggleSave = () => {
+    if (!event) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    toggleSaveEvent(event.id);
+  };
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -161,6 +171,17 @@ export default function EventDetailScreen() {
           />
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
             <X size={28} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleToggleSave}
+            accessibilityLabel={saved ? 'Remove from My Night' : 'Save to My Night'}
+          >
+            <Bookmark
+              size={24}
+              color={saved ? '#ff0080' : '#fff'}
+              fill={saved ? '#ff0080' : 'transparent'}
+            />
           </TouchableOpacity>
         </View>
 
@@ -406,6 +427,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
     width: 44,
     height: 44,
     borderRadius: 22,

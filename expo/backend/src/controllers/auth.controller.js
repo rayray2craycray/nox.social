@@ -336,6 +336,13 @@ function serializeBadges(badges) {
   }));
 }
 
+function serializeSavedEvents(savedEvents) {
+  return (savedEvents || []).map((s) => ({
+    eventId: s.eventId,
+    savedAt: s.savedAt ? new Date(s.savedAt).toISOString() : new Date().toISOString(),
+  }));
+}
+
 // Attendance-based tier thresholds. Tunable — this is the single source of
 // truth for how visit count maps to badge tier.
 const TIER_THRESHOLDS = [
@@ -401,6 +408,7 @@ const getMe = async (req, res) => {
         createdAt: user.createdAt,
         lastLoginAt: user.lastLoginAt,
         badges: serializeBadges(user.badges),
+        savedEvents: serializeSavedEvents(user.savedEvents),
       },
     });
   } catch (error) {
@@ -861,6 +869,63 @@ const removeBadge = async (req, res) => {
   }
 };
 
+/**
+ * Save an event to the user's "My Night" list.
+ * POST /api/auth/me/saved-events/:eventId  (idempotent — no duplicates)
+ */
+const saveEvent = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    const { eventId } = req.params;
+    if (!eventId) {
+      return res.status(400).json({ success: false, error: 'eventId is required' });
+    }
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    if (!user.savedEvents.some((s) => s.eventId === eventId)) {
+      user.savedEvents.push({ eventId, savedAt: new Date() });
+      await user.save();
+    }
+    return res.status(200).json({
+      success: true,
+      data: { savedEvents: serializeSavedEvents(user.savedEvents) },
+    });
+  } catch (error) {
+    console.error('Save event error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to save event' });
+  }
+};
+
+/**
+ * Remove an event from the user's "My Night" list.
+ * DELETE /api/auth/me/saved-events/:eventId
+ */
+const unsaveEvent = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Not authenticated' });
+    }
+    const { eventId } = req.params;
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    user.savedEvents = user.savedEvents.filter((s) => s.eventId !== eventId);
+    await user.save();
+    return res.status(200).json({
+      success: true,
+      data: { savedEvents: serializeSavedEvents(user.savedEvents) },
+    });
+  } catch (error) {
+    console.error('Unsave event error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to unsave event' });
+  }
+};
+
 module.exports = {
   signUp,
   signIn,
@@ -874,4 +939,6 @@ module.exports = {
   awardBadge,
   removeBadge,
   checkIn,
+  saveEvent,
+  unsaveEvent,
 };

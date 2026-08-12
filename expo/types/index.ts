@@ -148,6 +148,11 @@ export interface UserTransaction {
   checkGuid?: string;
 }
 
+export interface SavedEventRef {
+  eventId: string;
+  savedAt: string;
+}
+
 export interface UserProfile {
   id: string;
   displayName: string;
@@ -155,6 +160,8 @@ export interface UserProfile {
   bio?: string;
   totalSpend: number;
   badges: UserBadge[];
+  /** "My Night" saved events (server-persisted). */
+  savedEvents?: SavedEventRef[];
   isIncognito: boolean;
   followedPerformers: string[];
   isVenueManager?: boolean;
