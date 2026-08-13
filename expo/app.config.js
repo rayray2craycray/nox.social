@@ -54,7 +54,6 @@ module.exports = {
       jsEngine: 'jsc',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
-        NSUserTrackingUsageDescription: 'Nox uses this permission to deliver more relevant content and improve the app. Your information is never sold to third parties.',
         NSCameraUsageDescription: 'Nox needs camera access to capture venue moments and create video highlights.',
         NSMicrophoneUsageDescription: 'Nox needs microphone access to record video highlights.',
         NSPhotoLibraryUsageDescription: 'Nox needs photo library access to upload your memories.',

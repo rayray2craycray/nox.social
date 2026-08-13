@@ -115,7 +115,7 @@ Declare exactly these. **Data Used to Track You: NONE** (see the ATT flag in §1
 
 **Not collected:** Financial/Payment info (tickets redirect to the venue's seller — Nox never handles payment), Purchases (no in-app purchases), Health, Browsing/Search history, Sensitive info, Advertising data.
 
-⚠️ **Privacy-policy mismatch to fix:** `legal/PRIVACY_POLICY.md` still says payment is processed via Stripe. Under the redirect model Nox no longer takes payment in-app. Update the policy to remove/soften the Stripe payment section so the label and policy agree (Apple cross-checks).
+✅ **Privacy-policy mismatch FIXED** (commit pending): the Stripe/payment sections in `legal/PRIVACY_POLICY.md` + `legal/privacy.html` now state Nox never handles payment (tickets redirect to the venue's seller). Label and policy agree.
 
 ## 11. Screenshots (shot list)
 Required: **6.7"/6.9" iPhone** (1290×2796 or 1320×2868). 6.5" (1242×2688) optional; Apple down-scales. Provide 3–6, in this order (first 3 matter most):
@@ -148,7 +148,7 @@ Nox is a nightlife discovery + social app.
 ```
 - **Export compliance:** `ITSAppUsesNonExemptEncryption` is set to `false` in app config → no encryption docs needed; the "Missing Compliance" prompt should not appear.
 
-⚠️ **ATT / tracking rejection risk — decide before submit:** app config declares `NSUserTrackingUsageDescription` (the App Tracking Transparency prompt), but the app does not actually track users across other companies' apps/sites (no ads, no data brokers, "we don't sell your info"). Apple **rejects** apps that show the ATT prompt without real tracking. **Recommended:** remove `NSUserTrackingUsageDescription` from `app.config.js` and keep "Data Used to Track You: None." (If you later add ad attribution, re-add it and update the label.) This is a one-line change + a rebuild.
+✅ **ATT / tracking risk FIXED** (commit pending): `NSUserTrackingUsageDescription` removed from `app.config.js` (no code used ATT — it was purely dangling). Keep "Data Used to Track You: None." **Takes effect on the next build** — the ATT string is still baked into build 104; rebuild before submitting so the shipped binary has no ATT prompt.
 
 ## 13. Misc
 - **Copyright:** `© 2026 Nox Social`
@@ -160,8 +160,9 @@ Nox is a nightlife discovery + social app.
 
 ### Pre-submit checklist
 - [ ] Host `legal/` so `/privacy` + `/terms` resolve (Vercel via the included `vercel.json`)
-- [ ] Update privacy policy to drop the Stripe/payment section (redirect model)
-- [ ] Remove the unused ATT usage string (or justify it) → rebuild
-- [ ] Create + populate the reviewer demo account, fill creds in §12
+- [x] ~~Update privacy policy to drop the Stripe/payment section~~ ✅ done (md + html)
+- [x] ~~Remove the unused ATT usage string~~ ✅ done — **needs a rebuild to take effect** (build 104 still has it)
+- [x] ~~Create + populate the reviewer demo account~~ ✅ done (`appreview@nox.social`)
 - [ ] Capture the 3–6 screenshots on a 6.7"/6.9" device
 - [ ] Fill App Privacy label per §10, age questionnaire per §9
+- [ ] Cut a fresh build (105) after the ATT removal, then submit that one

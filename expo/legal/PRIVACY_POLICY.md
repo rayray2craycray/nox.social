@@ -33,7 +33,7 @@ Welcome to Nox Social ("we," "our," or "us"). We respect your privacy and are co
 - Event check-ins
 
 **Payment Information:**
-- When purchasing tickets or making in-app purchases, payment information is processed by our third-party payment processor (Stripe). We do not store your credit card details on our servers.
+- Nox does not sell tickets or process payments in the App. When you choose to buy tickets, we send you to the venue's own ticketing website or seller, where any purchase and payment happen directly between you and that third party under their terms and privacy policy. Nox does not collect, receive, or store your payment or credit card details.
 
 ### 2.2 Information Collected Automatically
 
@@ -143,11 +143,6 @@ We share data with trusted third-party service providers who help us operate our
 **Purpose:** Track and fix app crashes and bugs
 **Data Shared:** Error logs, device info, anonymized user IDs
 **Privacy Policy:** https://sentry.io/privacy/
-
-**Stripe** - Payment processing
-**Purpose:** Process ticket purchases
-**Data Shared:** Payment information (credit card, billing address)
-**Privacy Policy:** https://stripe.com/privacy
 
 **Expo/EAS** - App development and updates
 **Purpose:** Build and deploy app updates
@@ -351,7 +346,7 @@ If you do not agree with this policy, please do not use our app.
 - To make the app better
 
 **Who we share with:**
-- Service providers who help run the app (Cloudinary, MongoDB, Stripe)
+- Service providers who help run the app (Cloudinary, MongoDB)
 - Law enforcement if required by law
 - We do NOT sell your data to advertisers
 
