@@ -74,11 +74,12 @@ Found a bug or have an idea? Reach us at support@nox.social — we're just getti
 ## 7. URLs
 | Field | Value | Status |
 |---|---|---|
-| Support URL | `https://nox.social/support` (or a mailto page) | ⚠️ must resolve — see note |
-| Marketing URL (optional) | `https://nox.social` | optional |
-| Privacy Policy URL | `https://nox.social/privacy` | ⚠️ **required** — host `legal/` first |
+| Support URL | `https://nox.social` | ✅ live (landing page resolves) |
+| Marketing URL (optional) | `https://nox.social` | ✅ live |
+| Privacy Policy URL | `https://nox.social/privacy` | ✅ **live** (200, public) |
+| Terms URL | `https://nox.social/terms` | ✅ live (200, public) |
 
-**Note:** the privacy policy + terms already exist in `expo/legal/` with a `vercel.json`. Deploy that folder (Vercel) so `/privacy` and `/terms` resolve **before** submitting — Apple rejects a dead privacy URL. Support URL can be a simple page or a mailto → but Apple prefers a real page.
+**Status:** `legal/` deployed to Vercel (project `nox-legal`) and aliased to `nox.social`. `/privacy` + `/terms` resolve publicly with the corrected (redirect-model) payment language. Re-deploy after any policy edit: `cd expo/legal && vercel --prod` (needs `--token` + `VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` in non-interactive mode — see below).
 
 ## 8. Category
 - **Primary:** Social Networking
@@ -159,7 +160,7 @@ Nox is a nightlife discovery + social app.
 ---
 
 ### Pre-submit checklist
-- [ ] Host `legal/` so `/privacy` + `/terms` resolve (Vercel via the included `vercel.json`)
+- [x] ~~Host `legal/` so `/privacy` + `/terms` resolve~~ ✅ live at nox.social/privacy + /terms (Vercel `nox-legal`)
 - [x] ~~Update privacy policy to drop the Stripe/payment section~~ ✅ done (md + html)
 - [x] ~~Remove the unused ATT usage string~~ ✅ done — **needs a rebuild to take effect** (build 104 still has it)
 - [x] ~~Create + populate the reviewer demo account~~ ✅ done (`appreview@nox.social`)
