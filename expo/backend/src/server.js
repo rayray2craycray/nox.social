@@ -365,6 +365,10 @@ const server = httpServer.listen(PORT, () => {
 ║                                                            ║
 ╚════════════════════════════════════════════════════════════╝
   `);
+
+  // Surface SMTP misconfiguration at boot rather than on a user's first
+  // password reset. No-op (logs dev notice) when SMTP isn't configured.
+  require('./services/email.service').verifyTransport().catch(() => {});
 });
 
 // Graceful shutdown
