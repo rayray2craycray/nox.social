@@ -214,6 +214,9 @@ app.use('/api/v1', venuesRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/auth', authRoutes);
 
+// Public pre-launch waitlist (nox.social signup form)
+app.use('/api/waitlist', require('./routes/waitlist.routes'));
+
 // Public venue analytics dashboard (magic-link web page). Mounted outside /api
 // so the shareable URL reads /venue/<token>. Auth is the signed token itself.
 const venueDashboardRoutes = require('./routes/venue-dashboard.routes');

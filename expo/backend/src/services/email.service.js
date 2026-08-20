@@ -204,6 +204,30 @@ exports.sendWelcomeEmail = async (email, venueName) => {
 };
 
 /**
+ * Waitlist confirmation — sent when someone joins the early-access list.
+ */
+exports.sendWaitlistConfirmation = async (email, city) => {
+  const where = city ? ` in ${city}` : '';
+  const { html, text } = renderEmail({
+    title: `You're on the list 🖤`,
+    intro: `You're in line for early access to <strong>Nox</strong>${where}. We're building the best way to go out — discover where the night is, get rewarded for showing up, and plan it all in one place.`,
+    bullets: [
+      'A live map of the night, with real vibes',
+      'Check in to climb loyalty tiers at your spots',
+      'Save events and plan your night',
+    ],
+    outro: `We'll email you the moment your city goes live. Know someone who'd love this? Send them to nox.social.`,
+  });
+  return send({
+    to: email,
+    subject: `You're on the Nox list`,
+    html,
+    text,
+    devSummary: `Waitlist confirm → ${email}${where}`,
+  });
+};
+
+/**
  * Optional startup check — verifies SMTP creds are valid so misconfig shows up
  * in logs at boot instead of on the first send. No-op in dev (no SMTP).
  */
