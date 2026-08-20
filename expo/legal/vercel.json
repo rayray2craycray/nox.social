@@ -7,6 +7,10 @@
     {
       "source": "/terms",
       "destination": "/terms.html"
+    },
+    {
+      "source": "/waitlist",
+      "destination": "/"
     }
   ],
   "headers": [
