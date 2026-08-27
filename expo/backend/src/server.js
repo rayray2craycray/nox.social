@@ -75,6 +75,11 @@ const chatRoutes = require('./routes/chat.routes');
 // Initialize Express app
 const app = express();
 
+// Trust the first proxy hop (Heroku's router). Required for express-rate-limit
+// and req.ip to read the real client IP from X-Forwarded-For — without this,
+// rate limiting keys on the proxy IP and doesn't bound per-client requests.
+app.set('trust proxy', 1);
+
 // Connect to database
 connectDB();
 
