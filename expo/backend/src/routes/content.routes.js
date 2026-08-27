@@ -8,6 +8,8 @@ const router = express.Router();
 const { body, param, query, validationResult } = require('express-validator');
 const Performer = require('../models/Performer');
 const HighlightVideo = require('../models/HighlightVideo');
+const User = require('../models/User');
+const { authMiddleware } = require('../middleware/auth.middleware');
 
 // ===== VALIDATION MIDDLEWARE =====
 const validate = (req, res, next) => {
@@ -17,6 +19,72 @@ const validate = (req, res, next) => {
   }
   next();
 };
+
+// ===== TALENT ONBOARDING (authenticated; must be before /performers/:id) =====
+
+// GET /api/content/performers/me — the current user's own performer profile (or null).
+router.get('/performers/me', authMiddleware, async (req, res) => {
+  try {
+    const performer = await Performer.findOne({ userId: req.user.id });
+    return res.json({ success: true, data: performer || null });
+  } catch (error) {
+    console.error('Get my performer error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to load performer profile' });
+  }
+});
+
+// POST /api/content/performers/me — become talent (AUTO-APPROVED).
+// Idempotent: if the user already has a performer profile, it's updated.
+router.post(
+  '/performers/me',
+  authMiddleware,
+  [
+    body('stageName').isString().trim().isLength({ min: 2, max: 60 }),
+    body('name').optional().isString().trim().isLength({ max: 80 }),
+    body('bio').optional().isString().isLength({ max: 500 }),
+    body('genres').optional().isArray(),
+    body('imageUrl').optional().isString(),
+    body('homeCity').optional().isString().trim().isLength({ max: 80 }),
+    body('socialMedia').optional().isObject(),
+    validate,
+  ],
+  async (req, res) => {
+    try {
+      const { stageName, name, bio, genres, imageUrl, homeCity, socialMedia } = req.body;
+      const user = await User.findById(req.user.id).select('displayName avatarUrl profileImageUrl');
+
+      const fields = {
+        userId: req.user.id,
+        stageName,
+        name: name || user?.displayName || stageName,
+        bio: bio || undefined,
+        genres: Array.isArray(genres) ? genres.slice(0, 10) : undefined,
+        imageUrl: imageUrl || user?.avatarUrl || user?.profileImageUrl || undefined,
+        homeCity: homeCity || undefined,
+        socialMedia: socialMedia || undefined,
+        isVerified: true, // auto-approved — live immediately
+        isActive: true,
+      };
+      // Strip undefined so we don't overwrite existing values with blanks.
+      Object.keys(fields).forEach((k) => fields[k] === undefined && delete fields[k]);
+
+      const performer = await Performer.findOneAndUpdate(
+        { userId: req.user.id },
+        { $set: fields },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+      );
+
+      return res.status(200).json({ success: true, data: performer });
+    } catch (error) {
+      if (error && error.code === 11000) {
+        const existing = await Performer.findOne({ userId: req.user.id });
+        return res.status(200).json({ success: true, data: existing });
+      }
+      console.error('Become talent error:', error);
+      return res.status(500).json({ success: false, error: 'Failed to create performer profile' });
+    }
+  }
+);
 
 // ===== PERFORMERS =====
 

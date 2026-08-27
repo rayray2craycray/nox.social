@@ -1405,6 +1405,28 @@ export const analyticsApi = {
   },
 };
 
+/**
+ * Talent — performer onboarding + own-profile management. Auto-approved: a user
+ * becomes a live performer the moment they submit.
+ */
+export const talentApi = {
+  /** The current user's own performer profile, or null if they aren't talent. */
+  getMyProfile: async (): Promise<ApiResponse<any | null>> => {
+    return apiClient.get<ApiResponse<any | null>>('/content/performers/me');
+  },
+  /** Become talent / update own performer profile (auto-approved, idempotent). */
+  becomeTalent: async (data: {
+    stageName: string;
+    bio?: string;
+    genres?: string[];
+    imageUrl?: string;
+    homeCity?: string;
+    socialMedia?: Record<string, string>;
+  }): Promise<ApiResponse<any>> => {
+    return apiClient.post<ApiResponse<any>>('/content/performers/me', data);
+  },
+};
+
 // Export all APIs as a unified object
 export const fullApi = {
   growth: growthApi,
@@ -1417,4 +1439,5 @@ export const fullApi = {
   business: businessApi,
   venueManagement: venueManagementApi,
   analytics: analyticsApi,
+  talent: talentApi,
 };

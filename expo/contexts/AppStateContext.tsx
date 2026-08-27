@@ -329,10 +329,14 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
       isVenueManager: isVenue,
       managedVenues: isVenue ? ['venue-1'] : [],
     };
-    // Verified status is venue-only, earned via business registration. For a
-    // non-venue role, force it off so a plain user never shows "verified".
-    // For a venue, leave it untouched (the verification flow owns it).
-    if (!isVenue) {
+    // Verified status is role-specific and earned via that role's onboarding.
+    // VENUE: leave untouched (business-verification flow owns it).
+    // TALENT: auto-approved performer — mark verified as a PERFORMER.
+    // Anything else: force off so a plain user never shows "verified".
+    if (role === 'TALENT') {
+      update.isVerified = true;
+      update.verifiedCategory = 'PERFORMER';
+    } else if (!isVenue) {
       update.isVerified = false;
       update.verifiedCategory = undefined;
     }

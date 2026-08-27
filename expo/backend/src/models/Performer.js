@@ -41,6 +41,16 @@ const performerPostSchema = new mongoose.Schema({
 });
 
 const performerSchema = new mongoose.Schema({
+  // The user who owns/manages this performer profile. Sparse+unique so a user
+  // can hold at most one performer profile, while legacy/seeded performers
+  // without an owner are still allowed.
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true,
+    unique: true,
+    sparse: true,
+  },
   name: {
     type: String,
     required: true,

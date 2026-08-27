@@ -224,7 +224,13 @@ export default function SettingsScreen() {
                   ]}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    setUserRole('TALENT');
+                    // Talent needs a performer profile — route to onboarding.
+                    // If they're already Talent, just re-affirm the role.
+                    if (profile.role === 'TALENT') {
+                      setUserRole('TALENT');
+                    } else {
+                      router.push('/talent/onboard');
+                    }
                   }}
                 >
                   <Award size={20} color={profile.role === 'TALENT' ? '#0a0a0f' : '#fff'} />
