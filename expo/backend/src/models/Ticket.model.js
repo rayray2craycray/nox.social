@@ -82,10 +82,9 @@ const TicketSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for efficient queries
+// Indexes for efficient queries. qrCode and status are already indexed inline
+// (index: true on their fields), so only the compound index lives here.
 TicketSchema.index({ eventId: 1, userId: 1 });
-TicketSchema.index({ qrCode: 1 });
-TicketSchema.index({ status: 1 });
 
 // Generate unique QR code before validation. Must be pre('validate') not
 // pre('save') — Mongoose runs validation BEFORE save hooks, so setting a

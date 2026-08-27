@@ -23,7 +23,8 @@ const refreshTokenSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     required: true,
-    index: true,
+    // Indexed via the TTL index below (schema.index with expireAfterSeconds),
+    // so no inline `index: true` here (would duplicate).
   },
 
   createdAt: {
@@ -42,9 +43,8 @@ const refreshTokenSchema = new mongoose.Schema({
   },
 });
 
-// Indexes for performance
-refreshTokenSchema.index({ token: 1 });
-refreshTokenSchema.index({ userId: 1 });
+// token and userId are already indexed inline (unique/index: true) — not
+// re-declared here to avoid duplicate-index warnings.
 
 // TTL index - MongoDB will automatically delete documents after they expire
 refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

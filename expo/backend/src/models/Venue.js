@@ -162,7 +162,7 @@ const VenueSchema = new Schema(
 VenueSchema.index({ 'location.coordinates': '2dsphere' }); // Geospatial index
 VenueSchema.index({ name: 'text' }); // Text search index
 VenueSchema.index({ type: 1 });
-VenueSchema.index({ googlePlaceId: 1 });
+// googlePlaceId already indexed via `unique: true` on the field — not re-declared.
 VenueSchema.index({ businessProfileId: 1 });
 VenueSchema.index({ status: 1 });
 

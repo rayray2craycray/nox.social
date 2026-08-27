@@ -196,10 +196,10 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes for performance
-userSchema.index({ email: 1 });
-userSchema.index({ phoneHash: 1 });
-userSchema.index({ instagramId: 1 });
-userSchema.index({ instagramUsername: 1 });
+// Note: email/phoneHash/instagramId/instagramUsername already declare their
+// index via `unique`/`index: true` on the field, so they are NOT re-declared
+// here (doing so triggers Mongoose "duplicate schema index" warnings at boot).
+// Only the text index, which can't be declared inline, lives here.
 userSchema.index({ displayName: 'text' });
 
 // Hash password before saving and update timestamp

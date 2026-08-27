@@ -37,8 +37,7 @@ const EmailVerificationTokenSchema = new Schema(
   }
 );
 
-// Indexes
-EmailVerificationTokenSchema.index({ token: 1 }, { unique: true });
+// Indexes (token already unique-indexed inline via `unique: true`)
 EmailVerificationTokenSchema.index({ businessProfileId: 1 });
 // TTL index: automatically delete expired tokens
 EmailVerificationTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

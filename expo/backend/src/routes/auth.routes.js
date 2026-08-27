@@ -36,15 +36,30 @@ const {
 
 const router = express.Router();
 
+const rateLimit = require('express-rate-limit');
+
+// Strict limiter for credential + account-recovery endpoints. The global /api
+// limiter is 100/15min; brute-forcing a login needs a much tighter bound.
+// Successful requests don't count against the limit, so a legit user retyping a
+// password isn't punished — only repeated failures burn attempts.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 failed attempts per IP per window
+  message: { success: false, error: 'Too many attempts. Please try again in a few minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});
+
 /**
  * Email/Password Authentication Routes
  */
 
 // POST /auth/signup - Register new user
-router.post('/signup', validate(signUpSchema), signUp);
+router.post('/signup', authLimiter, validate(signUpSchema), signUp);
 
 // POST /auth/signin - Authenticate user
-router.post('/signin', validate(signInSchema), signIn);
+router.post('/signin', authLimiter, validate(signInSchema), signIn);
 
 // POST /auth/refresh - Refresh access token
 router.post('/refresh', validate(refreshTokenSchema), refresh);
@@ -120,10 +135,10 @@ router.delete('/push-token', authMiddleware, async (req, res) => {
 router.put('/profile', authMiddleware, validate(updateProfileSchema), updateProfile);
 
 // POST /auth/forgot-password - Initiate password reset
-router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
+router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), forgotPassword);
 
 // POST /auth/reset-password - Complete password reset
-router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
+router.post('/reset-password', authLimiter, validate(resetPasswordSchema), resetPassword);
 
 /**
  * Instagram OAuth Routes
