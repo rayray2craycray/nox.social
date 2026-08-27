@@ -339,19 +339,18 @@ export const [AuthProvider, useAuth] = createContextHook(() => {
 
       console.log('[Auth] Sign in response status:', response.status);
       const result = await response.json();
-      console.log('[Auth] Sign in response data:', result);
+      // Never log the raw response — it carries the access token. Log status only.
+      console.log('[Auth] Sign in ok:', result.success === true);
 
       if (!response.ok || !result.success) {
         throw new Error(result.message || result.error || 'Sign in failed');
       }
 
-      console.log('[Auth] Sign in successful, user data:', result.data);
       return result.data;
     },
     onSuccess: async (data) => {
-      console.log('[Auth] onSuccess called with data:', data);
       const { user: userData, accessToken: token, refreshToken, expiresIn } = data;
-      console.log('[Auth] Extracted - user:', userData, 'token:', token);
+      // Do not log tokens.
       const expiresAt = Date.now() + expiresIn * 1000;
 
       // Map MongoDB _id to id for frontend compatibility

@@ -17,19 +17,22 @@ const STORAGE_KEYS = {
 
 const defaultProfile: UserProfile = {
   id: '', // Will be set from auth context
-  displayName: 'Alex Rivera',
+  displayName: '',
   bio: '',
   totalSpend: 0,
   badges: [],
   savedEvents: [],
   isIncognito: false,
   followedPerformers: [],
-  isVenueManager: true,
-  managedVenues: ['venue-1'], // The Nox Room
-  role: 'VENUE',
-  isAuthenticated: true,
-  isVerified: true,
-  verifiedCategory: 'MANAGER',
+  // Regular clubber by default. Venue-manager status is granted only via the
+  // business-registration flow (setUserRole('VENUE')) — NOT the default, or
+  // every user would see venue-management UI and a "verified" badge.
+  isVenueManager: false,
+  managedVenues: [],
+  role: 'PARTYGOER',
+  isAuthenticated: false,
+  isVerified: false,
+  verifiedCategory: undefined,
   transactionHistory: [],
 };
 
@@ -319,12 +322,21 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
   }, [profile.badges]);
 
   const setUserRole = useCallback((role: UserRole) => {
-    updateProfile({
+    const isVenue = role === 'VENUE';
+    const update: Partial<UserProfile> = {
       role,
       isAuthenticated: role !== null,
-      isVenueManager: role === 'VENUE',
-      managedVenues: role === 'VENUE' ? ['venue-1'] : [],
-    });
+      isVenueManager: isVenue,
+      managedVenues: isVenue ? ['venue-1'] : [],
+    };
+    // Verified status is venue-only, earned via business registration. For a
+    // non-venue role, force it off so a plain user never shows "verified".
+    // For a venue, leave it untouched (the verification flow owns it).
+    if (!isVenue) {
+      update.isVerified = false;
+      update.verifiedCategory = undefined;
+    }
+    updateProfile(update);
   }, [updateProfile]);
 
   const updateProfileDetails = useCallback((displayName: string, bio: string) => {
