@@ -768,6 +768,13 @@ router.get('/friends', authMiddleware, friendsController.getFriends);
 // Get pending friend requests
 router.get('/friends/requests/pending', authMiddleware, friendsController.getPendingRequests);
 
+// One-tap follow / unfollow (directional follow modeled as accepted friendship)
+router.post('/follow/:userId', authMiddleware, friendsController.followUser);
+router.delete('/follow/:userId', authMiddleware, friendsController.unfollowUser);
+
+// Search users by display name (add friends). Before any /:param routes.
+router.get('/users/search', authMiddleware, friendsController.searchUsers);
+
 // ===== NEW CREWS ROUTES (authenticated) =====
 
 // Join crew (with invite code for private crews)

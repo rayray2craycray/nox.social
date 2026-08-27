@@ -83,28 +83,36 @@ export async function getUserById(userId: string): Promise<UserProfile> {
  * GET /users/search
  */
 export async function searchUsers(params: SearchUsersRequest): Promise<SearchUsersResponse> {
-  const response = await apiClient.get<SearchUsersResponse>('/users/search', {
-    params: {
-      q: params.query,
-      limit: params.limit || 20,
-      offset: params.offset || 0,
-    },
-  });
-  return response.data;
+  const response = await apiClient.get<{ success: boolean; data?: FriendProfile[]; users?: FriendProfile[] }>(
+    '/social/users/search',
+    {
+      params: {
+        q: params.query,
+        limit: params.limit || 20,
+      },
+    }
+  );
+  const users = response.data?.users || response.data?.data || [];
+  return { users } as SearchUsersResponse;
 }
 
 /**
  * Get user's friends list
- * GET /users/me/friends
+ * GET /social/friends  (the /users/* routes were removed in v1.0 prep)
+ * Backend returns { success, data: FriendProfile[], friends: FriendProfile[] }.
  */
 export async function getFriends(params?: GetFriendsRequest): Promise<GetFriendsResponse> {
-  const response = await apiClient.get<GetFriendsResponse>('/users/me/friends', {
-    params: {
-      limit: params?.limit || 50,
-      offset: params?.offset || 0,
-    },
-  });
-  return response.data;
+  const response = await apiClient.get<{ success: boolean; data?: FriendProfile[]; friends?: FriendProfile[] }>(
+    '/social/friends',
+    {
+      params: {
+        limit: params?.limit || 50,
+        offset: params?.offset || 0,
+      },
+    }
+  );
+  const friends = response.data?.friends || response.data?.data || [];
+  return { friends } as GetFriendsResponse;
 }
 
 /**
@@ -126,44 +134,46 @@ export async function getSuggestions(
 }
 
 /**
- * Send friend request
- * POST /users/:userId/follow
+ * Follow a user (one-tap; backend models it as an accepted friendship).
+ * POST /social/follow/:userId
  */
 export async function followUser(userId: string): Promise<void> {
-  await apiClient.post(`/users/${userId}/follow`);
+  await apiClient.post(`/social/follow/${userId}`);
 }
 
 /**
- * Unfollow user
- * DELETE /users/:userId/follow
+ * Unfollow user.
+ * DELETE /social/follow/:userId
  */
 export async function unfollowUser(userId: string): Promise<void> {
-  await apiClient.delete(`/users/${userId}/follow`);
+  await apiClient.delete(`/social/follow/${userId}`);
 }
 
 /**
- * Block user
- * POST /users/:userId/block
+ * Block user.
+ * POST /moderation/block  { userId }
  */
 export async function blockUser(userId: string): Promise<void> {
-  await apiClient.post(`/users/${userId}/block`);
+  await apiClient.post('/moderation/block', { userId });
 }
 
 /**
- * Unblock user
- * DELETE /users/:userId/block
+ * Unblock user.
+ * DELETE /moderation/block/:userId
  */
 export async function unblockUser(userId: string): Promise<void> {
-  await apiClient.delete(`/users/${userId}/block`);
+  await apiClient.delete(`/moderation/block/${userId}`);
 }
 
 /**
- * Get blocked users list
- * GET /users/me/blocked
+ * Get blocked users list.
+ * GET /moderation/blocked
  */
 export async function getBlockedUsers(): Promise<FriendProfile[]> {
-  const response = await apiClient.get<{ users: FriendProfile[] }>('/users/me/blocked');
-  return response.data.users;
+  const response = await apiClient.get<{ success: boolean; data?: FriendProfile[]; users?: FriendProfile[] }>(
+    '/moderation/blocked'
+  );
+  return response.data?.data || response.data?.users || [];
 }
 
 /**
@@ -171,21 +181,21 @@ export async function getBlockedUsers(): Promise<FriendProfile[]> {
  * POST /users/me/avatar
  */
 export async function uploadAvatar(imageUri: string): Promise<{ avatarUrl: string }> {
-  // Create FormData for file upload
+  // Backend: POST /upload/profile-picture, field 'image', returns { data: { url } }.
   const formData = new FormData();
-  formData.append('avatar', {
+  formData.append('image', {
     uri: imageUri,
     type: 'image/jpeg',
     name: 'avatar.jpg',
   } as any);
 
-  const response = await apiClient.post<{ avatarUrl: string }>('/users/me/avatar', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  const response = await apiClient.post<{ success: boolean; data?: { url: string } }>(
+    '/upload/profile-picture',
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  );
 
-  return response.data;
+  return { avatarUrl: response.data?.data?.url || '' };
 }
 
 /**

@@ -1,4 +1,5 @@
 const Friendship = require('../models/Friendship.model');
+const User = require('../models/User');
 
 /**
  * Send a friend request
@@ -265,9 +266,39 @@ exports.getFriends = async (req, res) => {
       ],
     }).sort({ respondedAt: -1 });
 
+    // Resolve each friendship edge to the OTHER user's public profile, so the
+    // client gets usable friends (name + avatar), not raw edge records.
+    const me = String(userId);
+    const otherIds = friendships.map((f) =>
+      String(f.requesterId) === me ? f.addresseeId : f.requesterId
+    );
+    const users = await User.find({ _id: { $in: otherIds } }).select(
+      'displayName avatarUrl profileImageUrl bio instagramUsername isIncognito'
+    );
+    const byId = new Map(users.map((u) => [String(u._id), u]));
+
+    const friends = friendships
+      .map((f) => {
+        const otherId = String(f.requesterId) === me ? f.addresseeId : f.requesterId;
+        const u = byId.get(String(otherId));
+        if (!u) return null;
+        return {
+          id: u._id.toString(),
+          friendshipId: f._id.toString(),
+          displayName: u.displayName,
+          avatarUrl: u.avatarUrl || u.profileImageUrl || null,
+          bio: u.bio || null,
+          instagramUsername: u.instagramUsername || null,
+          isIncognito: !!u.isIncognito,
+          since: f.respondedAt || f.updatedAt || f.createdAt,
+        };
+      })
+      .filter(Boolean);
+
     res.json({
       success: true,
-      data: friendships,
+      data: friends,
+      friends, // convenience alias so clients can read either data or friends
     });
   } catch (error) {
     console.error('Get friends error:', error);
@@ -276,6 +307,112 @@ exports.getFriends = async (req, res) => {
       error: 'Failed to get friends',
       message: error.message,
     });
+  }
+};
+
+/**
+ * One-tap follow — the app's social model is a directional "follow", but for
+ * v1 we model it as an immediately-ACCEPTED friendship (no pending-request UX).
+ * Idempotent: following someone you already follow is a no-op success.
+ * POST /api/social/follow/:userId
+ */
+exports.followUser = async (req, res) => {
+  try {
+    const me = req.user?.userId;
+    const target = req.params.userId;
+    if (!me) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (!target || target === me) {
+      return res.status(400).json({ success: false, error: 'Invalid user to follow' });
+    }
+    const targetUser = await User.findById(target).select('_id');
+    if (!targetUser) return res.status(404).json({ success: false, error: 'User not found' });
+
+    // Reuse an existing edge in either direction; otherwise create one.
+    let edge = await Friendship.findOne({
+      $or: [
+        { requesterId: me, addresseeId: target },
+        { requesterId: target, addresseeId: me },
+      ],
+    });
+    if (edge) {
+      if (edge.status !== 'ACCEPTED') {
+        edge.status = 'ACCEPTED';
+        edge.respondedAt = new Date();
+        await edge.save();
+      }
+    } else {
+      edge = await Friendship.create({
+        requesterId: me,
+        addresseeId: target,
+        status: 'ACCEPTED',
+        respondedAt: new Date(),
+      });
+    }
+    return res.status(200).json({ success: true, data: { friendshipId: edge._id.toString() } });
+  } catch (error) {
+    if (error && error.code === 11000) {
+      return res.status(200).json({ success: true, data: { alreadyFollowing: true } });
+    }
+    console.error('Follow user error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to follow user' });
+  }
+};
+
+/**
+ * Unfollow — removes the friendship edge in either direction.
+ * DELETE /api/social/follow/:userId
+ */
+exports.unfollowUser = async (req, res) => {
+  try {
+    const me = req.user?.userId;
+    const target = req.params.userId;
+    if (!me) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    await Friendship.deleteMany({
+      $or: [
+        { requesterId: me, addresseeId: target },
+        { requesterId: target, addresseeId: me },
+      ],
+    });
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Unfollow user error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to unfollow user' });
+  }
+};
+
+/**
+ * Search users by display name — powers "add friends".
+ * GET /api/social/users/search?q=&limit=
+ */
+exports.searchUsers = async (req, res) => {
+  try {
+    const me = req.user?.userId;
+    const q = (req.query.q || '').toString().trim();
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 50);
+    if (q.length < 2) {
+      return res.json({ success: true, data: [], users: [] });
+    }
+    // Case-insensitive prefix/substring match on displayName. Excludes self.
+    const safe = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const users = await User.find({
+      _id: { $ne: me },
+      displayName: { $regex: safe, $options: 'i' },
+    })
+      .select('displayName avatarUrl profileImageUrl bio instagramUsername isIncognito')
+      .limit(limit);
+
+    const results = users.map((u) => ({
+      id: u._id.toString(),
+      displayName: u.displayName,
+      avatarUrl: u.avatarUrl || u.profileImageUrl || null,
+      bio: u.bio || null,
+      instagramUsername: u.instagramUsername || null,
+      isIncognito: !!u.isIncognito,
+    }));
+    return res.json({ success: true, data: results, users: results });
+  } catch (error) {
+    console.error('Search users error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to search users' });
   }
 };
 
