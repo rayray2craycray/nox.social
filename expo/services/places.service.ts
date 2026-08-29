@@ -258,18 +258,20 @@ const isNightlifeVenue = (place: GooglePlace): boolean => {
   const hasNightlifeType = typesLower.some(type => ['night_club', 'bar'].includes(type));
   if (!hasNightlifeType) return false;
 
-  // Drop places Google tags as both a bar and something disqualifying.
+  // Drop places Google tags as both a bar and something disqualifying,
+  // including food-primary signals real bars don't carry.
   const excludedTypes = [
     'hospital', 'school', 'bank', 'store', 'supermarket', 'gym', 'spa',
     'hair_care', 'beauty_salon', 'lodging', 'gas_station', 'pharmacy',
+    'meal_takeaway', 'meal_delivery', 'cafe', 'bakery',
   ];
   if (typesLower.some(type => excludedTypes.includes(type))) return false;
 
   // Name denylist for the rare mislabels that still carry a bar type.
   if (/\b(country club|golf|pilates|yoga|barber|nail|fitness|crossfit)\b/.test(nameLower)) return false;
 
-  // Drop "restaurant with a bar" (primary type restaurant, not an actual club).
-  if (typesLower[0] === 'restaurant' && !typesLower.includes('night_club')) return false;
+  // National chain restaurants that carry a 'bar' type but aren't nightlife.
+  if (/\b(applebee|olive garden|chili'?s|tgi ?friday|buffalo wild wings|outback|red lobster|denny'?s|ihop|cheesecake factory|texas roadhouse|longhorn|red robin|cracker barrel|panera|chipotle|mcdonald|wendy'?s|taco bell|burger king|hooters|dave ?& ?buster)\b/.test(nameLower)) return false;
 
   return true;
 };

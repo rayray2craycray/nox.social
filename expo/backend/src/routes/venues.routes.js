@@ -254,18 +254,19 @@ router.get(
         'gym', 'spa', 'hair_care', 'beauty_salon', 'lodging', 'gas_station',
         'hospital', 'school', 'bank', 'supermarket', 'pharmacy', 'doctor',
         'church', 'place_of_worship', 'park', 'shopping_mall', 'store',
+        // Food-primary signals real bars don't carry.
+        'meal_takeaway', 'meal_delivery', 'cafe', 'bakery',
       ]);
       const NAME_DENY = /\b(country club|golf|pilates|yoga|barber|nail salon|nail bar|spa|salon|fitness|crossfit|cigar)\b/i;
+      // National chain restaurants that carry a 'bar' type but aren't nightlife.
+      const CHAIN_DENY = /\b(applebee|olive garden|chili'?s|tgi ?friday|buffalo wild wings|outback|red lobster|denny'?s|ihop|cheesecake factory|texas roadhouse|longhorn|red robin|cracker barrel|panera|chipotle|mcdonald|wendy'?s|taco bell|burger king|hooters|dave ?& ?buster)\b/i;
       const isNightlife = (place) => {
         const types = place.types || [];
         if (!types.some((t) => ALLOW_TYPES.has(t))) return false; // must be a bar/club
         if (types.some((t) => DENY_TYPES.has(t))) return false;
         if (NAME_DENY.test(place.name || '')) return false;
+        if (CHAIN_DENY.test(place.name || '')) return false;
         if (place.business_status && place.business_status !== 'OPERATIONAL') return false;
-        // Drop "restaurant with a bar" (Olive Garden, Applebee's): Google lists
-        // the primary category first, so a restaurant-primary place isn't
-        // nightlife — unless it's also an actual night_club.
-        if (types[0] === 'restaurant' && !types.includes('night_club')) return false;
         return true;
       };
 
