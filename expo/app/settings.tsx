@@ -125,7 +125,12 @@ export default function SettingsScreen() {
     );
   };
 
-  const totalPoints = profile.totalSpend;
+  // "Prestige" = total verified nights out across all venues — the attendance
+  // metric that fits the redirect model (spend is no longer tracked in-app).
+  const totalPoints = (profile.badges || []).reduce(
+    (sum, b) => sum + ((b as any).visitCount || 0),
+    0,
+  );
 
   return (
     <>
@@ -164,7 +169,7 @@ export default function SettingsScreen() {
             <Text style={styles.displayName}>{profile.displayName}</Text>
             <View style={styles.cloutBadge}>
               <Award size={16} color="#ff0080" />
-              <Text style={styles.cloutText}>{totalPoints} Clout Points</Text>
+              <Text style={styles.cloutText}>{totalPoints} Prestige</Text>
             </View>
           </View>
 
