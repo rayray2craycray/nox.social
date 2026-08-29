@@ -268,6 +268,9 @@ const isNightlifeVenue = (place: GooglePlace): boolean => {
   // Name denylist for the rare mislabels that still carry a bar type.
   if (/\b(country club|golf|pilates|yoga|barber|nail|fitness|crossfit)\b/.test(nameLower)) return false;
 
+  // Drop "restaurant with a bar" (primary type restaurant, not an actual club).
+  if (typesLower[0] === 'restaurant' && !typesLower.includes('night_club')) return false;
+
   return true;
 };
 

@@ -262,6 +262,10 @@ router.get(
         if (types.some((t) => DENY_TYPES.has(t))) return false;
         if (NAME_DENY.test(place.name || '')) return false;
         if (place.business_status && place.business_status !== 'OPERATIONAL') return false;
+        // Drop "restaurant with a bar" (Olive Garden, Applebee's): Google lists
+        // the primary category first, so a restaurant-primary place isn't
+        // nightlife — unless it's also an actual night_club.
+        if (types[0] === 'restaurant' && !types.includes('night_club')) return false;
         return true;
       };
 
