@@ -247,26 +247,28 @@ const determineVenueType = (types: string[], name: string): 'BAR' | 'CLUB' | 'LO
  * Check if place is likely a nightlife venue
  */
 const isNightlifeVenue = (place: GooglePlace): boolean => {
-  const nameLower = place.name.toLowerCase();
-  const typesLower = place.types.map(t => t.toLowerCase());
+  const nameLower = (place.name || '').toLowerCase();
+  const typesLower = (place.types || []).map(t => t.toLowerCase());
 
-  // Check if name contains nightlife keywords
-  const hasNightlifeKeyword = NIGHTLIFE_KEYWORDS.some(keyword =>
-    nameLower.includes(keyword)
-  );
+  // AUTHORITATIVE: a nightlife venue must be a Google 'bar' or 'night_club'.
+  // The name is NOT a standalone positive — that's how "Barber Lounge",
+  // "Pilates Club", and "Country Club" leaked in before (name contains a
+  // nightlife word but the place is not a bar/club). College bars, dive bars,
+  // sports bars, and pubs all carry the 'bar' type, so they're kept.
+  const hasNightlifeType = typesLower.some(type => ['night_club', 'bar'].includes(type));
+  if (!hasNightlifeType) return false;
 
-  // Check if types include nightlife types
-  const hasNightlifeType = typesLower.some(type =>
-    ['night_club', 'bar'].includes(type)
-  );
+  // Drop places Google tags as both a bar and something disqualifying.
+  const excludedTypes = [
+    'hospital', 'school', 'bank', 'store', 'supermarket', 'gym', 'spa',
+    'hair_care', 'beauty_salon', 'lodging', 'gas_station', 'pharmacy',
+  ];
+  if (typesLower.some(type => excludedTypes.includes(type))) return false;
 
-  // Exclude certain types that aren't nightlife
-  const excludedTypes = ['hospital', 'school', 'bank', 'store', 'supermarket'];
-  const hasExcludedType = typesLower.some(type =>
-    excludedTypes.includes(type)
-  );
+  // Name denylist for the rare mislabels that still carry a bar type.
+  if (/\b(country club|golf|pilates|yoga|barber|nail|fitness|crossfit)\b/.test(nameLower)) return false;
 
-  return (hasNightlifeKeyword || hasNightlifeType) && !hasExcludedType;
+  return true;
 };
 
 /**

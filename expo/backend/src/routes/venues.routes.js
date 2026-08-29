@@ -207,17 +207,30 @@ router.get(
     }
 
     const { latitude, longitude } = req.query;
-    const radius = req.query.radius ? parseInt(req.query.radius, 10) : 8000;
-    const keywords = req.query.keywords
-      ? String(req.query.keywords).split(',').map((k) => k.trim()).filter(Boolean)
-      : ['nightclub', 'bar', 'lounge', 'club'];
+    const location = `${latitude},${longitude}`;
+    const radius = req.query.radius ? parseInt(req.query.radius, 10) : 30000;
+
+    // Nightlife on Google Places = the place TYPES 'bar' and 'night_club'.
+    // We search by type (authoritative + precise) and add a few keyword passes
+    // that surface college/neighborhood spots the prominence-ranked type search
+    // crowds out. Every result is then filtered by its types array below, so
+    // keyword false-positives (barber "lounges", pilates "clubs") don't leak in.
+    const searches = req.query.keywords
+      ? String(req.query.keywords).split(',').map((k) => k.trim()).filter(Boolean).map((keyword) => ({ keyword }))
+      : [
+          { type: 'night_club' },
+          { type: 'bar' },
+          { keyword: 'college bar' },
+          { keyword: 'pub' },
+          { keyword: 'sports bar' },
+        ];
 
     try {
       const responses = await Promise.all(
-        keywords.map((keyword) =>
+        searches.map((extra) =>
           axios
             .get('https://maps.googleapis.com/maps/api/place/nearbysearch/json', {
-              params: { location: `${latitude},${longitude}`, radius, keyword, key: apiKey },
+              params: { location, radius, key: apiKey, ...extra },
               timeout: 10000,
             })
             .then((r) => r.data)
@@ -234,12 +247,31 @@ router.get(
         });
       }
 
+      // Authoritative nightlife filter. Keep only real bars/clubs and drop the
+      // junk (restaurants, barbershops, gyms/pilates, country/golf clubs, hotels).
+      const ALLOW_TYPES = new Set(['bar', 'night_club']);
+      const DENY_TYPES = new Set([
+        'gym', 'spa', 'hair_care', 'beauty_salon', 'lodging', 'gas_station',
+        'hospital', 'school', 'bank', 'supermarket', 'pharmacy', 'doctor',
+        'church', 'place_of_worship', 'park', 'shopping_mall', 'store',
+      ]);
+      const NAME_DENY = /\b(country club|golf|pilates|yoga|barber|nail salon|nail bar|spa|salon|fitness|crossfit|cigar)\b/i;
+      const isNightlife = (place) => {
+        const types = place.types || [];
+        if (!types.some((t) => ALLOW_TYPES.has(t))) return false; // must be a bar/club
+        if (types.some((t) => DENY_TYPES.has(t))) return false;
+        if (NAME_DENY.test(place.name || '')) return false;
+        if (place.business_status && place.business_status !== 'OPERATIONAL') return false;
+        return true;
+      };
+
       const merged = [];
       const seen = new Set();
       for (const r of responses) {
         if (r.status !== 'OK' || !Array.isArray(r.results)) continue;
         for (const place of r.results) {
           if (seen.has(place.place_id)) continue;
+          if (!isNightlife(place)) continue;
           seen.add(place.place_id);
           merged.push(place);
         }
