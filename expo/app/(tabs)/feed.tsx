@@ -582,11 +582,25 @@ function EmptyState({ filter, suggestedPerformers, onFollowPerformer, isFollowin
     return (
       <View style={styles.emptyContainer}>
         <MapPin size={64} color="#666" />
-        <Text style={styles.emptyTitle}>No nearby content</Text>
+        <Text style={styles.emptyTitle}>The night's just getting started</Text>
         <Text style={styles.emptyText}>
-          There are no videos from venues in your area right now.
+          No clips from venues near you yet. Find the spots that are popping tonight and be the first to check in.
         </Text>
-        <Text style={styles.emptySubtext}>Check back later for fresh content!</Text>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          style={{ marginTop: 22 }}
+          onPress={() => router.push('/(tabs)/discovery')}
+        >
+          <LinearGradient
+            colors={['#ff2d78', '#a855f7']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24, paddingVertical: 14, borderRadius: 24 }}
+          >
+            <MapPin size={18} color="#000" />
+            <Text style={{ color: '#000', fontSize: 15, fontWeight: '800' }}>Explore venues</Text>
+          </LinearGradient>
+        </TouchableOpacity>
       </View>
     );
   }

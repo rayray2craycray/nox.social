@@ -11,14 +11,15 @@ import {
   Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Hash, Lock, Send, MessageCircle, Settings, LogOut, Users, Bell, AlertTriangle, X, Zap, MessageSquare, Shield } from 'lucide-react-native';
+import { Hash, Lock, Send, MessageCircle, Settings, LogOut, Users, Bell, AlertTriangle, X, Zap, MessageSquare, Shield, Compass } from 'lucide-react-native';
+import { EmptyState } from '@/components/EmptyState';
 import { VenueServer, ServerChannel, Message, VibeEnergyLevel, WaitTimeRange, PerformerBooking } from '@/types';
 import * as Haptics from 'expo-haptics';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useSocial } from '@/contexts/SocialContext';
 import { useChat } from '@/contexts/ChatContext';
 import UserProfileModal from '@/components/UserProfileModal';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { Calendar, Clock, DollarSign } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useVenueMemberCounts } from '@/hooks/useVenueMemberCounts';
@@ -634,11 +635,14 @@ function ServerList({ onSelectServer }: ServerListProps) {
 
       <ScrollView style={styles.serverList} showsVerticalScrollIndicator={false}>
           {joinedServers.length === 0 ? (
-            <View style={styles.emptyState}>
-              <MessageCircle size={48} color="#666" />
-              <Text style={styles.emptyStateTitle}>No servers yet</Text>
-              <Text style={styles.emptyStateText}>Join a venue&apos;s lobby from the Discovery tab to start chatting!</Text>
-            </View>
+            <EmptyState
+              icon={MessageCircle}
+              title="Your venues, your people"
+              subtitle="Check in at a spot or join its community, and the group chat shows up here — see who's out and make the plan."
+              actionLabel="Explore venues"
+              actionIcon={Compass}
+              onAction={() => router.push('/(tabs)/discovery')}
+            />
           ) : (
             joinedServers.map((server) => (
             <TouchableOpacity
