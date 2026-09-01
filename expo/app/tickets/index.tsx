@@ -382,15 +382,6 @@ function TicketCard({
               {isPast ? 'Past' : 'Active'}
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.shareButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              onShare();
-            }}
-          >
-            <Share2 size={18} color={isPast ? '#666' : '#999'} />
-          </TouchableOpacity>
         </View>
 
         {event.imageUrl && (

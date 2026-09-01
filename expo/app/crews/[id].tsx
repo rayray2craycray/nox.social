@@ -256,23 +256,7 @@ export default function CrewDetailScreen() {
       {/* Action Buttons */}
       {isMember && (
         <View style={styles.actionButtons}>
-          {isOwner && (
-            <TouchableOpacity
-              style={styles.inviteButton}
-              onPress={handleInviteMember}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#00d4ff', '#a855f7']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.buttonGradient}
-              >
-                <UserPlus size={20} color="#000" />
-                <Text style={styles.buttonText}>Invite Members</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
+          {/* Invite Members hidden until the friend-selector is built. */}
           {!isOwner && (
             <TouchableOpacity
               style={styles.leaveButton}
