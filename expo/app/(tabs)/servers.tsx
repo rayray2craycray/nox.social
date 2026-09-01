@@ -22,6 +22,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { Calendar, Clock, DollarSign } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useVenueMemberCounts } from '@/hooks/useVenueMemberCounts';
+import { useUnreadCounts } from '@/hooks/useUnreadCounts';
 
 /** "1 member" / "N members" with correct pluralization. */
 function memberLabel(n: number): string {
@@ -608,6 +609,11 @@ interface ServerListProps {
 function ServerList({ onSelectServer }: ServerListProps) {
   const { joinedServers, profile } = useAppState();
   const getMemberCount = useVenueMemberCounts(joinedServers.map((s) => s.venueId));
+  const { getUnread } = useUnreadCounts(
+    joinedServers.flatMap((s) => s.channels.map((c) => c.id)),
+  );
+  const serverUnread = (channels: { id: string }[]) =>
+    channels.reduce((sum, ch) => sum + getUnread(ch.id), 0);
 
   // Debug logging
   React.useEffect(() => {
@@ -652,9 +658,11 @@ function ServerList({ onSelectServer }: ServerListProps) {
                   <Text style={styles.lastActivity}>
                     {getTimeAgo(server.lastActivity)}
                   </Text>
-                  {getTotalUnread(server.channels) > 0 && (
+                  {serverUnread(server.channels) > 0 && (
                     <View style={styles.unreadBadge}>
-                      <Text style={styles.unreadText}>{getTotalUnread(server.channels)}</Text>
+                      <Text style={styles.unreadText}>
+                        {serverUnread(server.channels) > 99 ? '99+' : serverUnread(server.channels)}
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -682,6 +690,11 @@ interface ChannelListProps {
 
 function ChannelList({ server, onSelectChannel, onBack, onOpenSettings }: ChannelListProps) {
   const getMemberCount = useVenueMemberCounts([server.venueId]);
+  const { getUnread, markRead } = useUnreadCounts(server.channels.map((c) => c.id));
+  const openChannel = (channelId: string) => {
+    markRead(channelId); // clear the badge as the channel is opened
+    onSelectChannel(channelId);
+  };
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -710,7 +723,8 @@ function ChannelList({ server, onSelectChannel, onBack, onOpenSettings }: Channe
                 <ChannelItem
                   key={channel.id}
                   channel={channel}
-                  onPress={() => onSelectChannel(channel.id)}
+                  unread={getUnread(channel.id)}
+                  onPress={() => openChannel(channel.id)}
                 />
               ))}
           </View>
@@ -723,7 +737,8 @@ function ChannelList({ server, onSelectChannel, onBack, onOpenSettings }: Channe
                 <ChannelItem
                   key={channel.id}
                   channel={channel}
-                  onPress={() => onSelectChannel(channel.id)}
+                  unread={getUnread(channel.id)}
+                  onPress={() => openChannel(channel.id)}
                 />
               ))}
           </View>
@@ -735,10 +750,11 @@ function ChannelList({ server, onSelectChannel, onBack, onOpenSettings }: Channe
 
 interface ChannelItemProps {
   channel: ServerChannel;
+  unread: number;
   onPress: () => void;
 }
 
-function ChannelItem({ channel, onPress }: ChannelItemProps) {
+function ChannelItem({ channel, unread, onPress }: ChannelItemProps) {
   return (
     <TouchableOpacity
       style={[styles.channelItem, channel.isLocked && styles.channelLocked]}
@@ -753,9 +769,9 @@ function ChannelItem({ channel, onPress }: ChannelItemProps) {
       <Text style={[styles.channelName, channel.isLocked && styles.channelNameLocked]}>
         {channel.name}
       </Text>
-      {channel.unreadCount > 0 && (
+      {unread > 0 && (
         <View style={styles.channelUnread}>
-          <Text style={styles.channelUnreadText}>{channel.unreadCount}</Text>
+          <Text style={styles.channelUnreadText}>{unread > 99 ? '99+' : unread}</Text>
         </View>
       )}
     </TouchableOpacity>
