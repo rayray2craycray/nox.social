@@ -296,12 +296,14 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
   }, [profile.followedPerformers]);
 
   const joinedServers = useMemo(() => {
-    // TODO: Fetch server/channel data from API based on badges
-    // For now, create dynamic server entries from user badges
+    // Server entries are derived from the user's venue badges. Note: memberCount
+    // here is a neutral placeholder — the REAL, live member count is fetched at
+    // display time via useVenueMemberCounts (POST /v1/venues/member-counts), so
+    // nothing renders this value. (unreadCount is likewise not yet chat-wired.)
     const allServers = profile.badges.map(badge => ({
       venueId: badge.venueId,
       venueName: badge.venueName,
-      memberCount: 1, // TODO: Get from API
+      memberCount: 0,
       lastActivity: badge.unlockedAt,
       channels: [
         {
@@ -309,7 +311,7 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
           name: 'general',
           type: 'PUBLIC_LOBBY' as const,
           isLocked: false,
-          unreadCount: 0, // TODO: Get from chat API
+          unreadCount: 0,
         }
       ]
     }));
