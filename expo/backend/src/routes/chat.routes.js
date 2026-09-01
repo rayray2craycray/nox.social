@@ -6,8 +6,16 @@ const {
   editMessage,
   deleteMessage,
   addReaction,
+  markChannelRead,
+  getUnreadCounts,
 } = require('../controllers/chat.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
+
+// Unread counts for a set of channels (authenticated)
+router.post('/unread-counts', authMiddleware, getUnreadCounts);
+
+// Mark a channel as read (authenticated)
+router.post('/channels/:channelId/read', authMiddleware, markChannelRead);
 
 // Get messages for a channel (public - rate limited)
 router.get('/channels/:channelId/messages', getChannelMessages);
