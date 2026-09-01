@@ -745,87 +745,26 @@ function VenueBottomSheet({ venue, userLocation, friendsAtVenue, groupPurchases,
       return;
     }
 
-    const hasLeftBefore = profile.transactionHistory.some(t => t.venueId === venue.id) && 
-                          !profile.badges.some(b => b.venueId === venue.id);
-    
-    if (hasLeftBefore) {
-      const canRejoin = canRejoinVenue(venue.id, venue);
-      
-      if (!canRejoin) {
-        const venueSpend = profile.transactionHistory
-          .filter(t => t.venueId === venue.id)
-          .reduce((sum, t) => sum + t.amount, 0);
-        
-        Alert.alert(
-          'Cannot Re-enter Inner Circle',
-          `Your Toast spend history (${venueSpend}) does not meet ${venue.name}'s VIP threshold (${venue.vipThreshold}). You can only re-enter if you meet the venue's active spend requirements.`,
-          [{ text: 'OK' }]
-        );
-        return;
-      }
+    // Join the venue's community: award a GUEST badge (server-persisted) and
+    // open the chat. Attendance/tiers are earned via location check-in — there
+    // is no spend gating (the venue "VIP threshold" model was pre-pivot).
+    try {
+      await awardBadge({
+        venueId: venue.id,
+        venueName: venue.name,
+        badgeType: 'GUEST',
+      });
+
+      triggerGlow({ color: 'purple', intensity: 0.6, duration: 1000 });
 
       Alert.alert(
-        'Welcome Back!',
-        venue.hasPublicLobby 
-          ? `You can re-enter ${venue.name}'s public lobby anytime.`
-          : `Your Toast spend history meets ${venue.name}'s VIP requirements. Welcome back to the Inner Circle!`,
-        [
-          {
-            text: 'Join',
-            onPress: async () => {
-              await awardBadge({
-                venueId: venue.id,
-                venueName: venue.name,
-                badgeType: 'GUEST',
-              });
-
-              triggerGlow({ color: 'purple', intensity: 0.6, duration: 1000 });
-              router.push('/(tabs)/servers');
-            }
-          },
-          { text: 'Cancel', style: 'cancel' }
-        ]
+        'Joined!',
+        `You've joined ${venue.name}'s community. Check the Servers tab to chat.`,
+        [{ text: 'OK', onPress: () => router.push('/(tabs)/servers') }],
       );
-    } else {
-      const newTransaction = {
-        id: `tx-${Date.now()}`,
-        venueId: venue.id,
-        amount: 0,
-        timestamp: new Date().toISOString(),
-      };
-
-      // Wait for profile update to complete before navigating
-      try {
-        // awardBadge persists server-side and updates state+cache; the
-        // transaction is a separate local-only profile field.
-        await awardBadge({
-          venueId: venue.id,
-          venueName: venue.name,
-          badgeType: 'GUEST',
-        });
-        await updateProfileAsync({
-          transactionHistory: [...profile.transactionHistory, newTransaction],
-        });
-
-        if (__DEV__) {
-          console.log('[Discovery] Profile update completed successfully');
-        }
-
-        triggerGlow({ color: 'purple', intensity: 0.6, duration: 1000 });
-
-        Alert.alert(
-          'Joined!',
-          `You've joined ${venue.name}'s public lobby. Check the Servers tab to chat.`,
-          [
-            { text: 'OK', onPress: () => router.push('/(tabs)/servers') },
-          ]
-        );
-      } catch (error) {
-        if (__DEV__) {
-          console.error('[Discovery] Error updating profile:', error);
-        }
-        Alert.alert('Error', 'Failed to join server. Please try again.');
-      }
+    } catch (error) {
+      if (__DEV__) console.error('[Discovery] Error joining venue:', error);
+      Alert.alert('Error', 'Failed to join. Please try again.');
     }
   };
   return (

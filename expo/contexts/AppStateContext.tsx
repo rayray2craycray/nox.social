@@ -501,20 +501,12 @@ export const [AppStateProvider, useAppState] = createContextHook(() => {
     },
   });
 
-  const canRejoinVenue = useCallback((venueId: string, venue: any) => {
-    const hadBadge = profile.badges.some(b => b.venueId === venueId);
-    if (!hadBadge) return true;
-
-    if (venue.hasPublicLobby) {
-      return true;
-    }
-
-    const venueSpend = profile.transactionHistory
-      .filter(t => t.venueId === venueId)
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    return venueSpend >= venue.vipThreshold;
-  }, [profile.badges, profile.transactionHistory]);
+  // Anyone can (re)join a venue's community — access is not spend-gated. The
+  // old VIP-spend-threshold model was pre-pivot; attendance/tiers are earned
+  // via location check-in instead.
+  const canRejoinVenue = useCallback((_venueId: string, _venue: any) => {
+    return true;
+  }, []);
 
   const canVoteVibeCheck = useCallback((venueId: string): boolean => {
     const cooldown = vibeCooldowns.find(c => c.venueId === venueId);

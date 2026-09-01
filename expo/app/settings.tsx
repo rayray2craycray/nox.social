@@ -14,7 +14,6 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   ChevronRight,
-  CreditCard,
   Bell,
   Shield,
   Globe,
@@ -25,7 +24,6 @@ import {
   Plus,
   X,
   Award,
-  DollarSign,
   Clock,
   MapPin,
   Users,
@@ -40,47 +38,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { router, Stack } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
-interface Transaction {
-  id: string;
-  venueId: string;
-  venueName: string;
-  amount: number;
-  pointsEarned: number;
-  date: string;
-  status: 'COMPLETED' | 'PENDING';
-}
-
 export default function SettingsScreen() {
   const { profile, toggleIncognito, setUserRole } = useAppState();
   const { locationSettings, updateLocationSettings, toggleGhostMode } = useSocial();
   const { signOut, deleteAccount } = useAuth();
-  const [transactions] = useState<Transaction[]>([
-    {
-      id: '1',
-      venueId: 'v1',
-      venueName: 'The Nox Room',
-      amount: 85.50,
-      pointsEarned: 86,
-      date: '2024-12-30T23:45:00Z',
-      status: 'COMPLETED',
-    },
-    {
-      id: '2',
-      venueId: 'v2',
-      venueName: 'Neon Pulse',
-      amount: 120.00,
-      pointsEarned: 120,
-      date: '2024-12-28T22:30:00Z',
-      status: 'COMPLETED',
-    },
-  ]);
 
   const [showBadges, setShowBadges] = useState(true);
   const [proximityAlerts, setProximityAlerts] = useState(true);
   const [levelUpPings, setLevelUpPings] = useState(true);
   const [performerDrops, setPerformerDrops] = useState(true);
-
-  const [isTransactionHistoryVisible, setIsTransactionHistoryVisible] = useState(false);
 
   const handleDeleteAccount = () => {
     Alert.alert(
@@ -500,57 +466,6 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Wallet & POS</Text>
-
-            <View style={styles.settingButton}>
-              <CreditCard size={22} color="#fff" />
-              <View style={styles.settingButtonInfo}>
-                <Text style={styles.settingTitle}>Payment Methods</Text>
-                <Text style={styles.settingSubtitle}>
-                  Handled securely at checkout via Apple Pay or card
-                </Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={styles.settingButton}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setIsTransactionHistoryVisible(true);
-              }}
-            >
-              <DollarSign size={22} color="#fff" />
-              <View style={styles.settingButtonInfo}>
-                <Text style={styles.settingTitle}>Transaction History</Text>
-                <Text style={styles.settingSubtitle}>
-                  View bar spends and points earned
-                </Text>
-              </View>
-              <ChevronRight size={20} color="#666" />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.settingButton}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                Alert.alert(
-                  'Loyalty Reset',
-                  'Contact venue management directly to reset your loyalty status or opt-out of tracking. This feature requires venue approval.',
-                  [{ text: 'OK' }]
-                );
-              }}
-            >
-              <Clock size={22} color="#fff" />
-              <View style={styles.settingButtonInfo}>
-                <Text style={styles.settingTitle}>Loyalty Reset</Text>
-                <Text style={styles.settingSubtitle}>
-                  Opt-out of tracking for specific venues
-                </Text>
-              </View>
-              <ChevronRight size={20} color="#666" />
-            </TouchableOpacity>
-          </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Notifications</Text>
@@ -769,70 +684,6 @@ export default function SettingsScreen() {
           <Text style={styles.version}>VibeLink v1.0.0</Text>
         </LinearGradient>
       </ScrollView>
-
-      <Modal
-        visible={isTransactionHistoryVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setIsTransactionHistoryVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Transaction History</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setIsTransactionHistoryVisible(false);
-                }}
-              >
-                <X size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              {transactions.map((transaction) => (
-                <View key={transaction.id} style={styles.transactionItem}>
-                  <LinearGradient
-                    colors={['#1a1a2e', '#15151f']}
-                    style={styles.transactionGradient}
-                  >
-                    <View style={styles.transactionLeft}>
-                      <View style={styles.transactionIcon}>
-                        <DollarSign size={20} color="#ff0080" />
-                      </View>
-                      <View>
-                        <Text style={styles.transactionVenue}>
-                          {transaction.venueName}
-                        </Text>
-                        <Text style={styles.transactionDate}>
-                          {new Date(transaction.date).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.transactionRight}>
-                      <Text style={styles.transactionAmount}>
-                        ${transaction.amount.toFixed(2)}
-                      </Text>
-                      <View style={styles.pointsBadge}>
-                        <Award size={12} color="#ff0080" />
-                        <Text style={styles.pointsText}>
-                          +{transaction.pointsEarned}
-                        </Text>
-                      </View>
-                    </View>
-                  </LinearGradient>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </>
   );
 }
