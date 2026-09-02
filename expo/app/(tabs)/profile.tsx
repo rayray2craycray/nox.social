@@ -21,6 +21,7 @@ import { useAppState } from '@/contexts/AppStateContext';
 import UserActionMenu from '@/components/UserActionMenu';
 import { useSocial } from '@/contexts/SocialContext';
 import { useGrowth } from '@/contexts/GrowthContext';
+import { FEATURE_FLAGS } from '@/constants/app';
 import { useRetention } from '@/contexts/RetentionContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVenueManagement } from '@/contexts/VenueManagementContext';
@@ -869,8 +870,8 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Group Purchases Section */}
-        {myGroupPurchases.length > 0 && (
+        {/* Group Purchases — deferred post-launch (feature-flagged off). */}
+        {FEATURE_FLAGS.GROUP_PURCHASES && myGroupPurchases.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>My Group Purchases</Text>

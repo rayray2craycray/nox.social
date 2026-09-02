@@ -27,6 +27,7 @@ import * as Location from 'expo-location';
 import UserProfileModal from '@/components/UserProfileModal';
 import { GroupPurchaseCard } from '@/components/GroupPurchaseCard';
 import { GroupPurchaseModal } from '@/components/modals/GroupPurchaseModal';
+import { FEATURE_FLAGS } from '@/constants/app';
 import VenueDetailsModal from '@/components/VenueDetailsModal';
 import { PricingBadge } from '@/components/PricingBadge';
 import { useNearbyVenues } from '@/hooks/useNearbyVenues';
@@ -441,16 +442,18 @@ export default function DiscoveryScreen() {
         onMessage={handleOpenDM}
       />
 
-      <GroupPurchaseModal
-        visible={showGroupPurchaseModal}
-        venueId={selectedVenueId || undefined}
-        venueName={selectedVenue?.name}
-        onClose={() => setShowGroupPurchaseModal(false)}
-        onCreate={(purchase) => {
-          createGroupPurchase(purchase);
-          setShowGroupPurchaseModal(false);
-        }}
-      />
+      {FEATURE_FLAGS.GROUP_PURCHASES && (
+        <GroupPurchaseModal
+          visible={showGroupPurchaseModal}
+          venueId={selectedVenueId || undefined}
+          venueName={selectedVenue?.name}
+          onClose={() => setShowGroupPurchaseModal(false)}
+          onCreate={(purchase) => {
+            createGroupPurchase(purchase);
+            setShowGroupPurchaseModal(false);
+          }}
+        />
+      )}
 
       <VenueDetailsModal
         visible={showVenueDetails}
@@ -894,45 +897,49 @@ function VenueBottomSheet({ venue, userLocation, friendsAtVenue, groupPurchases,
             </View>
           )}
 
-          {/* Group Purchases Section */}
-          {groupPurchases.length > 0 && (
-            <View style={styles.groupPurchasesSection}>
-              <View style={styles.groupPurchasesSectionHeader}>
-                <Users size={16} color="#00d4ff" />
-                <Text style={styles.groupPurchasesSectionTitle}>
-                  Group Purchase Opportunities ({groupPurchases.length})
-                </Text>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.groupPurchasesScrollContent}
-              >
-                {groupPurchases.map((gp) => (
-                  <View key={gp.id} style={styles.groupPurchaseScrollCard}>
-                    <GroupPurchaseCard
-                      groupPurchase={gp}
-                      onJoin={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        onJoinGroupPurchase(gp.id);
-                      }}
-                    />
+          {/* Group Purchases — deferred to a post-launch release (feature-flagged). */}
+          {FEATURE_FLAGS.GROUP_PURCHASES && (
+            <>
+              {groupPurchases.length > 0 && (
+                <View style={styles.groupPurchasesSection}>
+                  <View style={styles.groupPurchasesSectionHeader}>
+                    <Users size={16} color="#00d4ff" />
+                    <Text style={styles.groupPurchasesSectionTitle}>
+                      Group Purchase Opportunities ({groupPurchases.length})
+                    </Text>
                   </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.groupPurchasesScrollContent}
+                  >
+                    {groupPurchases.map((gp) => (
+                      <View key={gp.id} style={styles.groupPurchaseScrollCard}>
+                        <GroupPurchaseCard
+                          groupPurchase={gp}
+                          onJoin={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            onJoinGroupPurchase(gp.id);
+                          }}
+                        />
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
 
-          <TouchableOpacity
-            style={styles.createGroupPurchaseButton}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              onCreateGroupPurchase();
-            }}
-          >
-            <Users size={18} color="#00d4ff" />
-            <Text style={styles.createGroupPurchaseButtonText}>Create Group Purchase</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.createGroupPurchaseButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  onCreateGroupPurchase();
+                }}
+              >
+                <Users size={18} color="#00d4ff" />
+                <Text style={styles.createGroupPurchaseButtonText}>Create Group Purchase</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           {myBadge && (
             <View style={styles.tierRow}>

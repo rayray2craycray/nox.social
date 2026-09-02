@@ -228,6 +228,15 @@ export const API = {
  */
 export const PENDING_SIGNUP_ROLE_KEY = 'nox_pending_signup_role';
 
+/**
+ * Feature flags. Group purchases are deferred to a post-launch release — the
+ * backend + context wiring stay in place (dormant), but the UI is hidden for
+ * the launch build. Flip to true to re-enable.
+ */
+export const FEATURE_FLAGS = {
+  GROUP_PURCHASES: false,
+} as const;
+
 // Type exports for TypeScript
 export type UserTier = typeof USER_TIERS[keyof typeof USER_TIERS];
 export type ServerAccessLevel = typeof SERVER_ACCESS_LEVELS[keyof typeof SERVER_ACCESS_LEVELS];
