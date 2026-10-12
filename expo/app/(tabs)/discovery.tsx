@@ -51,7 +51,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 // open/closed, so the two signals don't fight.
 function venueMarkerGlyph(type?: string): string {
   switch ((type || '').toUpperCase()) {
-    case 'CLUB': return '🎧';   // nightclub / DJ
+    case 'CLUB': return '🪩';   // nightclub (disco ball reads unmistakably as club)
     case 'LOUNGE': return '🥂'; // lounge
     case 'BAR': return '🍸';    // bar
     default: return '🍸';
