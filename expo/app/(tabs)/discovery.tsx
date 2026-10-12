@@ -45,6 +45,19 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
+// Distinguish venue types on the map so clubs, bars, and lounges are legible at
+// a glance (previously every pin was an identical 🎵, so nightclubs were
+// invisible among the bars). Glyph = category; the ring color is left to signal
+// open/closed, so the two signals don't fight.
+function venueMarkerGlyph(type?: string): string {
+  switch ((type || '').toUpperCase()) {
+    case 'CLUB': return '🎧';   // nightclub / DJ
+    case 'LOUNGE': return '🥂'; // lounge
+    case 'BAR': return '🍸';    // bar
+    default: return '🍸';
+  }
+}
+
 export default function DiscoveryScreen() {
   const { selectedVenueId, setSelectedVenueId } = useDiscovery();
   const { friendLocations, getFriendsByVenue, locationSettings, toggleGhostMode, getLargestFriendCluster, getVenueSocialProofData } = useSocial();
@@ -288,7 +301,7 @@ export default function DiscoveryScreen() {
             >
               <View style={styles.markerWrapper}>
                 <View style={[styles.markerContainer, venue.isOpen && styles.markerLive]}>
-                  <Text style={styles.markerText}>🎵</Text>
+                  <Text style={styles.markerText}>{venueMarkerGlyph(venue.type)}</Text>
                   {venue.isOpen && <View style={styles.pulseDot} />}
                   {venueFriends.length > 0 && (
                     <View style={styles.friendCountBadge}>
