@@ -247,6 +247,8 @@ const determineVenueType = (types: string[], name: string): 'BAR' | 'CLUB' | 'LO
  * Check if place is likely a nightlife venue
  */
 const isNightlifeVenue = (place: GooglePlace): boolean => {
+  // Hand-curated launch venues are pre-verified — always keep them.
+  if ((place as any).curated) return true;
   const nameLower = (place.name || '').toLowerCase();
   const typesLower = (place.types || []).map(t => t.toLowerCase());
 
@@ -335,7 +337,8 @@ export const fetchNearbyVenues = async (
         return {
           id: place.place_id,
           name: place.name,
-          type: determineVenueType(place.types, place.name),
+          // Curated venues carry an authoritative nox_type; don't re-guess it.
+          type: (place as any).nox_type || determineVenueType(place.types, place.name),
           location: {
             latitude: place.geometry.location.lat,
             longitude: place.geometry.location.lng,
@@ -350,7 +353,7 @@ export const fetchNearbyVenues = async (
           isOpen: place.opening_hours?.open_now,
           photoUrl: place.photos?.[0]?.photo_reference
             ? getPhotoUrl(place.photos[0].photo_reference)
-            : undefined,
+            : ((place as any).photo_url || undefined),
           placeId: place.place_id,
         };
       })

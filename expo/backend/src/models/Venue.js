@@ -152,6 +152,14 @@ const VenueSchema = new Schema(
       enum: ['ACTIVE', 'INACTIVE', 'PENDING_APPROVAL', 'SUSPENDED'],
       default: 'ACTIVE',
     },
+    // Hand-curated launch venues (real bars/clubs for a launch market, typed
+    // correctly by us). These are the quality source for the map in launch
+    // cities — merged into /venues/nearby regardless of Google's noisy results.
+    curated: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

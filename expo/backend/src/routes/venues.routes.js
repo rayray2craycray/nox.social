@@ -272,6 +272,43 @@ router.get(
 
       const merged = [];
       const seen = new Set();
+
+      // Curated launch venues first — our hand-verified, correctly-typed bars/
+      // clubs for this area. These are the quality source; they're shaped to
+      // look like Google results (nox_type carries our authoritative type so the
+      // client doesn't re-guess, photo_url carries the stored image).
+      try {
+        const curated = await Venue.find({
+          curated: true,
+          'location.coordinates': {
+            $near: {
+              $geometry: { type: 'Point', coordinates: [parseFloat(longitude), parseFloat(latitude)] },
+              $maxDistance: radius,
+            },
+          },
+        }).limit(100);
+        for (const v of curated) {
+          const pid = v.googlePlaceId || v._id.toString();
+          if (seen.has(pid)) continue;
+          seen.add(pid);
+          const typesForClient = v.type === 'CLUB' ? ['night_club', 'bar'] : ['bar'];
+          merged.push({
+            place_id: pid,
+            name: v.name,
+            geometry: { location: { lat: v.location.latitude, lng: v.location.longitude } },
+            formatted_address: v.location.address || '',
+            vicinity: v.location.address || '',
+            types: typesForClient,
+            business_status: 'OPERATIONAL',
+            nox_type: v.type,              // authoritative type (client prefers this)
+            photo_url: v.imageUrl || undefined,
+            curated: true,
+          });
+        }
+      } catch (e) {
+        console.error('[venues/nearby] curated merge failed:', e.message);
+      }
+
       for (const r of responses) {
         if (r.status !== 'OK' || !Array.isArray(r.results)) continue;
         for (const place of r.results) {
