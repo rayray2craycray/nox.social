@@ -102,6 +102,10 @@ export default function SettingsScreen() {
     <>
       <Stack.Screen
         options={{
+          // Explicitly show this screen's own DARK header (the global default
+          // is headerShown:false). Without this the back button below never
+          // renders and the user gets trapped on Settings.
+          headerShown: true,
           title: 'Settings',
           headerStyle: { backgroundColor: '#0a0a0f' },
           headerTintColor: '#fff',
