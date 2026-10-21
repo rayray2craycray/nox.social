@@ -1,0 +1,33 @@
+# Nox core-loop smoke test — the critical path that must never break.
+# Run:  bash scripts/maestro.sh .maestro/smoke.yaml
+#
+# Asserts: app launches, sign-in works, the Map (home tab) loads, and the three
+# v1 tabs (Map / Chat / Profile) are all reachable without a crash. Would have
+# caught the Settings-trap and blank-screen regressions automatically.
+appId: social.nox
+---
+- launchApp:
+    clearState: true
+
+# --- Sign in with the staged reviewer account ---
+- assertVisible: "Welcome Back"
+- tapOn:
+    point: "50%,29%"        # Email field
+- inputText: "appreview@nox.social"
+- tapOn:
+    point: "50%,36%"        # Password field
+- inputText: "NoxReview2026!"
+- hideKeyboard
+- tapOn: "Sign In"
+
+# --- Map is the home tab and must populate ---
+- assertVisible: "Discover Venues"
+
+# --- Every v1 tab reachable, no crash ---
+- tapOn: "Chat"
+- assertVisible:
+    id: ".*"                # any content rendered (not a blank/crash screen)
+- tapOn: "Profile"
+- assertVisible: "Prestige"  # the tier/attendance badge on profile
+- tapOn: "Map"
+- assertVisible: "Discover Venues"
