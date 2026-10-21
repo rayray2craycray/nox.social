@@ -385,19 +385,19 @@ describe('API Configuration', () => {
     });
 
     it('should have block endpoint', () => {
-      expect(API_ENDPOINTS.MODERATION.BLOCKING.BLOCK).toBe('/moderation/blocking/block');
+      expect(API_ENDPOINTS.MODERATION.BLOCKING.BLOCK).toBe('/moderation/block');
     });
 
     it('should generate unblock endpoint', () => {
-      expect(API_ENDPOINTS.MODERATION.BLOCKING.UNBLOCK('u1')).toBe('/moderation/blocking/unblock/u1');
+      expect(API_ENDPOINTS.MODERATION.BLOCKING.UNBLOCK('u1')).toBe('/moderation/block/u1');
     });
 
     it('should have blocked users endpoint', () => {
-      expect(API_ENDPOINTS.MODERATION.BLOCKING.BLOCKED_USERS).toBe('/moderation/blocking/blocked');
+      expect(API_ENDPOINTS.MODERATION.BLOCKING.BLOCKED_USERS).toBe('/moderation/blocked');
     });
 
     it('should generate is-blocked endpoint', () => {
-      expect(API_ENDPOINTS.MODERATION.BLOCKING.IS_BLOCKED('u1')).toBe('/moderation/blocking/is-blocked/u1');
+      expect(API_ENDPOINTS.MODERATION.BLOCKING.IS_BLOCKED('u1')).toBe('/moderation/blocked/check/u1');
     });
 
     it('should have stats endpoint', () => {

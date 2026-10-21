@@ -26,6 +26,14 @@ jest.mock('@/contexts/EventsContext', () => ({
   }),
 }));
 
+// The event screen uses useAppState for the "save event" bookmark.
+jest.mock('@/contexts/AppStateContext', () => ({
+  useAppState: () => ({
+    isEventSaved: jest.fn(() => false),
+    toggleSaveEvent: jest.fn(),
+  }),
+}));
+
 const mockRouterBack = jest.fn();
 const mockRouterPush = jest.fn();
 
@@ -214,48 +222,13 @@ describe('EventDetailScreen', () => {
     expect(queryByText('Purchase Ticket')).toBeNull();
   });
 
-  it('selects a tier and shows the purchase button', () => {
+  // Under the ticketing-redirect model the in-app Stripe "Purchase Ticket" flow
+  // was replaced by an external "Get Tickets" button that opens the venue's
+  // seller. The old purchase/success/failure tests are removed; "Get Tickets"
+  // is covered below.
+  it('shows the Get Tickets button (external redirect model)', () => {
     const { getByText } = renderScreen();
-    fireEvent.press(getByText('General Admission'));
-    expect(getByText('Purchase Ticket')).toBeTruthy();
-  });
-
-  it('calls purchaseTicket and shows success alert on successful purchase', async () => {
-    const { getByText } = renderScreen();
-
-    // Select a tier
-    fireEvent.press(getByText('General Admission'));
-
-    // Press purchase
-    fireEvent.press(getByText('Purchase Ticket'));
-
-    await waitFor(() => {
-      expect(mockStripePurchase).toHaveBeenCalledWith('event-1', 'tier-1');
-    });
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Purchase Successful!',
-        expect.stringContaining('General Admission'),
-        expect.any(Array)
-      );
-    });
-  });
-
-  it('shows error alert when purchase fails', async () => {
-    mockStripePurchase.mockResolvedValue({ ok: false, reason: 'failed', message: 'Payment declined' });
-
-    const { getByText } = renderScreen();
-
-    fireEvent.press(getByText('General Admission'));
-    fireEvent.press(getByText('Purchase Ticket'));
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Purchase Failed',
-        'Payment declined'
-      );
-    });
+    expect(getByText('Get Tickets')).toBeTruthy();
   });
 
   it('navigates back when close button is pressed', () => {

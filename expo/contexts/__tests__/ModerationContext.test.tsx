@@ -28,10 +28,10 @@ jest.mock('@/services/config', () => ({
     MODERATION: {
       REPORTS: { CREATE: '/moderation/reports' },
       BLOCKING: {
-        BLOCK: '/moderation/blocking/block',
-        UNBLOCK: (id: string) => `/moderation/blocking/unblock/${id}`,
-        BLOCKED_USERS: '/moderation/blocking/blocked',
-        IS_BLOCKED: (id: string) => `/moderation/blocking/is-blocked/${id}`,
+        BLOCK: '/moderation/block',
+        UNBLOCK: (id: string) => `/moderation/block/${id}`,
+        BLOCKED_USERS: '/moderation/blocked',
+        IS_BLOCKED: (id: string) => `/moderation/blocked/check/${id}`,
       },
     },
   },
@@ -186,8 +186,8 @@ describe('ModerationContext', () => {
 
     await waitFor(() => {
       expect(mockApiClient.post).toHaveBeenCalledWith(
-        '/moderation/blocking/block',
-        { userIdToBlock: 'bad-user-id' }
+        '/moderation/block',
+        { userId: 'bad-user-id' }
       );
     });
   });
@@ -204,7 +204,7 @@ describe('ModerationContext', () => {
     });
 
     expect(mockApiClient.post).toHaveBeenCalledWith(
-      '/moderation/blocking/unblock/blocked-user-id',
+      '/moderation/block/blocked-user-id',
       {}
     );
 
@@ -219,7 +219,7 @@ describe('ModerationContext', () => {
   it('should check if a user is blocked', async () => {
     // The blocked users query also uses get, so we need to handle both calls
     mockApiClient.get.mockImplementation((url: string) => {
-      if (url.includes('is-blocked')) {
+      if (url.includes('/check/')) {
         return Promise.resolve({ data: { isBlocked: true } });
       }
       return Promise.resolve({ data: [] });

@@ -575,9 +575,9 @@ describe('AppStateContext', () => {
       expect(result.current.profile.badges.length).toBe(1);
     });
 
-    // 30 + 20 = 50, threshold is 100 -- should fail
-    expect(result.current.canRejoinVenue('v-vip', { hasPublicLobby: false, vipThreshold: 100 })).toBe(false);
-    // Threshold is 50 -- should pass
+    // Spend-gating was removed (redirect model): access is never spend-gated,
+    // so canRejoinVenue always returns true regardless of threshold.
+    expect(result.current.canRejoinVenue('v-vip', { hasPublicLobby: false, vipThreshold: 100 })).toBe(true);
     expect(result.current.canRejoinVenue('v-vip', { hasPublicLobby: false, vipThreshold: 50 })).toBe(true);
   });
 

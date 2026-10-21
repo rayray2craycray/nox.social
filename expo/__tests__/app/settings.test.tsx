@@ -26,7 +26,11 @@ jest.mock('@/contexts/AppStateContext', () => ({
       totalSpend: 500,
       isIncognito: false,
       role: 'PARTYGOER',
-      badges: [],
+      // Prestige = total verified visits across venue badges.
+      badges: [
+        { venueId: 'v1', venueName: 'Venue One', badgeType: 'REGULAR', visitCount: 7 },
+        { venueId: 'v2', venueName: 'Venue Two', badgeType: 'GUEST', visitCount: 3 },
+      ],
       followedPerformers: [],
       transactionHistory: [],
       isAuthenticated: true,
@@ -146,7 +150,8 @@ describe('SettingsScreen', () => {
     const { getAllByText, getByText } = renderScreen();
 
     expect(getAllByText('TestUser').length).toBeGreaterThanOrEqual(1);
-    expect(getByText('500 Clout Points')).toBeTruthy();
+    // Prestige = sum of badge visitCounts (7 + 3 = 10). Replaces "Clout Points".
+    expect(getByText('10 Prestige')).toBeTruthy();
   });
 
   it('renders all main settings sections', () => {
@@ -155,7 +160,7 @@ describe('SettingsScreen', () => {
     expect(getByText('User Type')).toBeTruthy();
     expect(getByText('Location Sharing')).toBeTruthy();
     expect(getByText('Privacy')).toBeTruthy();
-    expect(getByText('Wallet & POS')).toBeTruthy();
+    // "Wallet & POS" section removed with the dead payment/spend UI.
     expect(getByText('Notifications')).toBeTruthy();
     expect(getByText('Preferences')).toBeTruthy();
     expect(getByText('Support & Legal')).toBeTruthy();
@@ -167,8 +172,7 @@ describe('SettingsScreen', () => {
     fireEvent.press(getByText('Venue'));
     expect(mockSetUserRole).toHaveBeenCalledWith('VENUE');
 
-    fireEvent.press(getByText('Talent'));
-    expect(mockSetUserRole).toHaveBeenCalledWith('TALENT');
+    // Talent role deferred post-launch (FEATURE_FLAGS.TALENT off) — not rendered.
 
     fireEvent.press(getByText('Party-Goer'));
     expect(mockSetUserRole).toHaveBeenCalledWith('PARTYGOER');
@@ -251,16 +255,7 @@ describe('SettingsScreen', () => {
     expect(mockRouterPush).toHaveBeenCalledWith('/community-guidelines');
   });
 
-  it('opens transaction history modal', () => {
-    const { getByText } = renderScreen();
-
-    fireEvent.press(getByText('Transaction History'));
-
-    // The modal should now be visible with transaction data
-    expect(getByText('The Nox Room')).toBeTruthy();
-    expect(getByText('Neon Pulse')).toBeTruthy();
-    expect(getByText('$85.50')).toBeTruthy();
-  });
+  // Transaction History removed with the dead payment/spend UI (redirect model).
 
   it('shows location precision buttons', () => {
     const { getByText } = renderScreen();
