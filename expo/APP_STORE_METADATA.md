@@ -3,6 +3,13 @@
 Copy-paste ready. Character limits noted per field; App Store Connect enforces them.
 Bundle `social.nox` · version `1.0.0` · `ITSAppUsesNonExemptEncryption: false` (no export-compliance prompt).
 
+> **v1 launch scope (pivot):** three tabs — **Map** (discover venues),
+> **Chat** (venue communities), **Profile** (tiers + My Night). The core loop is
+> discover → check in → climb tiers → plan your night. The video **Feed** and
+> **Talent/performer** features are deferred post-launch (feature-flagged off), so
+> metadata avoids leaning on them. Build to submit: **110+** (Settings-trap fix,
+> real DMV venues, 3-tab trim). Reviewer demo: `appreview@nox.social`.
+
 ---
 
 ## 1. App Name  (max 30)
@@ -24,9 +31,10 @@ Alternates: `Discover venues & get rewarded` (30) · `Nightlife, venues & reward
 
 ## 4. Keywords  (max 100, comma-separated, no spaces = more room)
 ```
-nightlife,club,bar,venue,night out,events,tickets,party,rewards,loyalty,check in,vibe,lounge,dj,rave
+nightlife,club,bar,venue,night out,events,tickets,party,rewards,loyalty,check in,vibe,lounge,college
 ```
 99 chars. (Don't repeat the app name or subtitle words — Apple already indexes those.)
+*v1 pivot note:* dropped `dj,rave` (talent-leaning), added `college` for the DMV/UMD launch audience.
 
 ## 5. Description  (max 4000)
 ```
@@ -42,10 +50,10 @@ PLAN YOUR NIGHT
 Save the events you're into and keep them all in one place with My Night. See upcoming nights at the venues you already love, and jump straight to tickets from the venue's own seller when you're ready to go.
 
 READ THE ROOM
-Vote on the vibe — music, energy, crowd, wait time — and see real-time reads from everyone else out tonight. No more guessing which line is worth it.
+Check the vibe — music, energy, crowd, wait time — with real-time reads from everyone out tonight. No more guessing which line is worth it.
 
 YOUR PEOPLE
-See which friends are out, message the crew, and make a plan. Nightlife is better together.
+See which friends are out, join a venue's chat, and make the plan. Nightlife is better together.
 
 FOR VENUES
 Run a bar, club, or lounge? Nox gives you real-time analytics on who's walking through your door, when your crowd peaks, and how many ticket clicks we send your way — proof of the nights we help fill.
@@ -107,7 +115,7 @@ Declare exactly these. **Data Used to Track You: NONE** (see the ATT flag in §1
 | Name (display name) | Yes | Yes | No | App Functionality |
 | Other user contact (date of birth) | Yes | Yes | No | App Functionality (age gate) |
 | Precise Location | Yes | Yes | No | App Functionality (venue discovery, check-in) |
-| Photos or Videos | Yes | Yes | No | App Functionality (uploads, profile) |
+| Photos or Videos | Yes | Yes | No | App Functionality (profile picture; video upload deferred in v1) |
 | Other User Content (chat messages) | Yes | Yes | No | App Functionality |
 | User ID | Yes | Yes | No | App Functionality |
 | Contacts (optional friend-find) | Yes | Yes | No | App Functionality |
@@ -135,17 +143,19 @@ Tip: use the seeded demo venue "The Neon Room" events so screenshots look popula
 - **Contact:** your name, phone, `support@nox.social`
 - **Notes to reviewer:**
 ```
-Nox is a nightlife discovery + social app.
+Nox is a nightlife discovery + social app. v1 has three tabs: Map (discover
+venues), Chat (venue communities), and Profile (your tiers + My Night).
 
 • Location is used to show nearby venues and to verify a user is physically at a
   venue when they "check in" (check-in drives loyalty tiers). It is requested
   in-context on first use, not at launch.
 • Tickets are NOT sold in-app. "Get Tickets" opens the venue's own external
   seller in the browser — there are no in-app purchases in this version.
-• User-generated content (chat, uploaded photos/videos) is moderated: users can
-  report content and block other users in-app, and reach us at support@nox.social.
-• The demo account above is pre-populated with a venue badge and saved events so
-  you can see check-in tiers and My Night without needing to be at a venue.
+• User-generated content is the venue chat. It's moderated: users can report
+  messages and block other users in-app, and reach us at support@nox.social.
+• To sign in: use the demo account above. It's pre-populated with a REGULAR-tier
+  venue badge and saved events so you can see check-in tiers and My Night without
+  needing to be physically at a venue.
 ```
 - **Export compliance:** `ITSAppUsesNonExemptEncryption` is set to `false` in app config → no encryption docs needed; the "Missing Compliance" prompt should not appear.
 
