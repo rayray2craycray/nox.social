@@ -74,8 +74,9 @@ export async function updateProfile(data: UpdateProfileRequest): Promise<UserPro
  * GET /users/:userId
  */
 export async function getUserById(userId: string): Promise<UserProfile> {
-  const response = await apiClient.get<UserProfile>(`/users/${userId}`);
-  return response.data;
+  const response = await apiClient.get<{ success: boolean; data?: UserProfile }>(`/social/users/${userId}`);
+  // Backend wraps the profile in { success, data } — unwrap to the profile.
+  return (response.data?.data || response.data) as UserProfile;
 }
 
 /**

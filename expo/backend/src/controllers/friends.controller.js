@@ -417,6 +417,34 @@ exports.searchUsers = async (req, res) => {
 };
 
 /**
+ * Public profile for one user — powers viewing another user (chat, follower
+ * lists). GET /api/social/users/:userId
+ */
+exports.getUserById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const u = await User.findById(userId).select(
+      'displayName avatarUrl profileImageUrl bio instagramUsername isIncognito'
+    );
+    if (!u) return res.status(404).json({ success: false, error: 'User not found' });
+    return res.json({
+      success: true,
+      data: {
+        id: u._id.toString(),
+        displayName: u.displayName,
+        avatarUrl: u.avatarUrl || u.profileImageUrl || null,
+        bio: u.bio || null,
+        instagramUsername: u.instagramUsername || null,
+        isIncognito: !!u.isIncognito,
+      },
+    });
+  } catch (error) {
+    console.error('Get user by id error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to load user' });
+  }
+};
+
+/**
  * Get pending friend requests
  * GET /api/social/friends/requests/pending
  */

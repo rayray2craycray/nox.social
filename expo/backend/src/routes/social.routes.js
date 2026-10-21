@@ -772,8 +772,10 @@ router.get('/friends/requests/pending', authMiddleware, friendsController.getPen
 router.post('/follow/:userId', authMiddleware, friendsController.followUser);
 router.delete('/follow/:userId', authMiddleware, friendsController.unfollowUser);
 
-// Search users by display name (add friends). Before any /:param routes.
+// Search users by display name (add friends). MUST be before /users/:userId.
 router.get('/users/search', authMiddleware, friendsController.searchUsers);
+// Public profile for one user (chat, follower lists).
+router.get('/users/:userId', authMiddleware, friendsController.getUserById);
 
 // ===== NEW CREWS ROUTES (authenticated) =====
 
