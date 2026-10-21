@@ -14,7 +14,7 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
-    "setup": "npm install && cp .env.example .env && echo '\n✅ Setup complete! Edit .env with your credentials.'",
+    "setup": "npm install && cp .env.example .env && echo '\n\u2705 Setup complete! Edit .env with your credentials.'",
     "deploy:pm2": "pm2 start src/server.js --name nox-api --env production",
     "deploy:pm2:cluster": "pm2 start src/server.js --name nox-api --env production --instances 2 --exec-mode cluster",
     "deploy:restart": "pm2 restart nox-api",
@@ -25,7 +25,8 @@
     "backup:restore": "node scripts/restore-database.js",
     "backup:setup-cron": "./scripts/setup-backup-cron.sh",
     "backup:logs": "tail -f logs/backup-cron.log",
-    "test:email": "node test-email.js"
+    "test:email": "node test-email.js",
+    "smoke": "node scripts/smoke-api.js"
   },
   "keywords": [
     "nightlife",
