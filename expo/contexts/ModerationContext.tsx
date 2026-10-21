@@ -80,7 +80,7 @@ export function ModerationProvider({ children }: { children: ReactNode }) {
   const blockUserMutation = useMutation({
     mutationFn: async (userIdToBlock: string) => {
       const response = await apiClient.post<any>(API_ENDPOINTS.MODERATION.BLOCKING.BLOCK, {
-        userIdToBlock,
+        userId: userIdToBlock, // backend blockUser reads req.body.userId
       });
       return response.data;
     },

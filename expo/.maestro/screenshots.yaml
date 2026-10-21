@@ -1,19 +1,21 @@
 # Automated App Store screenshot capture — navigates the core loop and shoots
 # each hero screen. Replaces the manual sim screenshot session.
 # Run:  bash scripts/maestro.sh .maestro/screenshots.yaml
-# Output: ~/.maestro/tests/<run>/ (PNGs), or pass --output.
+# Best run against a RELEASE sim build (no dev chrome). Output: ~/.maestro runs.
 appId: social.nox
 ---
 - launchApp:
     clearState: true
 
-# Sign in (reviewer account is pre-populated: tier, saved events, upcoming events)
+# Age gate + sign in (reviewer account is pre-populated: tier, saved events)
+- assertVisible: "Age Verification Required"
+- tapOn: "Verify Age"
 - assertVisible: "Welcome Back"
 - tapOn:
-    point: "50%,29%"
+    id: "signin-email"
 - inputText: "appreview@nox.social"
 - tapOn:
-    point: "50%,36%"
+    id: "signin-password"
 - inputText: "NoxReview2026!"
 - hideKeyboard
 - tapOn: "Sign In"
@@ -22,22 +24,17 @@ appId: social.nox
 - assertVisible: "Discover Venues"
 - takeScreenshot: 01-map
 
-# 2 — Venue list → a venue (check-in + tier live here)
-- tapOn:
-    point: "88%,78%"        # list-view toggle (top of the FAB stack)
-- takeScreenshot: 02-venues
-
-# 3 — Profile (tiers / Prestige / My Night entry)
+# 2 — Profile (tiers / Prestige / My Night entry)
 - tapOn: "Profile"
 - assertVisible: "Prestige"
-- takeScreenshot: 03-profile
+- takeScreenshot: 02-profile
 
-# 4 — My Night (saved events + "at your venues")
+# 3 — My Night (saved events + "at your venues")
 - tapOn: "My Night"
-- takeScreenshot: 04-my-night
+- takeScreenshot: 03-my-night
 - back
 
-# 5 — Chat / venue communities
+# 4 — Chat / venue communities
 - tapOn: "Map"
 - tapOn: "Chat"
-- takeScreenshot: 05-chat
+- takeScreenshot: 04-chat

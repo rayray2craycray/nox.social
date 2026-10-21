@@ -140,11 +140,14 @@ export const API_ENDPOINTS = {
       BY_ID: (id: string) => `/moderation/reports/${id}`,
       MY_REPORTS: '/moderation/reports/my',
     },
+    // Backend serves these at /moderation/block, /moderation/blocked, etc.
+    // (moderation.routes.js) — the old /blocking/* prefix 404'd, breaking user
+    // blocking (a UGC-moderation feature Apple requires).
     BLOCKING: {
-      BLOCK: '/moderation/blocking/block',
-      UNBLOCK: (userId: string) => `/moderation/blocking/unblock/${userId}`,
-      BLOCKED_USERS: '/moderation/blocking/blocked',
-      IS_BLOCKED: (userId: string) => `/moderation/blocking/is-blocked/${userId}`,
+      BLOCK: '/moderation/block',
+      UNBLOCK: (userId: string) => `/moderation/block/${userId}`,
+      BLOCKED_USERS: '/moderation/blocked',
+      IS_BLOCKED: (userId: string) => `/moderation/blocked/check/${userId}`,
     },
     STATS: '/moderation/stats',
   },

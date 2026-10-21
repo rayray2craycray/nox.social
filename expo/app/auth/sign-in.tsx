@@ -45,6 +45,7 @@ export default function SignInScreen() {
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
               <TextInput
+                testID="signin-email"
                 style={styles.input}
                 placeholder="your@email.com"
                 placeholderTextColor="#666"
@@ -60,6 +61,7 @@ export default function SignInScreen() {
               <Text style={styles.label}>Password</Text>
               <View style={styles.passwordContainer}>
                 <TextInput
+                  testID="signin-password"
                   style={styles.passwordInput}
                   placeholder="••••••••"
                   placeholderTextColor="#666"
