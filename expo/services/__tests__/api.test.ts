@@ -132,13 +132,13 @@ jest.mock('@/services/config', () => ({
       updateProfile: '/business/profile',
     },
     venueManagement: {
-      roles: '/venue-management/roles',
-      detail: (id: string) => `/venue-management/${id}`,
-      updateInfo: (id: string) => `/venue-management/${id}/info`,
-      updateDisplay: (id: string) => `/venue-management/${id}/display`,
-      assignRole: (id: string) => `/venue-management/${id}/roles`,
-      removeRole: (id: string, rid: string) => `/venue-management/${id}/roles/${rid}`,
-      staff: (id: string) => `/venue-management/${id}/staff`,
+      roles: '/venues/roles',
+      detail: (id: string) => `/venues/${id}`,
+      updateInfo: (id: string) => `/venues/${id}/info`,
+      updateDisplay: (id: string) => `/venues/${id}/display`,
+      assignRole: (id: string) => `/venues/${id}/roles`,
+      removeRole: (id: string, rid: string) => `/venues/${id}/roles/${rid}`,
+      staff: (id: string) => `/venues/${id}/staff`,
     },
   },
 }));
@@ -1286,47 +1286,47 @@ describe('API Groups', () => {
     it('should get user roles', async () => {
       await venueManagementApi.getUserRoles();
       const [url] = (global.fetch as jest.Mock).mock.calls[0];
-      expect(url).toContain('venue-management/roles');
+      expect(url).toContain('venues/roles');
     });
 
     it('should get venue details', async () => {
       await venueManagementApi.getVenueDetails('v1');
       const [url] = (global.fetch as jest.Mock).mock.calls[0];
-      expect(url).toContain('venue-management/v1');
+      expect(url).toContain('venues/v1');
     });
 
     it('should update venue info', async () => {
       await venueManagementApi.updateVenueInfo('v1', { name: 'Updated Club' });
       const [url, config] = (global.fetch as jest.Mock).mock.calls[0];
-      expect(url).toContain('venue-management/v1/info');
+      expect(url).toContain('venues/v1/info');
       expect(config.method).toBe('PATCH');
     });
 
     it('should update venue display', async () => {
       await venueManagementApi.updateVenueDisplay('v1', { description: 'New desc' });
       const [url, config] = (global.fetch as jest.Mock).mock.calls[0];
-      expect(url).toContain('venue-management/v1/display');
+      expect(url).toContain('venues/v1/display');
       expect(config.method).toBe('PATCH');
     });
 
     it('should assign a role', async () => {
       await venueManagementApi.assignRole('v1', { userId: 'u1', role: 'manager' });
       const [url, config] = (global.fetch as jest.Mock).mock.calls[0];
-      expect(url).toContain('venue-management/v1/roles');
+      expect(url).toContain('venues/v1/roles');
       expect(config.method).toBe('POST');
     });
 
     it('should remove a role', async () => {
       await venueManagementApi.removeRole('v1', 'role-1');
       const [url, config] = (global.fetch as jest.Mock).mock.calls[0];
-      expect(url).toContain('venue-management/v1/roles/role-1');
+      expect(url).toContain('venues/v1/roles/role-1');
       expect(config.method).toBe('DELETE');
     });
 
     it('should get venue staff', async () => {
       await venueManagementApi.getVenueStaff('v1');
       const [url] = (global.fetch as jest.Mock).mock.calls[0];
-      expect(url).toContain('venue-management/v1/staff');
+      expect(url).toContain('venues/v1/staff');
     });
   });
 

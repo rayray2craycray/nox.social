@@ -799,33 +799,33 @@ describe('API Configuration', () => {
 
   describe('venueManagement endpoints', () => {
     it('should have roles endpoint', () => {
-      expect(API_ENDPOINTS.venueManagement.roles).toBe('/venue-management/roles');
+      expect(API_ENDPOINTS.venueManagement.roles).toBe('/venues/roles');
     });
 
     it('should generate detail endpoint', () => {
-      expect(API_ENDPOINTS.venueManagement.detail('v1')).toBe('/venue-management/v1');
+      expect(API_ENDPOINTS.venueManagement.detail('v1')).toBe('/venues/v1');
     });
 
     it('should generate updateInfo endpoint', () => {
-      expect(API_ENDPOINTS.venueManagement.updateInfo('v1')).toBe('/venue-management/v1/info');
+      expect(API_ENDPOINTS.venueManagement.updateInfo('v1')).toBe('/venues/v1/info');
     });
 
     it('should generate updateDisplay endpoint', () => {
-      expect(API_ENDPOINTS.venueManagement.updateDisplay('v1')).toBe('/venue-management/v1/display');
+      expect(API_ENDPOINTS.venueManagement.updateDisplay('v1')).toBe('/venues/v1/display');
     });
 
     it('should generate assignRole endpoint', () => {
-      expect(API_ENDPOINTS.venueManagement.assignRole('v1')).toBe('/venue-management/v1/roles');
+      expect(API_ENDPOINTS.venueManagement.assignRole('v1')).toBe('/venues/v1/roles');
     });
 
     it('should generate removeRole endpoint', () => {
       expect(API_ENDPOINTS.venueManagement.removeRole('v1', 'r1')).toBe(
-        '/venue-management/v1/roles/r1'
+        '/venues/v1/roles/r1'
       );
     });
 
     it('should generate staff endpoint', () => {
-      expect(API_ENDPOINTS.venueManagement.staff('v1')).toBe('/venue-management/v1/staff');
+      expect(API_ENDPOINTS.venueManagement.staff('v1')).toBe('/venues/v1/staff');
     });
   });
 });

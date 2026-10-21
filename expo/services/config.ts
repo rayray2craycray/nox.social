@@ -329,13 +329,16 @@ export const API_ENDPOINTS = {
   },
 
   // Venue Management
+  // Backend mounts these at /api/venues (venue.routes.js), NOT /venue-management
+  // — the old prefix 404'd (the "Failed to fetch venue roles" error). Discovery
+  // venues live under /v1/venues, so there's no collision.
   venueManagement: {
-    roles: '/venue-management/roles',
-    detail: (venueId: string) => `/venue-management/${venueId}`,
-    updateInfo: (venueId: string) => `/venue-management/${venueId}/info`,
-    updateDisplay: (venueId: string) => `/venue-management/${venueId}/display`,
-    assignRole: (venueId: string) => `/venue-management/${venueId}/roles`,
-    removeRole: (venueId: string, roleId: string) => `/venue-management/${venueId}/roles/${roleId}`,
-    staff: (venueId: string) => `/venue-management/${venueId}/staff`,
+    roles: '/venues/roles',
+    detail: (venueId: string) => `/venues/${venueId}`,
+    updateInfo: (venueId: string) => `/venues/${venueId}/info`,
+    updateDisplay: (venueId: string) => `/venues/${venueId}/display`,
+    assignRole: (venueId: string) => `/venues/${venueId}/roles`,
+    removeRole: (venueId: string, roleId: string) => `/venues/${venueId}/roles/${roleId}`,
+    staff: (venueId: string) => `/venues/${venueId}/staff`,
   },
 };
