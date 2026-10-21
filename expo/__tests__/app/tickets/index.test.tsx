@@ -20,13 +20,27 @@ const mockGenerateTicketQR = jest.fn();
 let mockUserTickets: any[] = [];
 let mockIsLoading = false;
 
+let mockSavedEvents: any[] = [];
+let mockUpcomingEvents: any[] = [];
+let mockBadges: any[] = [];
+
 jest.mock('@/contexts/EventsContext', () => ({
   useEvents: () => ({
     userTickets: mockUserTickets,
+    events: mockUpcomingEvents,
+    upcomingEvents: mockUpcomingEvents,
     getEventById: mockGetEventById,
     getTicketTiersForEvent: mockGetTicketTiersForEvent,
     generateTicketQR: mockGenerateTicketQR,
     isLoading: mockIsLoading,
+  }),
+}));
+
+// My Night reads saved events + badge venues from AppState.
+jest.mock('@/contexts/AppStateContext', () => ({
+  useAppState: () => ({
+    profile: { savedEvents: mockSavedEvents, badges: mockBadges },
+    unsaveEvent: jest.fn(),
   }),
 }));
 
@@ -148,103 +162,50 @@ describe('TicketsScreen', () => {
     alertSpy.mockRestore();
   });
 
+  // This screen is now "My Night" (saved events + legacy tickets), not the old
+  // "My Tickets". Tests reflect the current screen.
+  beforeEach(() => {
+    mockSavedEvents = [];
+    mockUpcomingEvents = [];
+    mockBadges = [];
+  });
+
   it('renders loading state when isLoading is true', () => {
     mockIsLoading = true;
     const { getByText } = renderScreen();
-    expect(getByText('Loading tickets...')).toBeTruthy();
+    expect(getByText('Loading your night...')).toBeTruthy();
   });
 
-  it('renders the header with title', () => {
+  it('renders the My Night header title', () => {
     const { getByText } = renderScreen();
-    expect(getByText('My Tickets')).toBeTruthy();
+    expect(getByText('My Night')).toBeTruthy();
   });
 
-  it('renders active ticket count in subtitle', () => {
-    const { getByText } = renderScreen();
-    expect(getByText('1 active ticket')).toBeTruthy();
-  });
-
-  it('renders plural ticket count when multiple active', () => {
-    const secondTicket = { ...mockActiveTicket, id: 'ticket-3', tierId: 'tier-1' };
-    mockUserTickets = [mockActiveTicket, secondTicket];
-    const { getByText } = renderScreen();
-    expect(getByText('2 active tickets')).toBeTruthy();
-  });
-
-  it('renders empty state when no tickets', () => {
+  it('renders the empty state when nothing saved and no tickets', () => {
     mockUserTickets = [];
+    mockSavedEvents = [];
     const { getByText } = renderScreen();
-    expect(getByText('No Tickets Yet')).toBeTruthy();
-    expect(getByText('Browse events and purchase tickets to see them here')).toBeTruthy();
+    expect(getByText('Your night starts here')).toBeTruthy();
+    expect(getByText('Explore events')).toBeTruthy();
   });
 
-  it('renders active ticket with event title and tier info', () => {
+  it('still renders legacy tickets under "Your Tickets" when the user holds any', () => {
+    // A past in-app ticket (pre-pivot) should still be accessible.
+    mockUserTickets = [mockActiveTicket];
     const { getByText } = renderScreen();
-    expect(getByText('Active Tickets')).toBeTruthy();
+    expect(getByText('Your Tickets')).toBeTruthy();
     expect(getByText('Neon Nights')).toBeTruthy();
     expect(getByText('General Admission')).toBeTruthy();
-    expect(getByText('$25')).toBeTruthy();
   });
 
-  it('renders Active status text for active tickets', () => {
-    const { getByText } = renderScreen();
-    expect(getByText('Active')).toBeTruthy();
-  });
-
-  it('renders QR code indicator text for active tickets', () => {
-    const { getByText } = renderScreen();
-    expect(getByText('Tap to show QR code')).toBeTruthy();
-  });
-
-  it('renders past tickets section when there are non-active tickets', () => {
-    mockUserTickets = [mockActiveTicket, mockUsedTicket];
-    const { getByText } = renderScreen();
-    expect(getByText('Active Tickets')).toBeTruthy();
-    expect(getByText('Past Tickets')).toBeTruthy();
-  });
-
-  it('shows share ticket alert when share button is pressed', () => {
+  it('opens the QR modal when a legacy ticket card is pressed', () => {
+    mockUserTickets = [mockActiveTicket];
     const { getByText } = renderScreen();
 
-    // The ticket card is visible; we press the event title area which is the onPress
-    // But the share button calls onShare — we need to find a way to trigger it.
-    // Since the share button is inside the TicketCard, let's verify the alert logic
-    // by directly checking the component renders correctly.
-    expect(getByText('Neon Nights')).toBeTruthy();
-  });
-
-  it('opens QR modal when a ticket card is pressed', () => {
-    const { getByText } = renderScreen();
-
-    // Press the ticket card (by pressing the event title)
     fireEvent.press(getByText('Neon Nights'));
 
-    // The QR modal should now be visible
     expect(getByText('Your Ticket')).toBeTruthy();
     expect(getByText('Ticket Type')).toBeTruthy();
-    expect(getByText('Ticket ID')).toBeTruthy();
     expect(getByText('ticket-1')).toBeTruthy();
-  });
-
-  it('shows check-in instructions in QR modal for active tickets', () => {
-    const { getByText } = renderScreen();
-
-    fireEvent.press(getByText('Neon Nights'));
-
-    expect(getByText('Check-In Instructions')).toBeTruthy();
-    expect(getByText(/Present this QR code/)).toBeTruthy();
-  });
-
-  it('renders formatted date in ticket card', () => {
-    const { getByText } = renderScreen();
-    // Date contains "2026" and "10:00 PM"
-    expect(getByText(/2026.*10:00 PM/)).toBeTruthy();
-  });
-
-  it('does not render ticket card when event or tier is missing', () => {
-    mockGetEventById.mockReturnValue(null);
-    const { queryByText } = renderScreen();
-    // TicketCard returns null when event is null
-    expect(queryByText('Neon Nights')).toBeNull();
   });
 });

@@ -349,7 +349,7 @@ describe('ProfileScreen', () => {
     expect(getByText('Quick Links')).toBeTruthy();
     expect(getByText('View Challenges')).toBeTruthy();
     expect(getByText('Event Calendar')).toBeTruthy();
-    expect(getByText('My Tickets')).toBeTruthy();
+    expect(getByText('My Night')).toBeTruthy();
   });
 
   it('navigates to challenges when View Challenges is pressed', () => {
@@ -366,10 +366,10 @@ describe('ProfileScreen', () => {
     expect(router.push).toHaveBeenCalledWith('/calendar');
   });
 
-  it('navigates to tickets when My Tickets is pressed', () => {
+  it('navigates to tickets when My Night is pressed', () => {
     const { router } = require('expo-router');
     const { getByText } = renderScreen();
-    fireEvent.press(getByText('My Tickets'));
+    fireEvent.press(getByText('My Night'));
     expect(router.push).toHaveBeenCalledWith('/tickets');
   });
 

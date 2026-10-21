@@ -233,8 +233,8 @@ describe('FeedScreen', () => {
     };
 
     const { getByText } = renderScreen();
-    expect(getByText('No nearby content')).toBeTruthy();
-    expect(getByText(/no videos from venues/i)).toBeTruthy();
+    expect(getByText("The night's just getting started")).toBeTruthy();
+    expect(getByText(/No clips from venues near you/i)).toBeTruthy();
   });
 
   it('shows empty state with FOLLOWING message and suggested performers', () => {
@@ -350,7 +350,7 @@ describe('FeedScreen', () => {
     };
 
     const { getByText } = renderScreen();
-    expect(getByText('Check back later for fresh content!')).toBeTruthy();
+    expect(getByText(/No clips from venues near you/)).toBeTruthy();
   });
 
   it('renders empty FOLLOWING state without suggestions when none available', () => {

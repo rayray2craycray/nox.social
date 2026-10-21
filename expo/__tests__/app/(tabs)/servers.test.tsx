@@ -64,6 +64,20 @@ const mockJoinedServers = [
   },
 ];
 
+// Member counts + unread counts now come from live hooks (not the server
+// objects). Mock them to return the values these tests expect.
+jest.mock('@/hooks/useVenueMemberCounts', () => ({
+  useVenueMemberCounts: () => (venueId: string) =>
+    ({ 'venue-1': 128, 'venue-2': 64 } as Record<string, number>)[venueId] ?? 0,
+}));
+jest.mock('@/hooks/useUnreadCounts', () => ({
+  useUnreadCounts: () => ({
+    getUnread: (channelId: string) =>
+      ({ 'ch-1': 3 } as Record<string, number>)[channelId] ?? 0,
+    markRead: jest.fn(),
+  }),
+}));
+
 jest.mock('@/contexts/AppStateContext', () => ({
   useAppState: () => ({
     profile: {
@@ -227,7 +241,7 @@ describe('ServersScreen', () => {
     const { getByText } = renderScreen();
     fireEvent.press(getByText('The Midnight Lounge'));
     // Should be on channel list now
-    expect(getByText('128 members online')).toBeTruthy();
+    expect(getByText('128 members')).toBeTruthy();
     // Press back
     fireEvent.press(getByText('← Back'));
     // Should be back on server list
@@ -269,7 +283,7 @@ describe('ServersScreen', () => {
   it('renders settings button in channel list view', () => {
     const { getByText } = renderScreen();
     fireEvent.press(getByText('The Midnight Lounge'));
-    expect(getByText('128 members online')).toBeTruthy();
+    expect(getByText('128 members')).toBeTruthy();
   });
 
   it('navigates to chat view when an unlocked channel is selected', () => {
@@ -301,7 +315,7 @@ describe('ServersScreen', () => {
   it('navigates to second server channels correctly', () => {
     const { getByText } = renderScreen();
     fireEvent.press(getByText('Neon Pulse'));
-    expect(getByText('64 members online')).toBeTruthy();
+    expect(getByText('64 members')).toBeTruthy();
     expect(getByText('general')).toBeTruthy();
   });
 
