@@ -33,6 +33,7 @@ import {
   ArrowLeft,
 } from 'lucide-react-native';
 import { useAppState } from '@/contexts/AppStateContext';
+import { FEATURE_FLAGS } from '@/constants/app';
 import { useSocial } from '@/contexts/SocialContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { router, Stack } from 'expo-router';
@@ -192,32 +193,33 @@ export default function SettingsScreen() {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    styles.userTypeButton,
-                    profile.role === 'TALENT' && styles.userTypeButtonActive,
-                  ]}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    // Talent needs a performer profile — route to onboarding.
-                    // If they're already Talent, just re-affirm the role.
-                    if (profile.role === 'TALENT') {
-                      setUserRole('TALENT');
-                    } else {
-                      router.push('/talent/onboard');
-                    }
-                  }}
-                >
-                  <Award size={20} color={profile.role === 'TALENT' ? '#0a0a0f' : '#fff'} />
-                  <Text
+                {/* Talent is deferred post-launch (feature-flagged). */}
+                {FEATURE_FLAGS.TALENT && (
+                  <TouchableOpacity
                     style={[
-                      styles.userTypeButtonText,
-                      profile.role === 'TALENT' && styles.userTypeButtonTextActive,
+                      styles.userTypeButton,
+                      profile.role === 'TALENT' && styles.userTypeButtonActive,
                     ]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      if (profile.role === 'TALENT') {
+                        setUserRole('TALENT');
+                      } else {
+                        router.push('/talent/onboard');
+                      }
+                    }}
                   >
-                    Talent
-                  </Text>
-                </TouchableOpacity>
+                    <Award size={20} color={profile.role === 'TALENT' ? '#0a0a0f' : '#fff'} />
+                    <Text
+                      style={[
+                        styles.userTypeButtonText,
+                        profile.role === 'TALENT' && styles.userTypeButtonTextActive,
+                      ]}
+                    >
+                      Talent
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -526,31 +528,34 @@ export default function SettingsScreen() {
               </LinearGradient>
             </View>
 
-            <View style={styles.settingCard}>
-              <LinearGradient
-                colors={['#1a1a2e', '#15151f']}
-                style={styles.settingGradient}
-              >
-                <View style={styles.settingLeft}>
-                  <Users size={22} color={performerDrops ? '#ff0080' : '#666'} />
-                  <View style={styles.settingInfo}>
-                    <Text style={styles.settingTitle}>Performer Drops</Text>
-                    <Text style={styles.settingSubtitle}>
-                      Notify when followed DJs post promos
-                    </Text>
+            {/* Performer Drops — tied to the deferred talent feature. */}
+            {FEATURE_FLAGS.TALENT && (
+              <View style={styles.settingCard}>
+                <LinearGradient
+                  colors={['#1a1a2e', '#15151f']}
+                  style={styles.settingGradient}
+                >
+                  <View style={styles.settingLeft}>
+                    <Users size={22} color={performerDrops ? '#ff0080' : '#666'} />
+                    <View style={styles.settingInfo}>
+                      <Text style={styles.settingTitle}>Performer Drops</Text>
+                      <Text style={styles.settingSubtitle}>
+                        Notify when followed DJs post promos
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <Switch
-                  value={performerDrops}
-                  onValueChange={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    setPerformerDrops(!performerDrops);
-                  }}
-                  trackColor={{ false: '#1a1a2e', true: '#ff0080' }}
-                  thumbColor={performerDrops ? '#0a0a0f' : '#666'}
-                />
-              </LinearGradient>
-            </View>
+                  <Switch
+                    value={performerDrops}
+                    onValueChange={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      setPerformerDrops(!performerDrops);
+                    }}
+                    trackColor={{ false: '#1a1a2e', true: '#ff0080' }}
+                    thumbColor={performerDrops ? '#0a0a0f' : '#666'}
+                  />
+                </LinearGradient>
+              </View>
+            )}
           </View>
 
           <View style={styles.section}>

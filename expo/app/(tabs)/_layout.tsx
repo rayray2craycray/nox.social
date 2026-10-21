@@ -3,6 +3,7 @@ import { Flame, MapPin, MessageCircle, User, Sparkles } from "lucide-react-nativ
 import React from "react";
 import { Platform } from "react-native";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { FEATURE_FLAGS } from "@/constants/app";
 
 const COLORS = {
   background: '#000000',
@@ -20,6 +21,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="discovery"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: COLORS.active,
@@ -43,13 +45,7 @@ export default function TabLayout() {
         },
       }}
     >
-      <Tabs.Screen
-        name="feed"
-        options={{
-          title: "Feed",
-          tabBarIcon: ({ color }) => <Flame color={color} size={22} />,
-        }}
-      />
+      {/* Map is the home tab for v1. */}
       <Tabs.Screen
         name="discovery"
         options={{
@@ -65,17 +61,28 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="studio"
-        options={{
-          title: "Studio",
-          tabBarIcon: ({ color }) => <Sparkles color={color} size={22} />,
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) => <User color={color} size={22} />,
+        }}
+      />
+      {/* Deferred post-launch — kept as routes (href:null hides the tab) so any
+          lingering links don't crash, but they're off the tab bar for v1. */}
+      <Tabs.Screen
+        name="feed"
+        options={{
+          title: "Feed",
+          href: FEATURE_FLAGS.FEED ? undefined : null,
+          tabBarIcon: ({ color }) => <Flame color={color} size={22} />,
+        }}
+      />
+      <Tabs.Screen
+        name="studio"
+        options={{
+          title: "Studio",
+          href: FEATURE_FLAGS.STUDIO ? undefined : null,
+          tabBarIcon: ({ color }) => <Sparkles color={color} size={22} />,
         }}
       />
     </Tabs>

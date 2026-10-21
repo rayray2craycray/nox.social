@@ -235,6 +235,13 @@ export const PENDING_SIGNUP_ROLE_KEY = 'nox_pending_signup_role';
  */
 export const FEATURE_FLAGS = {
   GROUP_PURCHASES: false,
+  // v1 launch scope = the core loop only (discover → check in → tiers → venue
+  // analytics). The video FEED and TALENT/STUDIO (performer content) surfaces
+  // are deferred post-launch to ship faster and keep the tested surface small.
+  // Flip to true to bring them back.
+  FEED: false,
+  STUDIO: false,
+  TALENT: false,
 } as const;
 
 // Type exports for TypeScript
