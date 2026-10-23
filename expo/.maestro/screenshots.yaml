@@ -1,15 +1,28 @@
 # Automated App Store screenshot capture — navigates the core loop and shoots
-# each hero screen. Replaces the manual sim screenshot session.
+# each hero screen on a clean RELEASE sim build (no dev chrome).
 # Run:  bash scripts/maestro.sh .maestro/screenshots.yaml
-# Best run against a RELEASE sim build (no dev chrome). Output: ~/.maestro runs.
+# Tabs are tapped by point (bottom bar is 3 tabs: Map | Chat | Profile) because
+# the accessible labels include "tab, N of 5".
 appId: social.nox
 ---
 - launchApp:
     clearState: true
+    permissions:
+      location: always
 
-# Age gate + sign in (reviewer account is pre-populated: tier, saved events)
+# Age gate + sign in (reviewer account: tier, saved events pre-populated).
+# The default DOB is already 18+, so just confirm. Retry the tap until the
+# gate actually advances to the sign-in screen.
 - assertVisible: "Age Verification Required"
-- tapOn: "Verify Age"
+- repeat:
+    times: 3
+    commands:
+      - tapOn:
+          text: "Verify Age"
+      - extendedWaitUntil:
+          visible: "Welcome Back"
+          timeout: 6000
+          optional: true
 - assertVisible: "Welcome Back"
 - tapOn:
     id: "signin-email"
@@ -21,20 +34,37 @@ appId: social.nox
 - tapOn: "Sign In"
 
 # 1 — Discovery / map (hero)
-- assertVisible: "Discover Venues"
+- extendedWaitUntil:
+    visible: "Discover Venues"
+    timeout: 40000
+- waitForAnimationToEnd:
+    timeout: 5000
 - takeScreenshot: 01-map
 
-# 2 — Profile (tiers / Prestige / My Night entry)
-- tapOn: "Profile"
-- assertVisible: "Prestige"
+# 2 — Profile (badges / tiers) — right tab (~83% width)
+- tapOn:
+    point: "83%,96%"
+- extendedWaitUntil:
+    visible: "Recent Badges"
+    timeout: 10000
 - takeScreenshot: 02-profile
 
-# 3 — My Night (saved events + "at your venues")
+# 3 — My Night (saved events + "at your venues") — scroll to the quick link
+- scrollUntilVisible:
+    element: "My Night"
+    direction: DOWN
+    timeout: 8000
 - tapOn: "My Night"
+- waitForAnimationToEnd:
+    timeout: 4000
 - takeScreenshot: 03-my-night
 - back
 
-# 4 — Chat / venue communities
-- tapOn: "Map"
-- tapOn: "Chat"
+# 4 — Chat / venue communities — middle tab (~50% width)
+- tapOn:
+    point: "50%,96%"
 - takeScreenshot: 04-chat
+
+# back to Map for a clean final state
+- tapOn:
+    point: "16%,96%"
